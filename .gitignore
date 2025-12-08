@@ -110,3 +110,4 @@ fabric.properties
 /.idea/discord.xml
 /.idea/modules.xml
 /.idea/realtimemap-services.iml
+/services/mark-service/config/config.yaml
