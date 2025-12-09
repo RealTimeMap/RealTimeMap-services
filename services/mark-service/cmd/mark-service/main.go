@@ -3,7 +3,12 @@ package main
 import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/handlers"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -22,4 +27,14 @@ func main() {
 		DBName:   cfg.Database.DBName,
 	}, log)
 	defer database.Close(db)
+
+	repo := postgres.NewCategoryRepository(db, log)
+
+	store, _ := storage.NewLocalStorage("./store", "http://localhost:8080/store", log) // TODO переести в контейнер DI
+	categoryService := service.NewCategoryService(repo, store)
+	router := gin.Default()
+
+	handlers.InitCategoryHandler(router.Group("/"), categoryService)
+	router.Static("./store", "./store")
+	router.Run(":8080")
 }

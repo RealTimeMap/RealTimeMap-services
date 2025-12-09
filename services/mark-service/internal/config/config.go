@@ -2,6 +2,7 @@ package config
 
 import (
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 )
 
 // Grpc Конфиг для gRPC указывается НазваниеСервиса-Адресс смотреть example.config.yaml
@@ -19,9 +20,10 @@ type Database struct {
 }
 
 type Config struct {
-	Env      string   `env:"ENV" env-default:"local"`
-	Database Database `yaml:"database"`
-	Grpc     Grpc     `yaml:"grpc"`
+	Env      string                `env:"ENV" env-default:"local"`
+	Database Database              `yaml:"database"`
+	Grpc     Grpc                  `yaml:"grpc"`
+	Storage  storage.StorageConfig `yaml:"storage"`
 }
 
 func MustLoad() *Config {
