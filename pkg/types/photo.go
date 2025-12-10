@@ -20,6 +20,31 @@ type Photo struct {
 	UploadedAt time.Time `json:"uploaded_at,omitempty"` // Время загрузки
 }
 
+// Scan реализует интерфейс sql.Scanner для чтения Photo из БД
+func (p *Photo) Scan(val interface{}) error {
+	if val == nil {
+		*p = Photo{}
+		return nil
+	}
+
+	var data []byte
+	switch v := val.(type) {
+	case []byte:
+		data = v
+	case string:
+		data = []byte(v)
+	default:
+		return fmt.Errorf("cannot scan %T into Photo", val)
+	}
+
+	return json.Unmarshal(data, p)
+}
+
+// Value реализует интерфейс driver.Valuer для записи Photo в БД
+func (p Photo) Value() (driver.Value, error) {
+	return json.Marshal(p)
+}
+
 // Photos представляет массив фотографий
 type Photos []Photo
 
