@@ -34,7 +34,7 @@ func main() {
 	categoryService := service.NewCategoryService(repo, store)
 	router := gin.Default()
 
-	handlers.InitCategoryHandler(router.Group("/"), categoryService)
+	handlers.InitCategoryHandler(router.Group("/"), categoryService, log)
 	router.Static("./store", "./store")
 	router.Run(":8080")
 }

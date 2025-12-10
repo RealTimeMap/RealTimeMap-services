@@ -77,7 +77,7 @@ service-name/
 **ЗАПРЕЩЕНО:**
 ```go
 // Никогда так не делай
-db, _ := sql.Open("postgres", "host=localhost user=admin password=secret123 dbname=app")
+db, _ := sql.Open("postgres", "host=localhost user=admin password=secret123 dbname=application")
 apiKey := "sk-live-abc123"
 ```
 
@@ -137,7 +137,7 @@ type CreateUserHandler struct {
 Доменные ошибки определяются в domain слое:
 
 ```go
-// domain/entity/errors.go
+// domain/entity/validation.go
 var (
     ErrUserNotFound      = errors.New("user not found")
     ErrEmailAlreadyTaken = errors.New("email already taken")
