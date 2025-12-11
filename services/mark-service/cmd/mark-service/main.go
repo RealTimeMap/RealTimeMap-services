@@ -5,6 +5,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/handlers"
@@ -28,13 +29,17 @@ func main() {
 	}, log)
 	defer database.Close(db)
 
-	repo := postgres.NewCategoryRepository(db, log)
+	db.AutoMigrate(&model.Mark{}, &model.Category{})
 
-	store, _ := storage.NewLocalStorage("./store", "http://localhost:8080/store", log) // TODO переести в контейнер DI
+	repo := postgres.NewCategoryRepository(db, log)
+	markRepo := postgres.NewMarkRepository(db, log)
+	store, _ := storage.NewLocalStorage("../../store", "http://localhost:8080/store", log) // TODO переести в контейнер DI
 	categoryService := service.NewCategoryService(repo, store)
+	markService := service.NewMarkService(markRepo, repo, store)
 	router := gin.Default()
 
 	handlers.InitCategoryHandler(router.Group("/"), categoryService, log)
+	handlers.InitMarkHandler(router.Group("/"), markService, log)
 	router.Static("./store", "./store")
 	router.Run(":8080")
 }

@@ -2,6 +2,7 @@ package types
 
 import (
 	"database/sql/driver"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/paulmach/orb"
@@ -14,6 +15,7 @@ type Point struct {
 	orb.Point
 }
 
+// TODO понять...
 // Scan реализует интерфейс sql.Scanner для чтения из БД
 func (p *Point) Scan(val interface{}) error {
 	if val == nil {
@@ -21,15 +23,35 @@ func (p *Point) Scan(val interface{}) error {
 		return nil
 	}
 
-	b, ok := val.([]byte)
-	if !ok {
+	var b []byte
+
+	switch v := val.(type) {
+	case []byte:
+		// Проверяем, не hex ли это (начинается с цифры или буквы a-f)
+		if len(v) > 0 && isHexString(v) {
+			decoded, err := hex.DecodeString(string(v))
+			if err != nil {
+				return fmt.Errorf("failed to decode hex: %w", err)
+			}
+			b = decoded
+		} else {
+			b = v
+		}
+	case string:
+		// Строка из PostGIS почти всегда hex-encoded
+		decoded, err := hex.DecodeString(v)
+		if err != nil {
+			return fmt.Errorf("failed to decode hex string: %w", err)
+		}
+		b = decoded
+	default:
 		return fmt.Errorf("cannot scan %T into Point", val)
 	}
 
-	// Пробуем сначала EWKB (Extended WKB с SRID)
+	// Пробуем EWKB (с SRID)
 	point, _, err := ewkb.Unmarshal(b)
 	if err != nil {
-		// Если не получилось, пробуем обычный WKB
+		// Fallback на обычный WKB
 		point, err = wkb.Unmarshal(b)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal point: %w", err)
@@ -38,9 +60,24 @@ func (p *Point) Scan(val interface{}) error {
 
 	if pt, ok := point.(orb.Point); ok {
 		p.Point = pt
+	} else {
+		return fmt.Errorf("geometry is not a point: %T", point)
 	}
 
 	return nil
+}
+
+// Проверяет, является ли []byte hex-строкой
+func isHexString(b []byte) bool {
+	if len(b) == 0 {
+		return false
+	}
+	for _, c := range b {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 // Value реализует интерфейс driver.Valuer для записи в БД

@@ -36,6 +36,7 @@ func (e *FieldValidationError) ToValidation() []validation.ValidationError {
 // NotFoundError - ресурс не найден (404)
 type NotFoundError struct {
 	Resource string
+	Field    string // Имя поля для validation error (например, "category_id")
 	ID       interface{}
 }
 
@@ -48,9 +49,13 @@ func (e *NotFoundError) HTTPStatus() int {
 }
 
 func (e *NotFoundError) ToValidation() []validation.ValidationError {
+	field := e.Field
+	if field == "" {
+		field = "id" // Дефолтное значение для обратной совместимости
+	}
 	return []validation.ValidationError{
 		validation.NewFieldError(
-			"id",
+			field,
 			fmt.Sprintf("%s not found", e.Resource),
 			"value_error.not_found",
 			e.ID,
@@ -85,7 +90,7 @@ type MultipleValidationErrors struct {
 }
 
 func (e *MultipleValidationErrors) Error() string {
-	return fmt.Sprintf("multiple validation errors: %d", len(e.Errors))
+	return fmt.Sprintf("multiple validation domainerrors: %d", len(e.Errors))
 }
 
 func (e *MultipleValidationErrors) HTTPStatus() int {

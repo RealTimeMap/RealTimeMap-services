@@ -47,11 +47,17 @@ func NewInvalidImageError(field string) *FieldValidationError {
 
 // Not Found constructors
 
-func NewNotFoundError(resource string, id interface{}) *NotFoundError {
+func NewNotFoundError(resource string, field string, id interface{}) *NotFoundError {
 	return &NotFoundError{
 		Resource: resource,
+		Field:    field,
 		ID:       id,
 	}
+}
+
+// NewNotFoundErrorByID создает NotFoundError с дефолтным полем "id" (для обратной совместимости)
+func NewNotFoundErrorByID(resource string, id interface{}) *NotFoundError {
+	return NewNotFoundError(resource, "id", id)
 }
 
 // Conflict constructors
@@ -72,13 +78,13 @@ func NewConflictError(field, message string, value interface{}) *ConflictError {
 	}
 }
 
-// Multiple errors
+// Multiple domainerrors
 
 func NewMultipleErrors(errors ...DomainError) *MultipleValidationErrors {
 	return &MultipleValidationErrors{Errors: errors}
 }
 
-// Internal errors
+// Internal domainerrors
 
 func NewInternalError(message string, cause error) *InternalError {
 	return &InternalError{

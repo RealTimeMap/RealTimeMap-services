@@ -14,7 +14,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 )
@@ -36,7 +36,7 @@ type CategoryCreateInput struct {
 	Color        string
 	FileName     string
 	IconData     []byte
-}
+} // TODO вынести
 
 func (s *CategoryService) CreateCategory(ctx context.Context, input CategoryCreateInput) (*model.Category, error) {
 	if err := s.validateInput(input); err != nil {
@@ -64,7 +64,7 @@ func (s *CategoryService) CreateCategory(ctx context.Context, input CategoryCrea
 
 	created, err := s.categoryRepo.Create(ctx, category)
 	if err != nil {
-		return nil, domain.ErrDatabaseQuery("create category", err)
+		return nil, domainerrors.ErrDatabaseQuery("create category", err)
 	}
 
 	return created, nil
@@ -74,23 +74,23 @@ func (s *CategoryService) CreateCategory(ctx context.Context, input CategoryCrea
 func (s *CategoryService) validateInput(input CategoryCreateInput) error {
 	// Валидация имени
 	if input.CategoryName == "" {
-		return domain.ErrCategoryNameRequired()
+		return domainerrors.ErrCategoryNameRequired()
 	}
 	if len(input.CategoryName) > 64 {
-		return domain.ErrCategoryNameTooLong(input.CategoryName)
+		return domainerrors.ErrCategoryNameTooLong(input.CategoryName)
 	}
 
 	// Валидация цвета
 	if input.Color == "" {
-		return domain.ErrCategoryColorRequired()
+		return domainerrors.ErrCategoryColorRequired()
 	}
 	if !s.isValidHexColor(input.Color) {
-		return domain.ErrCategoryColorInvalid(input.Color)
+		return domainerrors.ErrCategoryColorInvalid(input.Color)
 	}
 
 	// Валидация файла
 	if len(input.IconData) == 0 {
-		return domain.ErrCategoryIconRequired()
+		return domainerrors.ErrCategoryIconRequired()
 	}
 	if err := s.validateImageContent(input.IconData); err != nil {
 		return err
@@ -107,11 +107,11 @@ func (s *CategoryService) checkUniqueness(ctx context.Context, name string) erro
 		var notFoundErr *apperror.NotFoundError
 		if !errors.As(err, &notFoundErr) {
 			// Это НЕ NotFoundError - значит реальная ошибка БД
-			return domain.ErrDatabaseQuery("get category by name", err)
+			return domainerrors.ErrDatabaseQuery("get category by name", err)
 		}
 	}
 	if existing != nil {
-		return domain.ErrCategoryAlreadyExists(name)
+		return domainerrors.ErrCategoryAlreadyExists(name)
 	}
 	return nil
 }
@@ -129,9 +129,9 @@ func (s *CategoryService) uploadIcon(ctx context.Context, data []byte, filename 
 	})
 	if err != nil {
 		if errors.Is(err, storage.ErrInvalidMimeType) {
-			return nil, domain.ErrCategoryIconMimeType("")
+			return nil, domainerrors.ErrCategoryIconMimeType("")
 		}
-		return nil, domain.ErrStorageOperation("upload icon", err)
+		return nil, domainerrors.ErrStorageOperation("upload icon", err)
 	}
 	return icon, nil
 }
@@ -141,14 +141,14 @@ func (s *CategoryService) validateImageContent(data []byte) error {
 	// Проверка MIME типа из реальных байтов
 	mimeType := http.DetectContentType(data)
 	if !s.isAllowedMimeType(mimeType) {
-		return domain.ErrCategoryIconMimeType(mimeType)
+		return domainerrors.ErrCategoryIconMimeType(mimeType)
 	}
 
 	// Проверка, что можно декодировать как изображение
 	if mimeType != "image/svg+xml" {
 		_, _, err := image.Decode(bytes.NewReader(data))
 		if err != nil {
-			return domain.ErrCategoryIconInvalid()
+			return domainerrors.ErrCategoryIconInvalid()
 		}
 	}
 

@@ -1,4 +1,4 @@
-package domain
+package domainerrors
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 )
 
-// Category validation errors
+// Category validation domainerrors
 var (
 	ErrCategoryNameRequired = func() error {
 		return apperror.NewRequiredError("category_name")
@@ -45,11 +45,11 @@ var (
 	}
 
 	ErrCategoryNotFound = func(value any) error {
-		return apperror.NewNotFoundError("category", value)
+		return apperror.NewNotFoundError("category", "category_id", value)
 	}
 )
 
-// Business errors
+// Business domainerrors
 var (
 	ErrCannotDeleteActiveCategory = func(categoryName string, markCount int) error {
 		return apperror.NewConflictError(
@@ -60,7 +60,7 @@ var (
 	}
 )
 
-// Infrastructure errors
+// Infrastructure domainerrors
 var (
 	ErrDatabaseQuery = func(operation string, cause error) error {
 		return apperror.WrapInternalError(
