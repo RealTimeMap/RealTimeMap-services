@@ -4,7 +4,7 @@ import "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/interna
 
 type ResponseCategory struct {
 	ID           int    `json:"id"`
-	CategoryName string `json:"category_name"`
+	CategoryName string `json:"categoryName"`
 	Color        string `json:"color"`
 	Icon         string `json:"icon"`
 }

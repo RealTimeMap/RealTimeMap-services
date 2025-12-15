@@ -19,11 +19,18 @@ type Database struct {
 	SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE" env-default:"disable"`
 }
 
+// Kafka конфигурация для подключения к Kafka
+type Kafka struct {
+	Enabled bool     `yaml:"enabled" env:"KAFKA_ENABLED" env-default:"false"`
+	Brokers []string `yaml:"brokers" env:"KAFKA_BROKERS" env-separator:","`
+}
+
 type Config struct {
 	Env      string                `env:"ENV" env-default:"local"`
 	Database Database              `yaml:"database"`
 	Grpc     Grpc                  `yaml:"grpc"`
 	Storage  storage.StorageConfig `yaml:"storage"`
+	Kafka    Kafka                 `yaml:"kafka"`
 }
 
 func MustLoad() *Config {

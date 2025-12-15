@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
@@ -31,15 +33,21 @@ func main() {
 
 	db.AutoMigrate(&model.Mark{}, &model.Category{})
 
+	// Инициализация Kafka Producer
+
+	p := producer.New(producer.DefaultConfig().WithBrokers(cfg.Kafka.Brokers[0]).WithTopic("marks"), producer.WithLogger(log))
+	imageValidator := mediavalidator.NewPhotoValidator()
 	repo := postgres.NewCategoryRepository(db, log)
 	markRepo := postgres.NewMarkRepository(db, log)
 	store, _ := storage.NewLocalStorage("../../store", "http://localhost:8080/store", log) // TODO переести в контейнер DI
-	categoryService := service.NewCategoryService(repo, store)
-	markService := service.NewMarkService(markRepo, repo, store)
-	router := gin.Default()
 
-	handlers.InitCategoryHandler(router.Group("/"), categoryService, log)
-	handlers.InitMarkHandler(router.Group("/"), markService, log)
+	categoryService := service.NewCategoryService(repo, store)
+	markService := service.NewMarkService(markRepo, repo, store, p, imageValidator) // ← Передаём Kafka producer
+	router := gin.Default()
+	apiV1 := router.Group("/api/v1")
+
+	handlers.InitCategoryHandler(apiV1, categoryService, log)
+	handlers.InitMarkHandler(apiV1, markService, log)
 	router.Static("./store", "./store")
 	router.Run(":8080")
 }

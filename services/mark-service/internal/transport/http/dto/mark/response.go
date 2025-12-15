@@ -22,9 +22,8 @@ func NewFromPoint(data types.Point) *Coordinates {
 
 type ResponseMark struct {
 	ID             int                        `json:"id"`
-	MarKName       string                     `json:"mark_name"`
-	AdditionalInfo *string                    `json:"additional_info,omitempty"`
-	CategoryID     int                        `json:"category_id,omitempty"`
+	MarKName       string                     `json:"markName"`
+	AdditionalInfo *string                    `json:"additionalInfo,omitempty"`
 	Category       *category.ResponseCategory `json:"category"`
 	Geom           *Coordinates               `json:"geom"`
 }
@@ -34,11 +33,18 @@ func NewResponseMark(data *model.Mark) *ResponseMark {
 		ID:             data.ID,
 		MarKName:       data.MarkName,
 		AdditionalInfo: data.AdditionalInfo,
-		CategoryID:     data.CategoryID,
 		Geom:           NewFromPoint(data.Geom),
 	}
 	if data.Category.ID != 0 {
 		response.Category = category.NewResponseCategory(&data.Category)
+	}
+	return response
+}
+
+func NewMultiplyResponseMark(data []*model.Mark) []*ResponseMark {
+	response := make([]*ResponseMark, len(data))
+	for i := range response {
+		response[i] = NewResponseMark(data[i])
 	}
 	return response
 }

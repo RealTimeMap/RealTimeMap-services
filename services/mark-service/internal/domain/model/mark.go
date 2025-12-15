@@ -14,7 +14,7 @@ type Mark struct {
 	ID             int `gorm:"primarykey"`
 	MarkName       string
 	UserID         int
-	UserName       string
+	UserName       string `gorm:"not null"`
 	CategoryID     int
 	Category       Category
 	AdditionalInfo *string

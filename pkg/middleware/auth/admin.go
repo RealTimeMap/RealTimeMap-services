@@ -31,8 +31,8 @@ func AdminOnly() gin.HandlerFunc {
 		}
 
 		// Сохраняем типизированные значения
-		c.Set("user_id", userID)
-		c.Set("is_admin", isAdmin)
+		c.Set(UserIDKey, userID)
+		c.Set(UserIsAdminKey, isAdmin)
 		c.Next()
 	}
 }
