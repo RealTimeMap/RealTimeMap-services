@@ -116,7 +116,6 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		})
 	}
 
-	// ✅ Конвертируем DTO → Value Object
 	markName, err := valueobject.NewMarkName(request.MarkName)
 	if err != nil {
 		// Ошибка валидации имени метки (пустое, слишком короткое/длинное)
@@ -153,6 +152,8 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 
 func (h *MarkHandler) GetMarks(c *gin.Context) {
 	var params dto.FilterParams
+	params.ZoomLevel = 15
+	const zoomSelector = 12
 	params.EndAt = time.Now().UTC()
 
 	if err := c.ShouldBindBodyWithJSON(&params); err != nil {
@@ -163,14 +164,24 @@ func (h *MarkHandler) GetMarks(c *gin.Context) {
 		LeftTop:     valueobject.Point{Lon: params.Screen.LeftTop.Longitude, Lat: params.Screen.LeftTop.Latitude},
 		RightBottom: valueobject.Point{Lon: params.Screen.RightBottom.Longitude, Lat: params.Screen.RightBottom.Latitude},
 	},
-		StartAt: params.StartAt,
-		EndAt:   params.EndAt,
+		ZoomLevel: params.ZoomLevel,
+		StartAt:   params.StartAt,
+		EndAt:     params.EndAt,
 	}
-	marks, err := h.service.GetMarsInArea(c.Request.Context(), validParams)
-	if err != nil {
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
+	if validParams.ZoomLevel < zoomSelector {
+		clusters, err := h.service.GetMarsInCluster(c.Request.Context(), validParams)
+		if err != nil {
+			errorhandler.HandleError(c, err, h.logger)
+			return
+		}
+		c.JSON(200, dto.NewMultipleResponseCluster(clusters))
+	} else {
+		marks, err := h.service.GetMarsInArea(c.Request.Context(), validParams)
+		if err != nil {
+			errorhandler.HandleError(c, err, h.logger)
+			return
+		}
 
-	c.JSON(200, dto.NewMultiplyResponseMark(marks))
+		c.JSON(200, dto.NewMultipleResponseMark(marks))
+	}
 }

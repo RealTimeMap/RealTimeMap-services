@@ -18,7 +18,8 @@ type Mark struct {
 	CategoryID     int
 	Category       Category
 	AdditionalInfo *string
-	StartAt        time.Time
+	StartAt        time.Time    `gorm:"index:idx_marks_time,priority:1,where:NOT is_ended"`
+	EndAt          time.Time    `gorm:"index:idx_marks_time,priority:2"`
 	IsEnded        bool         `gorm:"default:false"`
 	Duration       int          `gorm:"default:12"`
 	Geom           types.Point  `gorm:"type:geometry(POINT,4326);not null"`
@@ -26,7 +27,12 @@ type Mark struct {
 	Photos         types.Photos `gorm:"type:jsonb"`
 }
 
-// EndAt вычисляемое время окончание действия метки
-func (m *Mark) EndAt() time.Time {
-	return m.StartAt.Add(time.Duration(m.Duration) * time.Hour)
+func (m *Mark) BeforeCreate(_ *gorm.DB) (err error) {
+	m.EndAt = m.StartAt.Add(time.Duration(m.Duration) * time.Hour)
+	return
+}
+
+type Cluster struct {
+	Center types.Point
+	Count  int
 }

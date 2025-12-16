@@ -182,3 +182,11 @@ func (s *MarkService) GetMarsInArea(ctx context.Context, filter repository.Filte
 	return marks, nil
 
 }
+
+func (s *MarkService) GetMarsInCluster(ctx context.Context, filter repository.Filter) ([]*model.Cluster, error) {
+	clusters, err := s.markRepo.GetMarksInCluster(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	return clusters, nil
+}

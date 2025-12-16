@@ -28,7 +28,8 @@ type Screen struct {
 }
 
 type FilterParams struct {
-	Screen  Screen    `json:"screen" binding:"required"`
-	StartAt time.Time `json:"startAt" binding:"required"`
-	EndAt   time.Time `json:"endAt" binding:"-"`
+	Screen    Screen    `json:"screen" binding:"required"`
+	ZoomLevel int       `json:"zoomLevel" binding:"-"`
+	StartAt   time.Time `json:"startAt" binding:"required"`
+	EndAt     time.Time `json:"endAt" binding:"-"`
 }
