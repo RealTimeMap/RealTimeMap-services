@@ -8,6 +8,9 @@ import (
 
 // Mark validation errors
 var (
+	ErrMarkNotFound = func(id int) error {
+		return apperror.NewNotFoundErrorByID("mark", id)
+	}
 	ErrMarkNameRequired = func() error {
 		return apperror.NewRequiredError("mark_name")
 	}

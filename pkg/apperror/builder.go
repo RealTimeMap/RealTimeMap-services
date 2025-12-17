@@ -10,6 +10,7 @@ func NewFieldValidationError(field, message, errType string, value interface{}) 
 		value:   value,
 	}
 }
+
 func NewRequiredError(field string) *FieldValidationError {
 	return NewFieldValidationError(field, "field is required", "value_error.missing", nil)
 }
@@ -43,6 +44,14 @@ func NewInvalidMimeTypeError(field string, allowed []string, actual string) *Fie
 
 func NewInvalidImageError(field string) *FieldValidationError {
 	return NewFieldValidationError(field, "file is not a valid image", "value_error.image", nil)
+}
+
+// Permissions errors
+
+func NewForbiddenError(message string) *ForbiddenError {
+	return &ForbiddenError{
+		Message: message,
+	}
 }
 
 // Not Found constructors

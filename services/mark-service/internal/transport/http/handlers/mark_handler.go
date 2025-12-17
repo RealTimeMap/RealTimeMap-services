@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"fmt"
-	"io"
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
+	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
@@ -33,6 +31,9 @@ func InitMarkHandler(g *gin.RouterGroup, service *service.MarkService, logger *z
 	{
 		markGroup.POST("/create", auth.AuthRequired(), handler.CreateMark)
 		markGroup.POST("/", handler.GetMarks)
+		markGroup.POST("/:markID", handler.DetailMark)
+		markGroup.DELETE("/:markID", auth.AuthRequired(), handler.DeleteMark)
+		markGroup.PATCH("/:markID", auth.AuthRequired(), handler.UpdateMark)
 	}
 }
 
@@ -40,7 +41,7 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 	var request dto.RequestMark
 	request.StartAt = time.Now()
 
-	userID, userName, err := context.GetUserInfo(c)
+	userID, userName, err := helper.GetUserInfo(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"detail": "unauthorized"})
 		return
@@ -51,69 +52,11 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		return
 	}
 
-	// Валидация media файлов
-	photos := make([]mediavalidator.PhotoInput, 0, len(request.Photos))
-
-	for i, fileHeader := range request.Photos {
-		// 3.1. Проверка размера
-		if fileHeader.Size > maxFileSize {
-			validation.Abort(c, validation.NewFieldError(
-				fmt.Sprintf("photos[%d]", i),
-				"file size exceeds maximum allowed size of 5MB",
-				"value_error.file.too_large",
-				fileHeader.Size,
-			))
-			return
-		}
-
-		// 3.2. Проверка Content-Type header
-		contentType := fileHeader.Header.Get("Content-Type")
-		isAllowed := false
-		for _, t := range allowedTypes {
-			if t == contentType {
-				isAllowed = true
-				break
-			}
-		}
-		if !isAllowed {
-			validation.Abort(c, validation.NewFieldError(
-				fmt.Sprintf("photos[%d]", i),
-				"file type not allowed. Allowed types: jpeg, png, webp, svg",
-				"value_error.mime_type",
-				contentType,
-			))
-			return
-		}
-
-		// 3.3. Чтение файла
-		file, err := fileHeader.Open()
-		if err != nil {
-			validation.Abort(c, validation.NewFieldError(
-				fmt.Sprintf("photos[%d]", i),
-				"failed to open uploaded file",
-				"value_error.file.invalid",
-				nil,
-			))
-			return
-		}
-		defer file.Close()
-
-		photoData, err := io.ReadAll(file)
-		if err != nil {
-			validation.Abort(c, validation.NewFieldError(
-				fmt.Sprintf("photos[%d]", i),
-				"failed to read uploaded file",
-				"value_error.file.invalid",
-				nil,
-			))
-			return
-		}
-
-		// 3.4. Добавление в slice с чистыми данными
-		photos = append(photos, mediavalidator.PhotoInput{
-			Data:     photoData,
-			FileName: fileHeader.Filename,
-		})
+	// Валидация и обработка media файлов
+	photos, err := processPhotoUploads(request.Photos)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
 	}
 
 	markName, err := valueobject.NewMarkName(request.MarkName)
@@ -128,7 +71,7 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-
+	userInput := service.UserInput{UserID: userID, UserName: userName}
 	// Мапинг и создание
 	validData := service.MarkInput{
 		MarkName:       markName,
@@ -139,8 +82,7 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		StartAt:        request.StartAt,
 		Duration:       duration,
 		Photos:         photos,
-		UserID:         userID,
-		UserName:       userName,
+		UserInput:      userInput,
 	}
 	res, err := h.service.CreateMark(c.Request.Context(), validData)
 	if err != nil {
@@ -150,6 +92,15 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 	c.JSON(201, dto.NewResponseMark(res))
 }
 
+// GetMarks godoc
+// @Summary      Получение актуальных меток через HTTP
+// @Tags         mark
+// @Accept       json
+// @Produce      json
+// @Param        body dto.FilterParams true "фильтры"
+// @Success      200 {array} dto.ResponseMark "Список меток"
+// @Success      200 {array} dto.ResponseCluster "Список кластеров"
+// @Router       /mark [post]
 func (h *MarkHandler) GetMarks(c *gin.Context) {
 	var params dto.FilterParams
 	params.ZoomLevel = 15
@@ -169,14 +120,14 @@ func (h *MarkHandler) GetMarks(c *gin.Context) {
 		EndAt:     params.EndAt,
 	}
 	if validParams.ZoomLevel < zoomSelector {
-		clusters, err := h.service.GetMarsInCluster(c.Request.Context(), validParams)
+		clusters, err := h.service.GetMarksInCluster(c.Request.Context(), validParams)
 		if err != nil {
 			errorhandler.HandleError(c, err, h.logger)
 			return
 		}
 		c.JSON(200, dto.NewMultipleResponseCluster(clusters))
 	} else {
-		marks, err := h.service.GetMarsInArea(c.Request.Context(), validParams)
+		marks, err := h.service.GetMarksInArea(c.Request.Context(), validParams)
 		if err != nil {
 			errorhandler.HandleError(c, err, h.logger)
 			return
@@ -184,4 +135,96 @@ func (h *MarkHandler) GetMarks(c *gin.Context) {
 
 		c.JSON(200, dto.NewMultipleResponseMark(marks))
 	}
+}
+
+func (h *MarkHandler) DeleteMark(c *gin.Context) {
+	userID, userName, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	markID, err := strconv.Atoi(c.Param("markID"))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	userInput := service.UserInput{UserID: userID, UserName: userName}
+	err = h.service.DeleteMark(c.Request.Context(), markID, userInput)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	c.Status(204)
+}
+
+func (h *MarkHandler) UpdateMark(c *gin.Context) {
+	var req dto.RequestUpdateMark
+
+	markID, err := strconv.Atoi(c.Param("markID"))
+	userID, userName, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	// Валидация и обработка media файлов
+	photos, err := processPhotoUploads(req.Photos)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	userData := service.UserInput{UserID: userID, UserName: userName}
+	validData := service.MarkUpdateInput{
+		MarkID:         markID,
+		Photos:         photos,
+		CategoryId:     req.CategoryId,
+		AdditionalInfo: req.AdditionalInfo,
+		UserInput:      userData,
+		PhotosToDelete: req.PhotosToDelete,
+	}
+	if req.MarkName != nil {
+		markName, err := valueobject.NewMarkName(*req.MarkName)
+		if err != nil {
+			validation.AbortWithBindingError(c, err)
+			return
+		}
+		validData.MarkName = &markName
+	}
+	if req.Duration != nil {
+		duration, err := valueobject.NewDuration(*req.Duration)
+		if err != nil {
+			validation.AbortWithBindingError(c, err)
+			return
+		}
+		validData.Duration = &duration
+	}
+
+	updatedMark, err := h.service.UpdateMark(c.Request.Context(), validData)
+
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(200, dto.NewResponseMark(updatedMark))
+}
+
+func (h *MarkHandler) DetailMark(c *gin.Context) {
+	markID, err := strconv.Atoi(c.Param("markID"))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	mark, err := h.service.DetailMark(c.Request.Context(), markID)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	c.JSON(200, dto.NewResponseMark(mark))
 }

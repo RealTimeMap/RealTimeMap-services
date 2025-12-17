@@ -1,7 +1,7 @@
 package auth
 
 const (
-	UserIDKey      = "user_id"
-	UsernameKey    = "username"
-	UserIsAdminKey = "is_admin"
+	UserIDKey      = "userID"
+	UsernameKey    = "userName"
+	UserIsAdminKey = "isAdmin"
 )

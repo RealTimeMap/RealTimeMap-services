@@ -105,6 +105,22 @@ func (e *MultipleValidationErrors) ToValidation() []validation.ValidationError {
 	return result
 }
 
+// ForbiddenError - ошибка прав доступа
+type ForbiddenError struct {
+	Message string
+}
+
+func (e *ForbiddenError) Error() string {
+	return "forbidden"
+}
+func (e *ForbiddenError) HTTPStatus() int {
+	return 403
+}
+
+func (e *ForbiddenError) ToValidation() []validation.ValidationError {
+	return nil
+}
+
 // InternalError - внутренняя ошибка (500)
 type InternalError struct {
 	Message string

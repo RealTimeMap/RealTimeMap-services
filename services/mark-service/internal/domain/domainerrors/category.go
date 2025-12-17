@@ -9,15 +9,15 @@ import (
 // Category validation domainerrors
 var (
 	ErrCategoryNameRequired = func() error {
-		return apperror.NewRequiredError("category_name")
+		return apperror.NewRequiredError("categoryName")
 	}
 
 	ErrCategoryNameTooLong = func(name string) error {
-		return apperror.NewTooLongError("category_name", 64, name)
+		return apperror.NewTooLongError("categoryName", 64, name)
 	}
 
 	ErrCategoryAlreadyExists = func(name string) error {
-		return apperror.NewAlreadyExistsError("category_name", name)
+		return apperror.NewAlreadyExistsError("categoryName", name)
 	}
 
 	ErrCategoryColorRequired = func() error {
@@ -45,7 +45,7 @@ var (
 	}
 
 	ErrCategoryNotFound = func(value any) error {
-		return apperror.NewNotFoundError("category", "category_id", value)
+		return apperror.NewNotFoundError("category", "categoryId", value)
 	}
 )
 
@@ -53,7 +53,7 @@ var (
 var (
 	ErrCannotDeleteActiveCategory = func(categoryName string, markCount int) error {
 		return apperror.NewConflictError(
-			"category_id",
+			"categoryId",
 			fmt.Sprintf("cannot delete category '%s' with %d active marks", categoryName, markCount),
 			nil,
 		)

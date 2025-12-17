@@ -7,6 +7,8 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/category"
 )
 
+// Coordinates represents coordinates response
+// @name Coordinates
 type Coordinates struct {
 	Type        string     `json:"type"`
 	Coordinates [2]float64 `json:"coordinates"`
@@ -21,6 +23,8 @@ func NewFromPoint(data types.Point) *Coordinates {
 	}
 }
 
+// ResponseMark represents mark response
+// @name MarkResponse
 type ResponseMark struct {
 	ID             int                        `json:"id"`
 	MarKName       string                     `json:"markName"`
@@ -28,6 +32,7 @@ type ResponseMark struct {
 	Category       *category.ResponseCategory `json:"category"`
 	Geom           *Coordinates               `json:"geom"`
 	User           *dto.UserResponse          `json:"owner"`
+	Photos         []string                   `json:"photos"`
 }
 
 func NewResponseMark(data *model.Mark) *ResponseMark {
@@ -41,6 +46,9 @@ func NewResponseMark(data *model.Mark) *ResponseMark {
 	if data.Category.ID != 0 {
 		response.Category = category.NewResponseCategory(&data.Category)
 	}
+	for _, photo := range data.Photos {
+		response.Photos = append(response.Photos, photo.URL)
+	}
 	return response
 }
 
@@ -52,6 +60,8 @@ func NewMultipleResponseMark(data []*model.Mark) []*ResponseMark {
 	return response
 }
 
+// ResponseCluster represents cluster of marks response
+// @name ResponseCluster
 type ResponseCluster struct {
 	Center *Coordinates `json:"center"`
 	Count  int          `json:"count"`

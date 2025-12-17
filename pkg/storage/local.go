@@ -12,6 +12,7 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/imageprocessor"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -110,7 +111,7 @@ func (s *LocalStorage) Upload(ctx context.Context, file io.Reader, opts UploadOp
 		ext = imageprocessor.GetExtensionByMimeType(opts.MimeType)
 	}
 
-	filename := fmt.Sprintf("%s%s", hashStr[:16], ext)
+	filename := fmt.Sprintf("%s%s", uuid.New(), ext) // TODO пофиксить мб на uuid
 
 	storageKey := filepath.Join("photos", opts.Category.String(), yearMonth, filename)
 	fullPath := filepath.Join(s.basePath, storageKey)

@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger/sl"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"github.com/paulmach/orb"
@@ -44,6 +46,48 @@ func (r *MarkRepository) Create(ctx context.Context, data *model.Mark) (*model.M
 	}
 
 	return data, nil
+}
+
+func (r *MarkRepository) Update(ctx context.Context, id int, mark *model.Mark) (*model.Mark, error) {
+	r.log.Info("update_mark_by_id", sl.String("layer", r.layer))
+
+	err := r.db.WithContext(ctx).Model(&model.Mark{}).Where("id = ?", id).Save(mark).Error
+	if err != nil {
+		r.log.Error("update_mark_by_id err: ", sl.String("layer", r.layer), zap.Error(err))
+		return nil, err
+	}
+	return mark, nil
+}
+
+func (r *MarkRepository) GetByID(ctx context.Context, id int) (*model.Mark, error) {
+	r.log.Info("get_mark_by_id", sl.String("layer", r.layer))
+	var mark *model.Mark
+	err := r.db.WithContext(ctx).Model(&model.Mark{}).Preload("Category").Where("id = ? AND deleted_at IS NULL", id).First(&mark).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainerrors.ErrMarkNotFound(id)
+		}
+		r.log.Error("get_mark_by_id err: ", sl.String("layer", r.layer), zap.Error(err))
+		return nil, err
+	}
+	return mark, nil
+}
+
+func (r *MarkRepository) Delete(ctx context.Context, id int) error {
+	r.log.Info("delete_mark_by_id", sl.String("layer", r.layer))
+
+	result := r.db.WithContext(ctx).Delete(&model.Mark{}, id)
+	if result.Error != nil {
+		r.log.Error("delete_mark_by_id err: ", sl.String("layer", r.layer), zap.Error(result.Error))
+		return result.Error
+	}
+
+	// Проверка, что запись существовала
+	if result.RowsAffected == 0 {
+		return domainerrors.ErrMarkNotFound(id)
+	}
+
+	return nil
 }
 
 func (r *MarkRepository) TodayCreated(ctx context.Context, userID int) (int64, error) {
@@ -124,4 +168,24 @@ func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repositor
 		}
 	}
 	return clusters, nil
+}
+
+func (r *MarkRepository) Exist(ctx context.Context, id int) (bool, error) {
+	r.log.Info("check_exist_mark_by_id", sl.String("layer", r.layer))
+	var exists bool
+	err := r.db.WithContext(ctx).
+		Model(&model.Mark{}).
+		Select("1").
+		Where("id = ?", id).
+		Limit(1).
+		Find(&exists).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, domainerrors.ErrMarkNotFound(id)
+		}
+		r.log.Error("check_exist_mark_by_id err: ", sl.String("layer", r.layer), zap.Error(err))
+		return false, err
+	}
+	return exists, nil
 }

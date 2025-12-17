@@ -29,6 +29,11 @@ func HandleError(c *gin.Context, err error, logger *zap.Logger) {
 			return
 		}
 
+		if status == http.StatusForbidden {
+			c.AbortWithStatusJSON(status, gin.H{"error": "forbidden"})
+			return
+		}
+
 		// Для клиентских ошибок возвращаем детали
 		validationErrors := domainErr.ToValidation()
 		if len(validationErrors) > 0 {

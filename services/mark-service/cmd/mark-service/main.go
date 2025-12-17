@@ -12,9 +12,21 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/handlers"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
+
+	_ "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/docs"
 )
 
+// @title           Your API
+// @version         1.0
+// @description     Описание вашего API
+// @host            localhost:8080
+// @BasePath        /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	cfg := config.MustLoad()
 	log := logger.MustNewByEnv(cfg.Env, "mark-service")
@@ -44,6 +56,7 @@ func main() {
 	categoryService := service.NewCategoryService(repo, store)
 	markService := service.NewMarkService(markRepo, repo, store, p, imageValidator) // ← Передаём Kafka producer
 	router := gin.Default()
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	apiV1 := router.Group("/api/v1")
 
 	handlers.InitCategoryHandler(apiV1, categoryService, log)

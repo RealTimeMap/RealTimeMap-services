@@ -16,6 +16,16 @@ type RequestMark struct {
 	Photos         []*multipart.FileHeader `form:"photos"`
 }
 
+type RequestUpdateMark struct {
+	MarkName       *string `form:"markName,omitempty" binding:"-"`
+	AdditionalInfo *string `form:"additionalInfo,omitempty" binding:"-"`
+	CategoryId     *int    `form:"categoryId,omitempty" binding:"-"`
+	Duration       *int    `form:"duration,omitempty" binding:"-"`
+	// Управление фотками
+	PhotosToDelete []string                `form:"photosToDelete" binding:"-"`
+	Photos         []*multipart.FileHeader `form:"photos" binding:"-"`
+}
+
 type Coords struct {
 	Longitude float64 `json:"lon" binding:"required,longitude"`
 	Latitude  float64 `json:"lat" binding:"required,latitude"`

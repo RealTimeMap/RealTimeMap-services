@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
@@ -90,7 +89,7 @@ func FromBindingError(err error) []ValidationError {
 			}
 
 			result = append(result, ValidationError{
-				Loc:     Location{"body", utils.ToSnakeCase(v.Field())},
+				Loc:     Location{"body", v.Field()},
 				Msg:     buildMessage(v),
 				ErrType: errType,
 				Input:   v.Value(),
