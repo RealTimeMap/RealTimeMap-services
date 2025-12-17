@@ -21,8 +21,9 @@ type Database struct {
 
 // Kafka конфигурация для подключения к Kafka
 type Kafka struct {
-	Enabled bool     `yaml:"enabled" env:"KAFKA_ENABLED" env-default:"false"`
-	Brokers []string `yaml:"brokers" env:"KAFKA_BROKERS" env-separator:","`
+	Enabled       bool     `yaml:"enabled" env:"KAFKA_ENABLED" env-default:"false"`
+	Brokers       []string `yaml:"brokers" env:"KAFKA_BROKERS" env-separator:","`
+	ProducerTopic string   `yaml:"producerTopic" env-default:"mark-service.events"`
 }
 
 type Config struct {

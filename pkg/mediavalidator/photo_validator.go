@@ -1,9 +1,7 @@
 package mediavalidator
 
 import (
-	"bytes"
 	"fmt"
-	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -134,19 +132,6 @@ func (v *PhotoValidator) validateSinglePhoto(index int, photo PhotoInput) error 
 			),
 		}
 	}
-
-	// 3. Проверка что изображение можно декодировать
-	if _, _, err := image.Decode(bytes.NewReader(photo.Data)); err != nil {
-		return PhotoValidationError{
-			ValidationError: validation.NewFieldError(
-				fieldName,
-				"invalid image: cannot decode",
-				"value_error.image",
-				nil,
-			),
-		}
-	}
-
 	return nil
 }
 

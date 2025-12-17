@@ -7,10 +7,18 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"sync"
 
 	"github.com/disintegration/imaging"
 	"go.uber.org/zap"
 )
+
+// Буфер pool для уменьшения аллокаций памяти
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
 
 type Processor struct {
 	logger *zap.Logger
@@ -18,6 +26,15 @@ type Processor struct {
 
 func NewProcessor(logger *zap.Logger) *Processor {
 	return &Processor{logger: logger}
+}
+
+// DecodeImage декодирует изображение из байтов (вызывается один раз)
+func (p *Processor) DecodeImage(data []byte) (image.Image, string, error) {
+	img, format, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to decode image: %w", err)
+	}
+	return img, format, nil
 }
 
 // GetDimensions метод возвращает ширину и высоту картинки
@@ -28,6 +45,12 @@ func (p *Processor) GetDimensions(data []byte) (width, height int, err error) {
 	}
 	bounds := img.Bounds()
 	return bounds.Dx(), bounds.Dy(), nil
+}
+
+// GetDimensionsFromDecoded получает размеры из уже декодированного изображения (без повторного декодирования)
+func (p *Processor) GetDimensionsFromDecoded(img image.Image) (width, height int) {
+	bounds := img.Bounds()
+	return bounds.Dx(), bounds.Dy()
 }
 
 // Resize изменяет размер изображения
@@ -58,6 +81,42 @@ func (p *Processor) Resize(data []byte, width, height int) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// ResizeFromDecoded изменяет размер уже декодированного изображения (без повторного декодирования)
+// format - оригинальный формат изображения ("jpeg", "png", etc.)
+func (p *Processor) ResizeFromDecoded(img image.Image, format string, width, height int) ([]byte, error) {
+	// Resize с сохранением пропорций
+	resized := imaging.Fit(img, width, height, imaging.Lanczos)
+
+	// Используем buffer pool
+	buf := bufferPool.Get().(*bytes.Buffer)
+	defer func() {
+		buf.Reset()
+		bufferPool.Put(buf)
+	}()
+
+	// Encode
+	var err error
+	switch format {
+	case "jpeg", "jpg":
+		err = jpeg.Encode(buf, resized, &jpeg.Options{Quality: 85})
+	case "png":
+		err = png.Encode(buf, resized)
+	case "gif":
+		err = gif.Encode(buf, resized, nil)
+	default:
+		err = jpeg.Encode(buf, resized, &jpeg.Options{Quality: 85})
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode resized image: %w", err)
+	}
+
+	// Копируем данные из buffer pool перед возвратом
+	result := make([]byte, buf.Len())
+	copy(result, buf.Bytes())
+	return result, nil
 }
 
 // Optimize оптимизирует изображение (сжатие)
@@ -95,6 +154,43 @@ func (p *Processor) Optimize(data []byte, mimeType string) ([]byte, error) {
 		zap.Int("optimized_size", len(optimized)),
 		zap.Float64("saved_percent", float64(len(data)-len(optimized))/float64(len(data))*100),
 	)
+
+	return optimized, nil
+}
+
+// OptimizeFromDecoded оптимизирует уже декодированное изображение (без повторного декодирования)
+func (p *Processor) OptimizeFromDecoded(img image.Image, mimeType string, originalSize int) ([]byte, error) {
+	buf := bufferPool.Get().(*bytes.Buffer)
+	defer func() {
+		buf.Reset()
+		bufferPool.Put(buf)
+	}()
+
+	var err error
+	switch mimeType {
+	case "image/jpeg", "image/jpg":
+		err = jpeg.Encode(buf, img, &jpeg.Options{Quality: 85})
+	case "image/png":
+		err = png.Encode(buf, img)
+	default:
+		return nil, fmt.Errorf("unsupported mime type for optimization: %s", mimeType)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	optimized := make([]byte, buf.Len())
+	copy(optimized, buf.Bytes())
+
+	// Логируем только если действительно сжали
+	if originalSize > 0 && len(optimized) < originalSize {
+		p.logger.Info("image optimized",
+			zap.Int("original_size", originalSize),
+			zap.Int("optimized_size", len(optimized)),
+			zap.Float64("saved_percent", float64(originalSize-len(optimized))/float64(originalSize)*100),
+		)
+	}
 
 	return optimized, nil
 }

@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/imageprocessor"
@@ -111,7 +113,7 @@ func (s *LocalStorage) Upload(ctx context.Context, file io.Reader, opts UploadOp
 		ext = imageprocessor.GetExtensionByMimeType(opts.MimeType)
 	}
 
-	filename := fmt.Sprintf("%s%s", uuid.New(), ext) // TODO пофиксить мб на uuid
+	filename := fmt.Sprintf("%s%s", uuid.New(), ext)
 
 	storageKey := filepath.Join("photos", opts.Category.String(), yearMonth, filename)
 	fullPath := filepath.Join(s.basePath, storageKey)
@@ -167,23 +169,453 @@ func (s *LocalStorage) Upload(ctx context.Context, file io.Reader, opts UploadOp
 	return photo, nil
 }
 
-// UploadMultiple загружает несколько файлов
+// UploadMultiple загружает несколько файлов параллельно
 func (s *LocalStorage) UploadMultiple(ctx context.Context, files []FileUpload) (types.Photos, error) {
-	photos := make(types.Photos, 0, len(files))
+	type uploadResult struct {
+		photo *types.Photo
+		index int
+		err   error
+	}
 
+	resultChan := make(chan uploadResult, len(files))
+
+	// Параллельная загрузка фотографий
 	for i, file := range files {
-		photo, err := s.Upload(ctx, file.Reader, file.Options)
-		if err != nil {
+		go func(index int, f FileUpload) {
+			photo, err := s.Upload(ctx, f.Reader, f.Options)
+			resultChan <- uploadResult{photo: photo, index: index, err: err}
+		}(i, file)
+	}
+
+	// Сбор результатов
+	results := make([]uploadResult, 0, len(files))
+	for i := 0; i < len(files); i++ {
+		result := <-resultChan
+		if result.err != nil {
 			s.logger.Error("failed to upload file",
-				zap.Int("index", i),
-				zap.Error(err),
+				zap.Int("index", result.index),
+				zap.Error(result.err),
 			)
 			continue
 		}
-		photos = append(photos, *photo)
+		results = append(results, result)
+	}
+
+	// Сортировка по исходному индексу для сохранения порядка
+	photos := make(types.Photos, 0, len(results))
+	for i := 0; i < len(files); i++ {
+		for _, r := range results {
+			if r.index == i {
+				photos = append(photos, *r.photo)
+				break
+			}
+		}
 	}
 
 	return photos, nil
+}
+
+// UploadMultipartOptimized - максимально оптимизированная загрузка с worker pool и pipeline обработкой
+// Использует:
+// - Worker Pool для контроля параллелизма (не создает 100 горутин для 100 файлов)
+// - Pipeline обработку (декодирование изображения ОДИН раз)
+// - Параллельное создание миниатюр
+// - Синхронное возвращение thumbnail URLs (без потери)
+func (s *LocalStorage) UploadMultipartOptimized(ctx context.Context, files []*multipart.FileHeader, opts UploadOptions) (types.Photos, error) {
+	const maxWorkers = 5 // Максимум 5 параллельных загрузок для оптимального баланса CPU/IO
+
+	type uploadResult struct {
+		photo *types.Photo
+		index int
+		err   error
+	}
+
+	resultChan := make(chan uploadResult, len(files))
+	semaphore := make(chan struct{}, maxWorkers) // Worker pool semaphore
+
+	var wg sync.WaitGroup
+
+	// Параллельная загрузка файлов с контролем через semaphore
+	for i, fileHeader := range files {
+		wg.Add(1)
+		go func(index int, fh *multipart.FileHeader) {
+			defer wg.Done()
+
+			// Acquire semaphore
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }() // Release semaphore
+
+			photo, err := s.uploadSingleMultipartOptimized(ctx, fh, opts)
+			resultChan <- uploadResult{photo: photo, index: index, err: err}
+		}(i, fileHeader)
+	}
+
+	// Закрыть канал после завершения всех горутин
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// Сбор результатов
+	results := make([]uploadResult, 0, len(files))
+	for result := range resultChan {
+		if result.err != nil {
+			s.logger.Error("failed to upload file",
+				zap.Int("index", result.index),
+				zap.Error(result.err),
+			)
+			continue
+		}
+		results = append(results, result)
+	}
+
+	// Сортировка по исходному индексу для сохранения порядка
+	photos := make(types.Photos, 0, len(results))
+	for i := 0; i < len(files); i++ {
+		for _, r := range results {
+			if r.index == i {
+				photos = append(photos, *r.photo)
+				break
+			}
+		}
+	}
+
+	return photos, nil
+}
+
+// UploadMultipartDirect - оптимизированная загрузка из multipart.FileHeader
+// Сохраняет файлы напрямую на диск минуя чтение всего в память
+// Затем параллельно обрабатывает метаданные (hash, размеры)
+// DEPRECATED: Используйте UploadMultipartOptimized для лучшей производительности
+func (s *LocalStorage) UploadMultipartDirect(ctx context.Context, files []*multipart.FileHeader, opts UploadOptions) (types.Photos, error) {
+	type uploadResult struct {
+		photo *types.Photo
+		index int
+		err   error
+	}
+
+	resultChan := make(chan uploadResult, len(files))
+	var wg sync.WaitGroup
+
+	// Параллельная загрузка файлов
+	for i, fileHeader := range files {
+		wg.Add(1)
+		go func(index int, fh *multipart.FileHeader) {
+			defer wg.Done()
+
+			photo, err := s.uploadSingleMultipart(ctx, fh, opts)
+			resultChan <- uploadResult{photo: photo, index: index, err: err}
+		}(i, fileHeader)
+	}
+
+	// Закрыть канал после завершения всех горутин
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// Сбор результатов
+	results := make([]uploadResult, 0, len(files))
+	for result := range resultChan {
+		if result.err != nil {
+			s.logger.Error("failed to upload file",
+				zap.Int("index", result.index),
+				zap.Error(result.err),
+			)
+			continue
+		}
+		results = append(results, result)
+	}
+
+	// Сортировка по исходному индексу для сохранения порядка
+	photos := make(types.Photos, 0, len(results))
+	for i := 0; i < len(files); i++ {
+		for _, r := range results {
+			if r.index == i {
+				photos = append(photos, *r.photo)
+				break
+			}
+		}
+	}
+
+	return photos, nil
+}
+
+// uploadSingleMultipartOptimized - максимально оптимизированная загрузка с pipeline обработкой
+// Декодирует изображение ОДИН раз и параллельно создает миниатюру
+func (s *LocalStorage) uploadSingleMultipartOptimized(ctx context.Context, fileHeader *multipart.FileHeader, opts UploadOptions) (*types.Photo, error) {
+	// Валидация категории
+	if err := opts.Category.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Проверка размера
+	if opts.MaxSize > 0 && fileHeader.Size > opts.MaxSize {
+		return nil, fmt.Errorf("%w: %d bytes, max: %d", ErrFileTooLarge, fileHeader.Size, opts.MaxSize)
+	}
+
+	// Открыть файл
+	src, err := fileHeader.Open()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open uploaded file: %w", err)
+	}
+	defer src.Close()
+
+	// Сгенерировать путь для сохранения
+	now := time.Now()
+	yearMonth := now.Format("2006/01")
+	ext := filepath.Ext(fileHeader.Filename)
+	if ext == "" && opts.MimeType != "" {
+		ext = imageprocessor.GetExtensionByMimeType(opts.MimeType)
+	}
+
+	filename := fmt.Sprintf("%s%s", uuid.New(), ext)
+	storageKey := filepath.Join("photos", opts.Category.String(), yearMonth, filename)
+	fullPath := filepath.Join(s.basePath, storageKey)
+
+	// Создать директорию
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Создать файл на диске
+	dst, err := os.Create(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file: %w", err)
+	}
+	defer dst.Close()
+
+	// Копировать с вычислением hash на лету
+	hasher := sha256.New()
+	multiWriter := io.MultiWriter(dst, hasher)
+
+	written, err := io.Copy(multiWriter, src)
+	if err != nil {
+		os.Remove(fullPath) // Удалить частично записанный файл
+		return nil, fmt.Errorf("failed to save file: %w", err)
+	}
+
+	hashStr := hex.EncodeToString(hasher.Sum(nil))
+
+	// Прочитать файл ОДИН раз для обработки
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read saved file: %w", err)
+	}
+
+	// Определить MIME type если не указан
+	mimeType := opts.MimeType
+	if mimeType == "" {
+		mimeType = imageprocessor.DetectMimeType(data)
+	}
+
+	// Валидация MIME type
+	if !s.isValidMimeType(mimeType) {
+		os.Remove(fullPath)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidMimeType, mimeType)
+	}
+
+	var width, height int
+	var thumbnailKey string
+
+	// КЛЮЧЕВАЯ ОПТИМИЗАЦИЯ: Декодируем изображение ОДИН раз
+	if s.isImage(mimeType) {
+		img, format, err := s.processor.DecodeImage(data)
+		if err != nil {
+			s.logger.Warn("failed to decode image", zap.Error(err))
+		} else {
+			// Параллельная обработка декодированного изображения
+			var wg sync.WaitGroup
+			var thumbData []byte
+			var thumbErr error
+
+			wg.Add(2)
+
+			// 1. Получить размеры (из уже декодированного)
+			go func() {
+				defer wg.Done()
+				width, height = s.processor.GetDimensionsFromDecoded(img)
+			}()
+
+			// 2. Создать миниатюру (из уже декодированного)
+			go func() {
+				defer wg.Done()
+				if opts.GenerateThumb {
+					thumbWidth := opts.ThumbWidth
+					thumbHeight := opts.ThumbHeight
+					if thumbWidth == 0 {
+						thumbWidth = 300
+					}
+					if thumbHeight == 0 {
+						thumbHeight = 300
+					}
+
+					thumbData, thumbErr = s.processor.ResizeFromDecoded(img, format, thumbWidth, thumbHeight)
+				}
+			}()
+
+			wg.Wait()
+
+			// Сохранить миниатюру СИНХРОННО (чтобы вернуть URL)
+			if opts.GenerateThumb && thumbErr == nil && thumbData != nil {
+				ext := filepath.Ext(storageKey)
+				thumbKey := storageKey[:len(storageKey)-len(ext)] + "_thumb" + ext
+				thumbPath := filepath.Join(s.basePath, thumbKey)
+
+				if err := os.WriteFile(thumbPath, thumbData, 0644); err != nil {
+					s.logger.Warn("failed to save thumbnail", zap.Error(err))
+				} else {
+					thumbnailKey = thumbKey
+				}
+			}
+		}
+	}
+
+	// Сформировать Photo
+	photo := &types.Photo{
+		URL:        s.GetURL(storageKey),
+		Thumbnail:  "",
+		FileName:   fileHeader.Filename,
+		Size:       written,
+		Width:      width,
+		Height:     height,
+		MimeType:   mimeType,
+		Hash:       hashStr,
+		StorageKey: storageKey,
+		UploadedAt: now,
+	}
+
+	if thumbnailKey != "" {
+		photo.Thumbnail = s.GetURL(thumbnailKey)
+	}
+
+	s.logger.Info("file uploaded (optimized)",
+		zap.String("storage_key", storageKey),
+		zap.String("hash", hashStr[:16]),
+		zap.Int64("size", photo.Size),
+		zap.Bool("has_thumbnail", thumbnailKey != ""),
+	)
+
+	return photo, nil
+}
+
+// uploadSingleMultipart загружает один файл из multipart.FileHeader
+func (s *LocalStorage) uploadSingleMultipart(ctx context.Context, fileHeader *multipart.FileHeader, opts UploadOptions) (*types.Photo, error) {
+	// Валидация категории
+	if err := opts.Category.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Проверка размера
+	if opts.MaxSize > 0 && fileHeader.Size > opts.MaxSize {
+		return nil, fmt.Errorf("%w: %d bytes, max: %d", ErrFileTooLarge, fileHeader.Size, opts.MaxSize)
+	}
+
+	// Открыть файл
+	src, err := fileHeader.Open()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open uploaded file: %w", err)
+	}
+	defer src.Close()
+
+	// Сгенерировать путь для сохранения
+	now := time.Now()
+	yearMonth := now.Format("2006/01")
+	ext := filepath.Ext(fileHeader.Filename)
+	if ext == "" && opts.MimeType != "" {
+		ext = imageprocessor.GetExtensionByMimeType(opts.MimeType)
+	}
+
+	filename := fmt.Sprintf("%s%s", uuid.New(), ext)
+	storageKey := filepath.Join("photos", opts.Category.String(), yearMonth, filename)
+	fullPath := filepath.Join(s.basePath, storageKey)
+
+	// Создать директорию
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Создать файл на диске
+	dst, err := os.Create(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file: %w", err)
+	}
+	defer dst.Close()
+
+	// Копировать с вычислением hash на лету
+	hasher := sha256.New()
+	multiWriter := io.MultiWriter(dst, hasher)
+
+	written, err := io.Copy(multiWriter, src)
+	if err != nil {
+		os.Remove(fullPath) // Удалить частично записанный файл
+		return nil, fmt.Errorf("failed to save file: %w", err)
+	}
+
+	hashStr := hex.EncodeToString(hasher.Sum(nil))
+
+	// Определить MIME type если не указан
+	mimeType := opts.MimeType
+	if mimeType == "" {
+		// Открыть файл для определения MIME
+		file, err := os.Open(fullPath)
+		if err == nil {
+			defer file.Close()
+			buf := make([]byte, 512)
+			n, _ := file.Read(buf)
+			mimeType = imageprocessor.DetectMimeType(buf[:n])
+		}
+	}
+
+	// Получить размеры изображения (открываем файл один раз)
+	var width, height int
+	if s.isImage(mimeType) {
+		file, err := os.Open(fullPath)
+		if err == nil {
+			defer file.Close()
+			data, _ := io.ReadAll(file)
+			width, height, _ = s.processor.GetDimensions(data)
+		}
+	}
+
+	// Создать миниатюру асинхронно (не блокируем ответ)
+	var thumbnailKey string
+	if opts.GenerateThumb && s.isImage(mimeType) {
+		go func() {
+			file, err := os.Open(fullPath)
+			if err == nil {
+				defer file.Close()
+				data, _ := io.ReadAll(file)
+				_, _ = s.generateThumbnail(data, storageKey, opts)
+			}
+		}()
+	}
+
+	// Сформировать Photo
+	photo := &types.Photo{
+		URL:        s.GetURL(storageKey),
+		Thumbnail:  "",
+		FileName:   fileHeader.Filename,
+		Size:       written,
+		Width:      width,
+		Height:     height,
+		MimeType:   mimeType,
+		Hash:       hashStr,
+		StorageKey: storageKey,
+		UploadedAt: now,
+	}
+
+	if thumbnailKey != "" {
+		photo.Thumbnail = s.GetURL(thumbnailKey)
+	}
+
+	s.logger.Info("file uploaded (direct)",
+		zap.String("storage_key", storageKey),
+		zap.String("hash", hashStr[:16]),
+		zap.Int64("size", photo.Size),
+	)
+
+	return photo, nil
 }
 
 // Delete удаляет файл

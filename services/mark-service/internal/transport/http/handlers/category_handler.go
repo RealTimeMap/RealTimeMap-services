@@ -14,10 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	maxFileSize = 5 * 1024 * 1024 // 5MB
-)
-
 var allowedTypes = [4]string{"image/jpeg", "image/png", "image/webp", "image/svg+xml"}
 
 type CategoryHandler struct {

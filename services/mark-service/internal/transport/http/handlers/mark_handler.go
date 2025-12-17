@@ -52,8 +52,8 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		return
 	}
 
-	// Валидация и обработка media файлов
-	photos, err := processPhotoUploads(request.Photos)
+	// Валидация и обработка media файлов (быстрая валидация без чтения в память)
+	photoHeaders, err := processPhotoUploads(request.Photos)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -81,7 +81,7 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		CategoryId:     request.CategoryId,
 		StartAt:        request.StartAt,
 		Duration:       duration,
-		Photos:         photos,
+		PhotoHeaders:   photoHeaders, // Оптимизированный путь - передаем headers напрямую
 		UserInput:      userInput,
 	}
 	res, err := h.service.CreateMark(c.Request.Context(), validData)
@@ -171,8 +171,8 @@ func (h *MarkHandler) UpdateMark(c *gin.Context) {
 		return
 	}
 
-	// Валидация и обработка media файлов
-	photos, err := processPhotoUploads(req.Photos)
+	// Валидация и обработка media файлов (быстрая валидация без чтения в память)
+	photoHeaders, err := processPhotoUploads(req.Photos)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -181,7 +181,7 @@ func (h *MarkHandler) UpdateMark(c *gin.Context) {
 	userData := service.UserInput{UserID: userID, UserName: userName}
 	validData := service.MarkUpdateInput{
 		MarkID:         markID,
-		Photos:         photos,
+		PhotoHeaders:   photoHeaders, // Оптимизированный путь
 		CategoryId:     req.CategoryId,
 		AdditionalInfo: req.AdditionalInfo,
 		UserInput:      userData,
