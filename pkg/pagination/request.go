@@ -1,8 +1,8 @@
 package pagination
 
 type Params struct {
-	Page     int `json:"page" query:"page"`
-	PageSize int `json:"page_size" query:"page_size"`
+	Page     int `json:"page" query:"page" form:"page"`
+	PageSize int `json:"pageSize" query:"pageSize" form:"pageSize"`
 }
 
 func (p *Params) ApplyDefaults(cfg Config) {

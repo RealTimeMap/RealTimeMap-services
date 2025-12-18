@@ -18,11 +18,11 @@ type Container struct {
 	MarkRepo     repository.MarkRepository
 
 	// Сервисы для пользовательский кейсов
-	MarkService     *service.MarkService
+	MarkService     *service.UserMarkService
 	CategoryService *service.CategoryService
 
 	// Сервисы для админских кейсов
-
+	AdminMarkService *service.AdminMarkService
 }
 
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
@@ -45,7 +45,10 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 
 	// Создание сервисов
 	categoryService := service.NewCategoryService(categoryRepo, store)
-	markService := service.NewMarkService(markRepo, categoryRepo, store, p, imageValidator)
+	markService := service.NewUserMarkService(markRepo, categoryRepo, store, p, imageValidator)
+
+	// админские сервисы
+	adminMarkService := service.NewAdminMarkService(markRepo, categoryRepo, store, p, imageValidator)
 
 	// добавление
 	return &Container{
@@ -55,5 +58,8 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 
 		MarkService:     markService,
 		CategoryService: categoryService,
+
+		AdminMarkService: adminMarkService,
 	}
+
 }

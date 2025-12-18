@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/valueobject"
 )
@@ -26,4 +27,8 @@ type MarkRepository interface {
 	Delete(ctx context.Context, id int) error
 	GetByID(ctx context.Context, id int) (*model.Mark, error)
 	Update(ctx context.Context, id int, mark *model.Mark) (*model.Mark, error)
+
+	// Специфические для админ панели запросы
+
+	GetAll(ctx context.Context, params pagination.Params) ([]*model.Mark, int64, error)
 }

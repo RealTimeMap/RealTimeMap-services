@@ -21,11 +21,11 @@ import (
 )
 
 type MarkHandler struct {
-	service *service.MarkService
+	service *service.UserMarkService
 	logger  *zap.Logger
 }
 
-func InitMarkHandler(g *gin.RouterGroup, service *service.MarkService, logger *zap.Logger) {
+func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logger *zap.Logger) {
 	handler := &MarkHandler{service: service, logger: logger}
 	markGroup := g.Group("/mark")
 	{

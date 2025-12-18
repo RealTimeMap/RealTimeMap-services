@@ -45,10 +45,11 @@ func main() {
 
 	router := gin.Default()
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	apiV1 := router.Group("/api/v1")
+	apiV1 := router.Group("/api/v2")
 
 	handlers.InitCategoryHandler(apiV1, container.CategoryService, log)
 	handlers.InitMarkHandler(apiV1, container.MarkService, log)
+	handlers.InitAdminMarkHandler(apiV1, container.AdminMarkService, log)
 	router.Static("./store", "./store")
 	router.Run(":8080")
 }

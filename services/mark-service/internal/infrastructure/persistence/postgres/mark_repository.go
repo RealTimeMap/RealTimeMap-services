@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger/sl"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
@@ -109,7 +110,7 @@ func (r *MarkRepository) GetMarksInArea(ctx context.Context, filter repository.F
 		Where("geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)", bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat).
 		//Where("geohash IN (?)", filter.GeoHashes()).
 		Where("start_at >= ?", filter.StartAt).
-		Where("(end_at) >= ?", filter.EndAt).
+		Where("end_at >= ?", filter.EndAt).
 		Find(&marks).Error
 	if err != nil {
 		r.log.Error("failed to get marks in area", zap.Error(err))
@@ -188,4 +189,15 @@ func (r *MarkRepository) Exist(ctx context.Context, id int) (bool, error) {
 		return false, err
 	}
 	return exists, nil
+}
+
+func (r *MarkRepository) GetAll(ctx context.Context, params pagination.Params) ([]*model.Mark, int64, error) {
+	var marks []*model.Mark
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.Mark{}).Offset(params.Offset()).Limit(params.Limit()).Find(&marks).Count(&count).Error
+	if err != nil {
+		r.log.Error("failed to get marks count", zap.Error(err))
+		return nil, 0, err
+	}
+	return marks, count, nil
 }
