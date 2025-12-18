@@ -1,26 +1,9 @@
 package context
 
 import (
-	"errors"
-
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	"github.com/gin-gonic/gin"
 )
-
-// GetIsAdmin проверяет является ли данный пользователь админом
-func GetIsAdmin(c *gin.Context) (bool, error) {
-	value, exists := c.Get(auth.UserIsAdminKey)
-	if !exists {
-		return false, errors.New("is_admin not found")
-	}
-
-	isAdmin, ok := value.(bool)
-	if !ok {
-		return false, ErrInvalidType
-	}
-
-	return isAdmin, nil
-}
 
 // GetUserID получение user_id из заголовков
 func GetUserID(c *gin.Context) (int, error) {
@@ -49,11 +32,19 @@ func GetUserName(c *gin.Context) (string, error) {
 	return userName, nil
 }
 
-func GetUserInfo(c *gin.Context) (int, string, error) {
+func GetUserInfo(c *gin.Context) (UserInput, error) {
 	userName, err := GetUserName(c)
+	if err != nil {
+		return UserInput{}, err
+	}
 	userID, err := GetUserID(c)
 	if err != nil {
-		return 0, "", err
+		return UserInput{}, err
 	}
-	return userID, userName, nil
+	isAdmin, ok := c.Get(auth.UserIsAdminKey)
+	if !ok {
+		isAdmin = false
+	}
+	return NewUserInput(userID, userName, isAdmin.(bool)), nil
+
 }
