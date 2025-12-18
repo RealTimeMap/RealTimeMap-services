@@ -49,7 +49,8 @@ var (
 	}
 )
 
-// Business domainerrors
+// Business domain errors
+
 var (
 	ErrCannotDeleteActiveCategory = func(categoryName string, markCount int) error {
 		return apperror.NewConflictError(

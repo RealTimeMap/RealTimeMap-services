@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"net/http"
 	"strconv"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/input"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/valueobject"
 	dto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/mark"
 	"github.com/gin-gonic/gin"
@@ -41,9 +41,9 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 	var request dto.RequestMark
 	request.StartAt = time.Now()
 
-	userID, userName, err := helper.GetUserInfo(c)
+	userInfo, err := helper.GetUserInfo(c)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"detail": "unauthorized"})
+		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 
@@ -52,8 +52,8 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		return
 	}
 
-	// Валидация и обработка media файлов (быстрая валидация без чтения в память)
-	photoHeaders, err := processPhotoUploads(request.Photos)
+	// Чтение и валидация фотографий (параллельно, с проверкой MIME из байтов)
+	photos, err := processPhotoUploads(request.Photos)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -61,7 +61,6 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 
 	markName, err := valueobject.NewMarkName(request.MarkName)
 	if err != nil {
-		// Ошибка валидации имени метки (пустое, слишком короткое/длинное)
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
@@ -71,9 +70,8 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	userInput := service.UserInput{UserID: userID, UserName: userName}
-	// Мапинг и создание
-	validData := service.MarkInput{
+	// Маппинг в чистые данные для Service Layer (Clean Architecture)
+	validData := input.MarkInput{
 		MarkName:       markName,
 		AdditionalInfo: request.AdditionalInfo,
 		Geom:           types.Point{Point: orb.Point{request.Longitude, request.Latitude}},
@@ -81,8 +79,8 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		CategoryId:     request.CategoryId,
 		StartAt:        request.StartAt,
 		Duration:       duration,
-		PhotoHeaders:   photoHeaders, // Оптимизированный путь - передаем headers напрямую
-		UserInput:      userInput,
+		Photos:         photos, // Чистые данные []PhotoInput
+		UserInput:      userInfo,
 	}
 	res, err := h.service.CreateMark(c.Request.Context(), validData)
 	if err != nil {
@@ -138,7 +136,7 @@ func (h *MarkHandler) GetMarks(c *gin.Context) {
 }
 
 func (h *MarkHandler) DeleteMark(c *gin.Context) {
-	userID, userName, err := helper.GetUserInfo(c)
+	userInfo, err := helper.GetUserInfo(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -148,8 +146,7 @@ func (h *MarkHandler) DeleteMark(c *gin.Context) {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	userInput := service.UserInput{UserID: userID, UserName: userName}
-	err = h.service.DeleteMark(c.Request.Context(), markID, userInput)
+	err = h.service.DeleteMark(c.Request.Context(), markID, userInfo)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -161,7 +158,7 @@ func (h *MarkHandler) UpdateMark(c *gin.Context) {
 	var req dto.RequestUpdateMark
 
 	markID, err := strconv.Atoi(c.Param("markID"))
-	userID, userName, err := helper.GetUserInfo(c)
+	userInfo, err := helper.GetUserInfo(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -171,20 +168,19 @@ func (h *MarkHandler) UpdateMark(c *gin.Context) {
 		return
 	}
 
-	// Валидация и обработка media файлов (быстрая валидация без чтения в память)
-	photoHeaders, err := processPhotoUploads(req.Photos)
+	// Чтение и валидация фотографий (параллельно, с проверкой MIME из байтов)
+	photos, err := processPhotoUploads(req.Photos)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 
-	userData := service.UserInput{UserID: userID, UserName: userName}
-	validData := service.MarkUpdateInput{
+	validData := input.MarkUpdateInput{
 		MarkID:         markID,
-		PhotoHeaders:   photoHeaders, // Оптимизированный путь
+		Photos:         photos, // Чистые данные []PhotoInput
 		CategoryId:     req.CategoryId,
 		AdditionalInfo: req.AdditionalInfo,
-		UserInput:      userData,
+		UserInput:      userInfo,
 		PhotosToDelete: req.PhotosToDelete,
 	}
 	if req.MarkName != nil {

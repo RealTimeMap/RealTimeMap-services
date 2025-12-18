@@ -37,7 +37,7 @@ func (p *Processor) DecodeImage(data []byte) (image.Image, string, error) {
 	return img, format, nil
 }
 
-// GetDimensions метод возвращает ширину и высоту картинки
+// GetDimensions метод возвращает ширину и высоту картинки (полное декодирование)
 func (p *Processor) GetDimensions(data []byte) (width, height int, err error) {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
@@ -47,13 +47,24 @@ func (p *Processor) GetDimensions(data []byte) (width, height int, err error) {
 	return bounds.Dx(), bounds.Dy(), nil
 }
 
+// GetDimensionsFast возвращает размеры БЕЗ полного декодирования изображения
+// Использует image.DecodeConfig который читает только заголовок файла
+func (p *Processor) GetDimensionsFast(data []byte) (width, height int) {
+	config, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		p.logger.Warn("failed to decode image config", zap.Error(err))
+		return 0, 0
+	}
+	return config.Width, config.Height
+}
+
 // GetDimensionsFromDecoded получает размеры из уже декодированного изображения (без повторного декодирования)
 func (p *Processor) GetDimensionsFromDecoded(img image.Image) (width, height int) {
 	bounds := img.Bounds()
 	return bounds.Dx(), bounds.Dy()
 }
 
-// Resize изменяет размер изображения
+// Resize изменяет размер изображения (качественный, но медленный - Lanczos)
 func (p *Processor) Resize(data []byte, width, height int) ([]byte, error) {
 	img, format, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
@@ -81,6 +92,47 @@ func (p *Processor) Resize(data []byte, width, height int) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// ResizeFast быстрое изменение размера для thumbnails (Box алгоритм вместо Lanczos)
+// Box в ~3-4 раза быстрее Lanczos и достаточен для превью
+func (p *Processor) ResizeFast(data []byte, width, height int) ([]byte, error) {
+	img, format, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Box filter - быстрый алгоритм, достаточный для thumbnails
+	resized := imaging.Fit(img, width, height, imaging.Box)
+
+	// Используем buffer pool
+	buf := bufferPool.Get().(*bytes.Buffer)
+	defer func() {
+		buf.Reset()
+		bufferPool.Put(buf)
+	}()
+
+	// Encode с уменьшенным качеством для thumbnails (быстрее + меньше размер)
+	switch format {
+	case "jpeg", "jpg":
+		err = jpeg.Encode(buf, resized, &jpeg.Options{Quality: 75})
+	case "png":
+		// PNG конвертируем в JPEG для thumbnails (значительно быстрее)
+		err = jpeg.Encode(buf, resized, &jpeg.Options{Quality: 75})
+	case "gif":
+		err = jpeg.Encode(buf, resized, &jpeg.Options{Quality: 75})
+	default:
+		err = jpeg.Encode(buf, resized, &jpeg.Options{Quality: 75})
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode thumbnail: %w", err)
+	}
+
+	// Копируем данные из buffer pool
+	result := make([]byte, buf.Len())
+	copy(result, buf.Bytes())
+	return result, nil
 }
 
 // ResizeFromDecoded изменяет размер уже декодированного изображения (без повторного декодирования)

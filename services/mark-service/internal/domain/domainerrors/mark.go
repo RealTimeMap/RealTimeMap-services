@@ -97,8 +97,8 @@ var (
 )
 
 // Mark business errors
+
 var (
-	// Будущее: лимит создания меток в день
 	ErrDailyMarkLimitExceeded = func(limit int) error {
 		return apperror.NewConflictError(
 			"user_id",

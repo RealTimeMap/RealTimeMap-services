@@ -2,9 +2,13 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"mime/multipart"
+	"net/http"
+	"sync"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 )
 
 const (
@@ -14,9 +18,9 @@ const (
 
 var allowedMimeTypes = []string{"image/jpeg", "image/png", "image/webp"}
 
-// processPhotoUploads выполняет быструю валидацию файлов и возвращает headers для оптимизированной загрузки
-// Это минимизирует задержку - не читаем файлы в память, просто валидируем headers
-func processPhotoUploads(fileHeaders []*multipart.FileHeader) ([]*multipart.FileHeader, error) {
+// processPhotoUploads читает файлы в память параллельно и валидирует их
+// Возвращает чистые данные []PhotoInput для передачи в Service Layer (Clean Architecture)
+func processPhotoUploads(fileHeaders []*multipart.FileHeader) ([]mediavalidator.PhotoInput, error) {
 	if len(fileHeaders) == 0 {
 		return nil, nil
 	}
@@ -31,46 +35,116 @@ func processPhotoUploads(fileHeaders []*multipart.FileHeader) ([]*multipart.File
 		)
 	}
 
-	// Быстрая валидация каждого файла (без чтения в память)
-	if err := validatePhotoHeaders(fileHeaders); err != nil {
+	// Параллельное чтение файлов в память
+	photos, err := readFilesParallel(fileHeaders)
+	if err != nil {
 		return nil, err
 	}
 
-	return fileHeaders, nil
+	return photos, nil
 }
 
-// validatePhotoHeaders проверяет заголовки загруженных файлов без чтения в память
-// Это быстрая валидация перед передачей в storage
-func validatePhotoHeaders(fileHeaders []*multipart.FileHeader) error {
-	for i, fileHeader := range fileHeaders {
-		// Проверка размера
-		if fileHeader.Size > maxFileSize {
-			return apperror.NewFieldValidationError(
-				fmt.Sprintf("photos[%d]", i),
-				fmt.Sprintf("file size exceeds maximum allowed size of %d MB", maxFileSize/(1024*1024)),
-				"value_error.file.too_large",
-				fileHeader.Size,
-			)
-		}
-
-		// Проверка Content-Type header (предварительная)
-		contentType := fileHeader.Header.Get("Content-Type")
-		if !isAllowedContentType(contentType) {
-			return apperror.NewInvalidMimeTypeError(
-				fmt.Sprintf("photos[%d]", i),
-				allowedMimeTypes,
-				contentType,
-			)
-		}
+// readFilesParallel читает файлы параллельно и валидирует MIME type из реальных байтов
+func readFilesParallel(fileHeaders []*multipart.FileHeader) ([]mediavalidator.PhotoInput, error) {
+	type readResult struct {
+		photo mediavalidator.PhotoInput
+		index int
+		err   error
 	}
 
-	return nil
+	resultChan := make(chan readResult, len(fileHeaders))
+	var wg sync.WaitGroup
+
+	// Параллельное чтение
+	for i, fh := range fileHeaders {
+		wg.Add(1)
+		go func(index int, header *multipart.FileHeader) {
+			defer wg.Done()
+
+			photo, err := readSingleFile(index, header)
+			resultChan <- readResult{photo: photo, index: index, err: err}
+		}(i, fh)
+	}
+
+	// Закрыть канал после завершения
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// Сбор результатов с сохранением порядка
+	results := make([]readResult, 0, len(fileHeaders))
+	for result := range resultChan {
+		if result.err != nil {
+			return nil, result.err // Возвращаем первую ошибку
+		}
+		results = append(results, result)
+	}
+
+	// Сортировка по индексу для сохранения порядка
+	photos := make([]mediavalidator.PhotoInput, len(fileHeaders))
+	for _, r := range results {
+		photos[r.index] = r.photo
+	}
+
+	return photos, nil
 }
 
-// isAllowedContentType проверяет допустимость типа файла
-func isAllowedContentType(contentType string) bool {
+// readSingleFile читает один файл и валидирует его
+func readSingleFile(index int, header *multipart.FileHeader) (mediavalidator.PhotoInput, error) {
+	// Проверка размера
+	if header.Size > maxFileSize {
+		return mediavalidator.PhotoInput{}, apperror.NewFieldValidationError(
+			fmt.Sprintf("photos[%d]", index),
+			fmt.Sprintf("file size exceeds maximum allowed size of %d MB", maxFileSize/(1024*1024)),
+			"value_error.file.too_large",
+			header.Size,
+		)
+	}
+
+	// Открыть файл
+	file, err := header.Open()
+	if err != nil {
+		return mediavalidator.PhotoInput{}, apperror.NewFieldValidationError(
+			fmt.Sprintf("photos[%d]", index),
+			"failed to open uploaded file",
+			"value_error.file.open",
+			nil,
+		)
+	}
+	defer file.Close()
+
+	// Читаем в память
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return mediavalidator.PhotoInput{}, apperror.NewFieldValidationError(
+			fmt.Sprintf("photos[%d]", index),
+			"failed to read uploaded file",
+			"value_error.file.read",
+			nil,
+		)
+	}
+
+	// Валидация MIME type из реальных байтов (не из HTTP заголовка!)
+	mimeType := http.DetectContentType(data)
+	if !isAllowedMimeType(mimeType) {
+		return mediavalidator.PhotoInput{}, apperror.NewInvalidMimeTypeError(
+			fmt.Sprintf("photos[%d]", index),
+			allowedMimeTypes,
+			mimeType,
+		)
+	}
+
+	return mediavalidator.PhotoInput{
+		Data:     data,
+		FileName: header.Filename,
+	}, nil
+}
+
+// isAllowedMimeType проверяет допустимость MIME типа
+func isAllowedMimeType(mimeType string) bool {
 	for _, allowed := range allowedMimeTypes {
-		if allowed == contentType {
+		if allowed == mimeType {
 			return true
 		}
 	}

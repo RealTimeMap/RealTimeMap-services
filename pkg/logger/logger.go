@@ -44,7 +44,7 @@ func New(opts ...Option) *zap.Logger {
 
 	core := zapcore.NewCore(encoder, options.Output, options.Level)
 
-	zapOpts := []zap.Option{}
+	var zapOpts []zap.Option
 	if options.AddCaller {
 		zapOpts = append(zapOpts, zap.AddCaller())
 	}

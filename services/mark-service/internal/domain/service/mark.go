@@ -7,60 +7,29 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"mime/multipart"
 	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/events"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/input"
 	_ "golang.org/x/image/webp"
+
+	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/valueobject"
 )
 
 const (
-	maxPhotosPerMark     = 10    // Максимум 10 фото
-	maxStartAtPastDays   = 1     // Не более 1 дня назад
-	maxStartAtFutureDays = 30    // Не более 30 дней вперед
-	maxMarksPerDay       = 10000 // Лимит на создание меток для пользователя
+	maxPhotosPerMark     = 10  // Максимум 10 фото
+	maxStartAtPastDays   = 1   // Не более 1 дня назад
+	maxStartAtFutureDays = 30  // Не более 30 дней вперед
+	maxMarksPerDay       = 100 // Лимит на создание меток для пользователя TODO уменьшить для production версии
 )
-
-type UserInput struct {
-	UserName string
-	UserID   int
-}
-
-type MarkInput struct {
-	MarkName       valueobject.MarkName
-	AdditionalInfo *string
-	CategoryId     int
-	StartAt        time.Time
-	Duration       valueobject.Duration
-	Geom           types.Point
-	Geohash        string
-	Photos         []mediavalidator.PhotoInput // Для обратной совместимости
-	PhotoHeaders   []*multipart.FileHeader     // Оптимизированный путь
-	UserInput
-}
-
-type MarkUpdateInput struct {
-	MarkID         int
-	MarkName       *valueobject.MarkName
-	AdditionalInfo *string
-	CategoryId     *int
-	Duration       *valueobject.Duration
-
-	PhotosToDelete []string
-	Photos         []mediavalidator.PhotoInput // Обратная совместимость
-	PhotoHeaders   []*multipart.FileHeader     // Оптимизированный путь
-
-	UserInput
-}
 
 type MarkService struct {
 	markRepo       repository.MarkRepository
@@ -84,7 +53,10 @@ func NewMarkService(markRepo repository.MarkRepository,
 	}
 }
 
-func (s *MarkService) CreateMark(ctx context.Context, input MarkInput) (*model.Mark, error) {
+// Основные методы
+
+// CreateMark Создание новой метки
+func (s *MarkService) CreateMark(ctx context.Context, input input.MarkInput) (*model.Mark, error) {
 	// 1. Валидация входных данных
 	if err := s.validateInput(ctx, input); err != nil {
 		return nil, err
@@ -92,15 +64,7 @@ func (s *MarkService) CreateMark(ctx context.Context, input MarkInput) (*model.M
 
 	// 2. Загрузка фото в storage (если есть)
 	var photos types.Photos
-	if len(input.PhotoHeaders) > 0 {
-		// Оптимизированный путь: прямая загрузка из multipart
-		uploadedPhotos, err := s.uploadPhotosDirect(ctx, input.PhotoHeaders)
-		if err != nil {
-			return nil, domainerrors.ErrStorageOperation("upload photos", err)
-		}
-		photos = uploadedPhotos
-	} else if len(input.Photos) > 0 {
-		// Обратная совместимость: загрузка из памяти
+	if len(input.Photos) > 0 {
 		uploadedPhotos, err := s.uploadPhotos(ctx, input.Photos)
 		if err != nil {
 			return nil, domainerrors.ErrStorageOperation("upload photos", err)
@@ -131,13 +95,83 @@ func (s *MarkService) CreateMark(ctx context.Context, input MarkInput) (*model.M
 	return mark, nil
 }
 
-func (s *MarkService) sendCreateEvent(ctx context.Context, mark *model.Mark) {
-	payload := events.NewMarkPayload(mark.ID, mark.CategoryID, mark.UserID, mark.MarkName, mark.AdditionalInfo)
-	event := events.NewMarkCreate(payload)
-	_ = s.producer.Publish(ctx, fmt.Sprintf("%d", mark.ID), event)
+// GetMarksInArea получение меток в области карты
+func (s *MarkService) GetMarksInArea(ctx context.Context, filter repository.Filter) ([]*model.Mark, error) {
+	marks, err := s.markRepo.GetMarksInArea(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	return marks, nil
+
 }
 
-func (s *MarkService) validateInput(ctx context.Context, input MarkInput) error {
+// GetMarksInCluster получение сгруппированных меток по кластерам для отображения при большой области карты
+func (s *MarkService) GetMarksInCluster(ctx context.Context, filter repository.Filter) ([]*model.Cluster, error) {
+	clusters, err := s.markRepo.GetMarksInCluster(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	return clusters, nil
+}
+
+// DeleteMark удаление метки
+func (s *MarkService) DeleteMark(ctx context.Context, id int, user helper.UserInput) error {
+	mark, err := s.markRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if mark.UserID != user.UserID {
+		return domainerrors.ErrPermissionDenied()
+	}
+
+	if err := s.markRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+	return nil
+}
+
+// UpdateMark частичное обновление метки
+func (s *MarkService) UpdateMark(ctx context.Context, input input.MarkUpdateInput) (*model.Mark, error) {
+	// 1. Получение и проверка прав
+	mark, err := s.markRepo.GetByID(ctx, input.MarkID)
+	if err != nil {
+		return nil, err
+	}
+	if err = s.checkOwnerShip(mark, input.UserID); err != nil {
+		return nil, err
+	}
+
+	// 2. Обработка фотографий (добавление новых + удаление старых)
+	updatedPhotos, err := s.updatePhotos(ctx, mark.Photos, input.Photos, input.PhotosToDelete)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Применение обновлений
+	s.applyUpdates(mark, input)
+	mark.Photos = updatedPhotos
+
+	// 4. Сохранение в БД
+	newMark, err := s.markRepo.Update(ctx, input.MarkID, mark)
+	if err != nil {
+		return nil, err
+	}
+	return newMark, nil
+}
+
+// DetailMark предоставляет подробный просомтр для определеной метки
+func (s *MarkService) DetailMark(ctx context.Context, id int) (*model.Mark, error) {
+	mark, err := s.markRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return mark, nil
+}
+
+// Валидация
+
+// validateInput Проверка входных данных
+func (s *MarkService) validateInput(ctx context.Context, input input.MarkInput) error {
 	// 1. Валидация категории (существует и активна)
 	category, err := s.categoryRepo.GetByID(ctx, input.CategoryId)
 	if err != nil {
@@ -165,91 +199,7 @@ func (s *MarkService) validateInput(ctx context.Context, input MarkInput) error 
 		return domainerrors.ErrStartAtTooFuture(maxStartAtFutureDays)
 	}
 
-	// 5. Валидация фото (только для старого пути через Photos)
-	// Для PhotoHeaders валидация уже произошла в handler
-	if len(input.Photos) > 0 {
-		if err := s.mediaValidator.ValidatePhotos(input.Photos); err != nil {
-			return err
-		}
-	}
-
 	return nil
-}
-
-// uploadPhotos загружает все фото в storage
-func (s *MarkService) uploadPhotos(ctx context.Context, photos []mediavalidator.PhotoInput) (types.Photos, error) {
-	// Подготовка файлов для загрузки
-	fileUploads := make([]storage.FileUpload, 0, len(photos))
-
-	for _, photo := range photos {
-		fileUploads = append(fileUploads, storage.FileUpload{
-			Reader: bytes.NewReader(photo.Data),
-			Options: storage.UploadOptions{
-				FileName:      photo.FileName,
-				Category:      storage.CategoryMarkPhoto,
-				MaxSize:       5 * 1024 * 1024, // 5MB
-				GenerateThumb: false,
-				ThumbWidth:    300,
-				ThumbHeight:   300,
-				Optimize:      true, // Отключаем оптимизацию для ускорения
-			},
-		})
-	}
-
-	// Загрузка всех фото
-	uploadedPhotos, err := s.store.UploadMultiple(ctx, fileUploads)
-	if err != nil {
-		return nil, err
-	}
-
-	return uploadedPhotos, nil
-}
-
-// uploadPhotosDirect загружает фото напрямую из multipart.FileHeader (максимально оптимизированный путь)
-func (s *MarkService) uploadPhotosDirect(ctx context.Context, photoHeaders []*multipart.FileHeader) (types.Photos, error) {
-	// Приведение к конкретному типу LocalStorage
-	localStore, ok := s.store.(*storage.LocalStorage)
-	if !ok {
-		// Fallback на старый метод если storage не LocalStorage
-		photos := make([]mediavalidator.PhotoInput, 0, len(photoHeaders))
-		for _, header := range photoHeaders {
-			file, err := header.Open()
-			if err != nil {
-				continue
-			}
-			defer file.Close()
-
-			data := make([]byte, header.Size)
-			_, err = file.Read(data)
-			if err != nil {
-				continue
-			}
-
-			photos = append(photos, mediavalidator.PhotoInput{
-				Data:     data,
-				FileName: header.Filename,
-			})
-		}
-		return s.uploadPhotos(ctx, photos)
-	}
-
-	// Используем МАКСИМАЛЬНО оптимизированный метод:
-	// - Worker Pool (контроль параллелизма)
-	// - Pipeline обработка (декодирование ОДИН раз)
-	// - Синхронные thumbnails (без потери URL)
-	uploadedPhotos, err := localStore.UploadMultipartOptimized(ctx, photoHeaders, storage.UploadOptions{
-		Category:      storage.CategoryMarkPhoto,
-		MaxSize:       5 * 1024 * 1024, // 5MB
-		GenerateThumb: true,
-		ThumbWidth:    300,
-		ThumbHeight:   300,
-		Optimize:      false, // Можно включить для дополнительной оптимизации
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return uploadedPhotos, nil
 }
 
 // validateLimit проверка дневных лимитов
@@ -262,95 +212,19 @@ func (s *MarkService) validateLimit(ctx context.Context, userID int) error {
 		return domainerrors.ErrDailyMarkLimitExceeded(maxMarksPerDay)
 	}
 	return nil
-
 }
 
-// GetMarksInArea получение меток в области карты
-func (s *MarkService) GetMarksInArea(ctx context.Context, filter repository.Filter) ([]*model.Mark, error) {
-	marks, err := s.markRepo.GetMarksInArea(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	return marks, nil
-
-}
-
-// GetMarksInCluster получение сгруппированных меток по кластерам для отображения при большой области карты
-func (s *MarkService) GetMarksInCluster(ctx context.Context, filter repository.Filter) ([]*model.Cluster, error) {
-	clusters, err := s.markRepo.GetMarksInCluster(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	return clusters, nil
-}
-
-// CheckExistsMark проверяет существования метки
-func (s *MarkService) CheckExistsMark(ctx context.Context, id int) error {
-	exists, err := s.markRepo.Exist(ctx, id)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return domainerrors.ErrMarkNotFound(id)
-	}
-	return nil
-}
-
-func (s *MarkService) DeleteMark(ctx context.Context, id int, user UserInput) error {
-	mark, err := s.markRepo.GetByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if mark.UserID != user.UserID {
+// checkOwnerShip вспомогательный метод на проверку прав
+func (s *MarkService) checkOwnerShip(mark *model.Mark, userID int) error {
+	fmt.Println(userID)
+	if mark.UserID != userID {
 		return domainerrors.ErrPermissionDenied()
 	}
-
-	if err := s.markRepo.Delete(ctx, id); err != nil {
-		return err
-	}
 	return nil
 }
 
-func (s *MarkService) UpdateMark(ctx context.Context, input MarkUpdateInput) (*model.Mark, error) {
-	// 1. Получение и проверка прав
-	mark, err := s.markRepo.GetByID(ctx, input.MarkID)
-	if err != nil {
-		return nil, err
-	}
-	if err = s.checkOwnerShip(mark, input.UserID); err != nil {
-		return nil, err
-	}
-
-	// 2. Обработка фотографий (с поддержкой оптимизированного пути)
-	var updatedPhotos types.Photos
-	if len(input.PhotoHeaders) > 0 {
-		// Оптимизированный путь: прямая загрузка из multipart
-		updatedPhotos, err = s.updatePhotosOptimized(ctx, mark.Photos, input.PhotoHeaders, input.PhotosToDelete)
-	} else if len(input.Photos) > 0 {
-		// Обратная совместимость
-		updatedPhotos, err = s.updatePhotos(ctx, mark.Photos, input.Photos, input.PhotosToDelete)
-	} else {
-		// Только удаление
-		updatedPhotos, err = s.updatePhotos(ctx, mark.Photos, nil, input.PhotosToDelete)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	// 3. Применение обновлений
-	s.applyUpdates(mark, input)
-	mark.Photos = updatedPhotos
-
-	// 4. Сохранение в БД
-	newMark, err := s.markRepo.Update(ctx, input.MarkID, mark)
-	if err != nil {
-		return nil, err
-	}
-	return newMark, nil
-}
-
-func (s *MarkService) applyUpdates(mark *model.Mark, input MarkUpdateInput) {
+// applyUpdates вспомогательная функция для обовлнеия новых данных
+func (s *MarkService) applyUpdates(mark *model.Mark, input input.MarkUpdateInput) {
 	if input.MarkName != nil {
 		mark.MarkName = input.MarkName.String()
 	}
@@ -362,57 +236,7 @@ func (s *MarkService) applyUpdates(mark *model.Mark, input MarkUpdateInput) {
 	}
 }
 
-func (s *MarkService) checkOwnerShip(mark *model.Mark, userID int) error {
-	fmt.Println(userID)
-	if mark.UserID != userID {
-		return domainerrors.ErrPermissionDenied()
-	}
-	return nil
-}
-
-// updatePhotosOptimized обрабатывает обновление фотографий (оптимизированный путь):
-// 1. Удаляет старые фото из storage и массива
-// 2. Загружает новые фото в storage через оптимизированный метод
-// 3. Возвращает обновленный массив фотографий
-func (s *MarkService) updatePhotosOptimized(ctx context.Context, currentPhotos types.Photos, newPhotoHeaders []*multipart.FileHeader, photosToDelete []string) (types.Photos, error) {
-	// 1. Создаем map для быстрого поиска удаляемых фото (по URL)
-	deleteMap := make(map[string]bool, len(photosToDelete))
-	for _, url := range photosToDelete {
-		deleteMap[url] = true
-	}
-
-	// 2. Фильтруем старые фото и удаляем из storage
-	var keptPhotos types.Photos
-	for _, photo := range currentPhotos {
-		if deleteMap[photo.URL] {
-			// Удаляем из storage (игнорируем ошибки, так как файл может быть уже удален)
-			_ = s.store.Delete(ctx, photo.StorageKey)
-		} else {
-			// Сохраняем фото, которое не удаляется
-			keptPhotos = append(keptPhotos, photo)
-		}
-	}
-
-	// 3. Загружаем новые фото в storage (оптимизированный путь)
-	var uploadedPhotos types.Photos
-	if len(newPhotoHeaders) > 0 {
-		var err error
-		uploadedPhotos, err = s.uploadPhotosDirect(ctx, newPhotoHeaders)
-		if err != nil {
-			return nil, domainerrors.ErrStorageOperation("upload photos", err)
-		}
-	}
-
-	// 4. Объединяем старые (не удаленные) + новые
-	resultPhotos := append(keptPhotos, uploadedPhotos...)
-
-	// 5. Валидация общего количества фото
-	if len(resultPhotos) > maxPhotosPerMark {
-		return nil, domainerrors.ErrTooManyPhotos(len(resultPhotos), maxPhotosPerMark)
-	}
-
-	return resultPhotos, nil
-}
+// Медиа файлы
 
 // updatePhotos обрабатывает обновление фотографий:
 // 1. Удаляет старые фото из storage и массива
@@ -458,10 +282,38 @@ func (s *MarkService) updatePhotos(ctx context.Context, currentPhotos types.Phot
 	return resultPhotos, nil
 }
 
-func (s *MarkService) DetailMark(ctx context.Context, id int) (*model.Mark, error) {
-	mark, err := s.markRepo.GetByID(ctx, id)
+// uploadPhotos загружает все фото в storage
+func (s *MarkService) uploadPhotos(ctx context.Context, photos []mediavalidator.PhotoInput) (types.Photos, error) {
+	// Подготовка файлов для загрузки
+	fileUploads := make([]storage.FileUpload, 0, len(photos))
+
+	for _, photo := range photos {
+		fileUploads = append(fileUploads, storage.FileUpload{
+			Reader: bytes.NewReader(photo.Data),
+			Options: storage.UploadOptions{
+				FileName:      photo.FileName,
+				Category:      storage.CategoryMarkPhoto,
+				MaxSize:       5 * 1024 * 1024, // 5MB
+				GenerateThumb: false,
+				Optimize:      false, // Отключаем оптимизацию для ускорения
+			},
+		})
+	}
+
+	// Загрузка всех фото
+	uploadedPhotos, err := s.store.UploadMultiple(ctx, fileUploads)
 	if err != nil {
 		return nil, err
 	}
-	return mark, nil
+
+	return uploadedPhotos, nil
+}
+
+// Ивенты
+
+// sendCreateEvent отсылает ивент в kafka
+func (s *MarkService) sendCreateEvent(ctx context.Context, mark *model.Mark) {
+	payload := events.NewMarkPayload(mark.ID, mark.CategoryID, mark.UserID, mark.MarkName, mark.AdditionalInfo)
+	event := events.NewMarkCreate(payload)
+	_ = s.producer.Publish(ctx, fmt.Sprintf("%d", mark.ID), event)
 }

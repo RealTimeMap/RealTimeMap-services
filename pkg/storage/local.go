@@ -342,7 +342,7 @@ func (s *LocalStorage) UploadMultipartDirect(ctx context.Context, files []*multi
 }
 
 // uploadSingleMultipartOptimized - максимально оптимизированная загрузка с pipeline обработкой
-// Декодирует изображение ОДИН раз и параллельно создает миниатюру
+// Читает файл в память ОДИН раз, параллельно вычисляет hash и создает миниатюру
 func (s *LocalStorage) uploadSingleMultipartOptimized(ctx context.Context, fileHeader *multipart.FileHeader, opts UploadOptions) (*types.Photo, error) {
 	// Валидация категории
 	if err := opts.Category.Validate(); err != nil {
@@ -361,12 +361,33 @@ func (s *LocalStorage) uploadSingleMultipartOptimized(ctx context.Context, fileH
 	}
 	defer src.Close()
 
+	// ОПТИМИЗАЦИЯ: Читаем файл в память ОДИН раз (избегаем двойного I/O)
+	data, err := io.ReadAll(src)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read uploaded file: %w", err)
+	}
+
+	// Вычисляем hash из памяти
+	hash := sha256.Sum256(data)
+	hashStr := hex.EncodeToString(hash[:])
+
+	// Определить MIME type из содержимого
+	mimeType := opts.MimeType
+	if mimeType == "" {
+		mimeType = imageprocessor.DetectMimeType(data)
+	}
+
+	// Валидация MIME type ДО записи на диск
+	if !s.isValidMimeType(mimeType) {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidMimeType, mimeType)
+	}
+
 	// Сгенерировать путь для сохранения
 	now := time.Now()
 	yearMonth := now.Format("2006/01")
 	ext := filepath.Ext(fileHeader.Filename)
-	if ext == "" && opts.MimeType != "" {
-		ext = imageprocessor.GetExtensionByMimeType(opts.MimeType)
+	if ext == "" {
+		ext = imageprocessor.GetExtensionByMimeType(mimeType)
 	}
 
 	filename := fmt.Sprintf("%s%s", uuid.New(), ext)
@@ -378,96 +399,62 @@ func (s *LocalStorage) uploadSingleMultipartOptimized(ctx context.Context, fileH
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Создать файл на диске
-	dst, err := os.Create(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create file: %w", err)
-	}
-	defer dst.Close()
-
-	// Копировать с вычислением hash на лету
-	hasher := sha256.New()
-	multiWriter := io.MultiWriter(dst, hasher)
-
-	written, err := io.Copy(multiWriter, src)
-	if err != nil {
-		os.Remove(fullPath) // Удалить частично записанный файл
-		return nil, fmt.Errorf("failed to save file: %w", err)
-	}
-
-	hashStr := hex.EncodeToString(hasher.Sum(nil))
-
-	// Прочитать файл ОДИН раз для обработки
-	data, err := os.ReadFile(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read saved file: %w", err)
-	}
-
-	// Определить MIME type если не указан
-	mimeType := opts.MimeType
-	if mimeType == "" {
-		mimeType = imageprocessor.DetectMimeType(data)
-	}
-
-	// Валидация MIME type
-	if !s.isValidMimeType(mimeType) {
-		os.Remove(fullPath)
-		return nil, fmt.Errorf("%w: %s", ErrInvalidMimeType, mimeType)
-	}
-
 	var width, height int
 	var thumbnailKey string
 
-	// КЛЮЧЕВАЯ ОПТИМИЗАЦИЯ: Декодируем изображение ОДИН раз
+	// Параллельная обработка: запись на диск + обработка изображения
+	var wg sync.WaitGroup
+	var writeErr error
+	var thumbData []byte
+	var thumbErr error
+
+	// 1. Запись файла на диск (в отдельной горутине)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		writeErr = os.WriteFile(fullPath, data, 0644)
+	}()
+
+	// 2. Обработка изображения (если это изображение)
 	if s.isImage(mimeType) {
-		img, format, err := s.processor.DecodeImage(data)
-		if err != nil {
-			s.logger.Warn("failed to decode image", zap.Error(err))
+		// Получаем размеры БЕЗ полного декодирования (быстро)
+		width, height = s.processor.GetDimensionsFast(data)
+
+		// Генерация thumbnail только если нужно
+		if opts.GenerateThumb {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				thumbWidth := opts.ThumbWidth
+				thumbHeight := opts.ThumbHeight
+				if thumbWidth == 0 {
+					thumbWidth = 300
+				}
+				if thumbHeight == 0 {
+					thumbHeight = 300
+				}
+				thumbData, thumbErr = s.processor.ResizeFast(data, thumbWidth, thumbHeight)
+			}()
+		}
+	}
+
+	wg.Wait()
+
+	// Проверка ошибки записи
+	if writeErr != nil {
+		return nil, fmt.Errorf("failed to save file: %w", writeErr)
+	}
+
+	// Сохранить миниатюру (если была сгенерирована)
+	if opts.GenerateThumb && thumbErr == nil && thumbData != nil {
+		ext := filepath.Ext(storageKey)
+		thumbKey := storageKey[:len(storageKey)-len(ext)] + "_thumb" + ext
+		thumbPath := filepath.Join(s.basePath, thumbKey)
+
+		if err := os.WriteFile(thumbPath, thumbData, 0644); err != nil {
+			s.logger.Warn("failed to save thumbnail", zap.Error(err))
 		} else {
-			// Параллельная обработка декодированного изображения
-			var wg sync.WaitGroup
-			var thumbData []byte
-			var thumbErr error
-
-			wg.Add(2)
-
-			// 1. Получить размеры (из уже декодированного)
-			go func() {
-				defer wg.Done()
-				width, height = s.processor.GetDimensionsFromDecoded(img)
-			}()
-
-			// 2. Создать миниатюру (из уже декодированного)
-			go func() {
-				defer wg.Done()
-				if opts.GenerateThumb {
-					thumbWidth := opts.ThumbWidth
-					thumbHeight := opts.ThumbHeight
-					if thumbWidth == 0 {
-						thumbWidth = 300
-					}
-					if thumbHeight == 0 {
-						thumbHeight = 300
-					}
-
-					thumbData, thumbErr = s.processor.ResizeFromDecoded(img, format, thumbWidth, thumbHeight)
-				}
-			}()
-
-			wg.Wait()
-
-			// Сохранить миниатюру СИНХРОННО (чтобы вернуть URL)
-			if opts.GenerateThumb && thumbErr == nil && thumbData != nil {
-				ext := filepath.Ext(storageKey)
-				thumbKey := storageKey[:len(storageKey)-len(ext)] + "_thumb" + ext
-				thumbPath := filepath.Join(s.basePath, thumbKey)
-
-				if err := os.WriteFile(thumbPath, thumbData, 0644); err != nil {
-					s.logger.Warn("failed to save thumbnail", zap.Error(err))
-				} else {
-					thumbnailKey = thumbKey
-				}
-			}
+			thumbnailKey = thumbKey
 		}
 	}
 
@@ -476,7 +463,7 @@ func (s *LocalStorage) uploadSingleMultipartOptimized(ctx context.Context, fileH
 		URL:        s.GetURL(storageKey),
 		Thumbnail:  "",
 		FileName:   fileHeader.Filename,
-		Size:       written,
+		Size:       int64(len(data)),
 		Width:      width,
 		Height:     height,
 		MimeType:   mimeType,
