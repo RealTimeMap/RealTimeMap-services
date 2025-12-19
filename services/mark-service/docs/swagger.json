@@ -1,0 +1,201 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Описание вашего API",
+        "title": "Your API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/mark": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mark"
+                ],
+                "summary": "Получение актуальных меток через HTTP",
+                "parameters": [
+                    {
+                        "description": "фильтры",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.FilterParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список меток",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.ResponseMark"
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Список кластеров",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.ResponseCluster"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.UserResponse": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_category.ResponseCategory": {
+            "type": "object",
+            "properties": {
+                "categoryName": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coordinates": {
+            "type": "object",
+            "properties": {
+                "coordinates": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coords": {
+            "type": "object",
+            "required": [
+                "lat",
+                "lon"
+            ],
+            "properties": {
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.FilterParams": {
+            "type": "object",
+            "required": [
+                "screen",
+                "startAt"
+            ],
+            "properties": {
+                "endAt": {
+                    "type": "string"
+                },
+                "screen": {
+                    "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Screen"
+                },
+                "startAt": {
+                    "type": "string"
+                },
+                "zoomLevel": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.ResponseCluster": {
+            "type": "object",
+            "properties": {
+                "center": {
+                    "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coordinates"
+                },
+                "count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.ResponseMark": {
+            "type": "object",
+            "properties": {
+                "additionalInfo": {
+                    "type": "string"
+                },
+                "category": {
+                    "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_category.ResponseCategory"
+                },
+                "geom": {
+                    "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coordinates"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "markName": {
+                    "type": "string"
+                },
+                "owner": {
+                    "$ref": "#/definitions/dto.UserResponse"
+                }
+            }
+        },
+        "github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Screen": {
+            "type": "object",
+            "required": [
+                "center",
+                "leftTop",
+                "rightBottom"
+            ],
+            "properties": {
+                "center": {
+                    "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coords"
+                },
+                "leftTop": {
+                    "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coords"
+                },
+                "rightBottom": {
+                    "$ref": "#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coords"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

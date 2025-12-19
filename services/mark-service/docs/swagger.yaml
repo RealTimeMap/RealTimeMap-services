@@ -1,0 +1,132 @@
+basePath: /api/v1
+definitions:
+  dto.UserResponse:
+    properties:
+      avatar:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+  github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_category.ResponseCategory:
+    properties:
+      categoryName:
+        type: string
+      color:
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+    type: object
+  github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coordinates:
+    properties:
+      coordinates:
+        items:
+          type: number
+        type: array
+      type:
+        type: string
+    type: object
+  github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coords:
+    properties:
+      lat:
+        type: number
+      lon:
+        type: number
+    required:
+    - lat
+    - lon
+    type: object
+  github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.FilterParams:
+    properties:
+      endAt:
+        type: string
+      screen:
+        $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Screen'
+      startAt:
+        type: string
+      zoomLevel:
+        type: integer
+    required:
+    - screen
+    - startAt
+    type: object
+  github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.ResponseCluster:
+    properties:
+      center:
+        $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coordinates'
+      count:
+        type: integer
+    type: object
+  github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.ResponseMark:
+    properties:
+      additionalInfo:
+        type: string
+      category:
+        $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_category.ResponseCategory'
+      geom:
+        $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coordinates'
+      id:
+        type: integer
+      markName:
+        type: string
+      owner:
+        $ref: '#/definitions/dto.UserResponse'
+    type: object
+  github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Screen:
+    properties:
+      center:
+        $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coords'
+      leftTop:
+        $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coords'
+      rightBottom:
+        $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.Coords'
+    required:
+    - center
+    - leftTop
+    - rightBottom
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Описание вашего API
+  title: Your API
+  version: "1.0"
+paths:
+  /mark:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: фильтры
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.FilterParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список меток
+          schema:
+            items:
+              $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.ResponseMark'
+            type: array
+        "201":
+          description: Список кластеров
+          schema:
+            items:
+              $ref: '#/definitions/github_com_RealTimeMap_RealTimeMap-backend_services_mark-service_internal_transport_http_dto_mark.ResponseCluster'
+            type: array
+      summary: Получение актуальных меток через HTTP
+      tags:
+      - mark
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
