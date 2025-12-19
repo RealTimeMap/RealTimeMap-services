@@ -25,21 +25,3 @@ type RequestUpdateMark struct {
 	PhotosToDelete []string                `form:"photosToDelete" binding:"-"`
 	Photos         []*multipart.FileHeader `form:"photos" binding:"-"`
 }
-
-type Coords struct {
-	Longitude float64 `json:"lon" binding:"required,longitude"`
-	Latitude  float64 `json:"lat" binding:"required,latitude"`
-}
-
-type Screen struct {
-	LeftTop     Coords `json:"leftTop" binding:"required"`
-	Center      Coords `json:"center" binding:"required"`
-	RightBottom Coords `json:"rightBottom" binding:"required"`
-}
-
-type FilterParams struct {
-	Screen    Screen    `json:"screen" binding:"required"`
-	ZoomLevel int       `json:"zoomLevel" binding:"-"`
-	StartAt   time.Time `json:"startAt" binding:"required"`
-	EndAt     time.Time `json:"endAt" binding:"-"`
-}

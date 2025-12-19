@@ -8,6 +8,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/socket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -23,6 +24,10 @@ type Container struct {
 
 	// Сервисы для админских кейсов
 	AdminMarkService *service.AdminMarkService
+
+	// Сокет
+
+	Socket *socket.SocketServer
 }
 
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
@@ -57,6 +62,9 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	// админские сервисы
 	adminMarkService := service.NewAdminMarkService(markRepo, categoryRepo, store, p, imageValidator)
 
+	// Сокеты
+	socketServer := socket.New(log, markService)
+
 	// добавление
 	return &Container{
 
@@ -67,6 +75,8 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		CategoryService: categoryService,
 
 		AdminMarkService: adminMarkService,
+
+		Socket: socketServer,
 	}
 
 }

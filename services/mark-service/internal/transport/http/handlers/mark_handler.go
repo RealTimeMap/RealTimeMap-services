@@ -9,10 +9,10 @@ import (
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/input"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/valueobject"
+	subdto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/dto/mark"
 	dto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/mark"
 	"github.com/gin-gonic/gin"
 	"github.com/mmcloughlin/geohash"
@@ -100,7 +100,7 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 // @Success      200 {array} dto.ResponseCluster "Список кластеров"
 // @Router       /mark [post]
 func (h *MarkHandler) GetMarks(c *gin.Context) {
-	var params dto.FilterParams
+	var params subdto.FilterParams
 	params.ZoomLevel = 15
 	const zoomSelector = 12
 	params.EndAt = time.Now().UTC()
@@ -109,14 +109,7 @@ func (h *MarkHandler) GetMarks(c *gin.Context) {
 		validation.AbortWithBindingError(c, err)
 		return
 	}
-	validParams := repository.Filter{BoundingBox: valueobject.BoundingBox{
-		LeftTop:     valueobject.Point{Lon: params.Screen.LeftTop.Longitude, Lat: params.Screen.LeftTop.Latitude},
-		RightBottom: valueobject.Point{Lon: params.Screen.RightBottom.Longitude, Lat: params.Screen.RightBottom.Latitude},
-	},
-		ZoomLevel: params.ZoomLevel,
-		StartAt:   params.StartAt,
-		EndAt:     params.EndAt,
-	}
+	validParams := subdto.ToInputFilter(params)
 	if validParams.ZoomLevel < zoomSelector {
 		clusters, err := h.service.GetMarksInCluster(c.Request.Context(), validParams)
 		if err != nil {

@@ -38,13 +38,16 @@ func main() {
 		DBName:   cfg.Database.DBName,
 	}, log)
 	defer database.Close(db)
-
 	db.AutoMigrate(&model.Mark{}, &model.Category{})
 
 	container := app.MustContainer(cfg, db, log)
 
 	router := gin.Default()
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	router.GET("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
+	router.POST("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
 	apiV1 := router.Group("/api/v2")
 
 	handlers.InitCategoryHandler(apiV1, container.CategoryService, log)
