@@ -1,0 +1,31 @@
+# Пример конфигурации для локальной разработки (без Docker)
+# Для Docker окружения используйте docker.config.yaml или ENV переменные
+#
+# Приоритет загрузки конфигурации:
+# 1. ENV переменные (highest) - например: DB_HOST=postgres DB_PASSWORD=secret
+# 2. config.yaml файл
+# 3. env-default значения из структур config
+
+ENV: "dev"
+
+database:
+  host: "localhost"         # Для локальной разработки
+  port: 5432                # ENV: DB_PORT
+  user: "postgres"          # ENV: DB_USER
+  password: "admin"         # ENV: DB_PASSWORD (используйте secrets для production!)
+  db_name: "realtimemap_marks"  # ENV: DB_NAME
+  ssl_mode: "disable"       # ENV: DB_SSL_MODE
+
+grpc:
+  user_service: "localhost:50052"  # Для Docker: "user-service:50051"
+
+storage:
+  type: "local"
+  base_path: "./store"      # Для локальной разработки | Docker: "/app/store"
+  base_url: "http://localhost:8080/store"
+
+kafka:
+  enabled: false            # ENV: KAFKA_ENABLED (false для dev без Kafka)
+  brokers:
+    - "localhost:9092"      # Для локальной разработки | Docker: "kafka:29092"
+  producerTopic: "mark-service.events"  # ENV: KAFKA_PRODUCER_TOPIC

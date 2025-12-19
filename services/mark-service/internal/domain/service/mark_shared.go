@@ -101,6 +101,11 @@ func (s *markShared) updatePhotos(ctx context.Context, currentPhotos types.Photo
 
 // sendCreateEvent отсылает ивент в kafka при создании метки
 func (s *markShared) sendCreateEvent(ctx context.Context, mark *model.Mark) {
+	// Пропускаем если Kafka выключен (producer == nil)
+	if s.producer == nil {
+		return
+	}
+
 	payload := events.NewMarkPayload(mark.ID, mark.CategoryID, mark.UserID, mark.MarkName, mark.AdditionalInfo)
 	event := events.NewMarkCreate(payload)
 	_ = s.producer.Publish(ctx, fmt.Sprintf("%d", mark.ID), event)

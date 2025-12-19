@@ -1,0 +1,5 @@
+include:
+  - services/mark-service/docker-compose.yml
+  - docker-compose.kafka.yml
+
+# Общая сеть для всех сервисов

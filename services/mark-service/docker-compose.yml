@@ -1,0 +1,46 @@
+
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: postgis
+    restart: always
+    # Порты закрыты для публичного доступа
+    # Для локальной разработки раскомментируйте:
+    # ports:
+    #   - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - realtimemap-network
+
+  mark-service:
+    build:
+      context: ../..
+      dockerfile: services/mark-service/Dockerfile
+    container_name: mark-service
+    # Доступен только внутри сети: mark-service:8080
+    # ports:
+    #   - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - realtimemap-network
+
+volumes:
+  postgres_data:
+
+# Подключаемся к общей сети
+networks:
+  realtimemap-network:
+    internal: true

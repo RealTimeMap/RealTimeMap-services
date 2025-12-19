@@ -51,5 +51,25 @@ func main() {
 	handlers.InitMarkHandler(apiV1, container.MarkService, log)
 	handlers.InitAdminMarkHandler(apiV1, container.AdminMarkService, log)
 	router.Static("./store", "./store")
+
+	// Health check endpoint for Docker/K8s
+	apiV1.GET("/health", func(c *gin.Context) {
+		// Проверка подключения к БД
+		sqlDB, err := db.DB()
+		if err != nil || sqlDB.Ping() != nil {
+			c.JSON(503, gin.H{
+				"status":   "unhealthy",
+				"database": "down",
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"status":  "healthy",
+			"service": "mark-service",
+			"env":     cfg.Env,
+		})
+	})
+
 	router.Run(":8080")
 }

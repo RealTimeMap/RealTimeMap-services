@@ -37,11 +37,18 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	if err != nil {
 		panic(err)
 	}
-	// kafka
-	p := producer.New(
-		producer.DefaultConfig().WithBrokers(cfg.Kafka.Brokers[0]).WithTopic(cfg.Kafka.ProducerTopic),
-		producer.WithLogger(log),
-	) // TODO Временно так
+
+	// Kafka producer (только если включен)
+	var p *producer.Producer
+	if cfg.Kafka.Enabled {
+		p = producer.New(
+			producer.DefaultConfig().WithBrokers(cfg.Kafka.Brokers[0]).WithTopic(cfg.Kafka.ProducerTopic),
+			producer.WithLogger(log),
+		)
+		log.Info("Kafka producer initialized", zap.String("topic", cfg.Kafka.ProducerTopic))
+	} else {
+		log.Info("Kafka producer disabled")
+	}
 
 	// Создание сервисов
 	categoryService := service.NewCategoryService(categoryRepo, store)

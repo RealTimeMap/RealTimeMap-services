@@ -39,15 +39,16 @@ func DefaultConfig() Config {
 
 // Producer отправляет события в Kafka.
 type Producer struct {
-	writer *kafka.Writer
-	logger *zap.Logger
+	writer       *kafka.Writer
+	logger       *zap.Logger
+	defaultTopic string // топик по умолчанию из конфига
 }
 
 // New создаёт новый Producer.
 func New(cfg Config, opts ...Option) *Producer {
 	writer := &kafka.Writer{
-		Addr:         kafka.TCP(cfg.Brokers...),
-		Topic:        cfg.Topic,
+		Addr: kafka.TCP(cfg.Brokers...),
+		// Topic НЕ устанавливается в Writer - будет в Message
 		Balancer:     &kafka.Hash{}, // партиционирование по ключу
 		BatchSize:    cfg.BatchSize,
 		BatchTimeout: cfg.BatchTimeout,
@@ -55,8 +56,9 @@ func New(cfg Config, opts ...Option) *Producer {
 	}
 
 	p := &Producer{
-		writer: writer,
-		logger: zap.NewNop(),
+		writer:       writer,
+		logger:       zap.NewNop(),
+		defaultTopic: cfg.Topic,
 	}
 
 	for _, opt := range opts {
@@ -102,13 +104,15 @@ func (p *Producer) PublishTo(ctx context.Context, topic, key string, event any) 
 		return fmt.Errorf("marshal event: %w", err)
 	}
 
-	msg := kafka.Message{
-		Key:   []byte(key),
-		Value: payload,
+	// Используем default топик если topic не указан
+	if topic == "" {
+		topic = p.defaultTopic
 	}
 
-	if topic != "" {
-		msg.Topic = topic
+	msg := kafka.Message{
+		Topic: topic,
+		Key:   []byte(key),
+		Value: payload,
 	}
 
 	if err := p.writer.WriteMessages(ctx, msg); err != nil {

@@ -23,7 +23,7 @@ type Database struct {
 type Kafka struct {
 	Enabled       bool     `yaml:"enabled" env:"KAFKA_ENABLED" env-default:"false"`
 	Brokers       []string `yaml:"brokers" env:"KAFKA_BROKERS" env-separator:","`
-	ProducerTopic string   `yaml:"producerTopic" env-default:"mark-service.events"`
+	ProducerTopic string   `yaml:"producerTopic" env:"KAFKA_PRODUCER_TOPIC" env-default:"mark-service.events"`
 }
 
 type Config struct {
