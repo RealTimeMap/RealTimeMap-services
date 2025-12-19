@@ -29,8 +29,8 @@ services:
       dockerfile: services/mark-service/Dockerfile
     container_name: mark-service
     # Доступен только внутри сети: mark-service:8080
-    # ports:
-    #   - "8080:8080"
+    ports:
+      - "127.0.0.1:8090:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,4 +43,3 @@ volumes:
 # Подключаемся к общей сети
 networks:
   realtimemap-network:
-    internal: true
