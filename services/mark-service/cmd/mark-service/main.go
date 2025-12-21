@@ -7,6 +7,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/handlers"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -43,6 +44,7 @@ func main() {
 	container := app.MustContainer(cfg, db, log)
 
 	router := gin.Default()
+	router.Use(cors.Default())
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

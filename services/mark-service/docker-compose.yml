@@ -43,3 +43,4 @@ volumes:
 # Подключаемся к общей сети
 networks:
   realtimemap-network:
+    external: true
