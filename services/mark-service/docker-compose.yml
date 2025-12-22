@@ -1,46 +1,59 @@
-
-
 services:
   postgres:
     image: postgis/postgis:16-3.4-alpine
     container_name: postgis
     restart: always
-    # Порты закрыты для публичного доступа
-    # Для локальной разработки раскомментируйте:
-    # ports:
-    #   - "5432:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
-      interval: 5s
-      timeout: 3s
-      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - realtimemap-network
+      - internal-mark
 
   mark-service:
     build:
       context: ../..
       dockerfile: services/mark-service/Dockerfile
     container_name: mark-service
-    # Доступен только внутри сети: mark-service:8080
-    ports:
-      - "127.0.0.1:8090:8080"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+    labels:
+      - "traefik.enable=true"
+
+      # HTTP API Router
+      - "traefik.http.routers.mark.rule=PathPrefix(`/api/v2/`)"
+      - "traefik.http.routers.mark.entrypoints=web"
+      - "traefik.http.routers.mark.priority=1"
+
+      # Socket.IO Router (higher priority)
+      - "traefik.http.routers.mark-socketio.rule=PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.mark-socketio.entrypoints=web"
+      - "traefik.http.routers.mark-socketio.priority=10"
+
+      # Swagger Router
+      - "traefik.http.routers.mark-swagger.rule=PathPrefix(`/swagger`)"
+      - "traefik.http.routers.mark-swagger.entrypoints=web"
+      - "traefik.http.routers.mark-swagger.priority=5"
+
+      # Static files Router (store)
+      - "traefik.http.routers.mark-store.rule=PathPrefix(`/store`)"
+      - "traefik.http.routers.mark-store.entrypoints=web"
+      - "traefik.http.routers.mark-store.priority=5"
+
+      # Service configuration
+      - "traefik.http.services.mark.loadbalancer.server.port=8080"
+      - "traefik.http.services.mark.loadbalancer.sticky.cookie=true"
+      - "traefik.http.services.mark.loadbalancer.sticky.cookie.name=mark_session"
     networks:
-      - realtimemap-network
+      - web
+      - internal-mark
 
 volumes:
   postgres_data:
 
-# Подключаемся к общей сети
 networks:
-  realtimemap-network:
+  web:
     external: true
+  internal-mark:

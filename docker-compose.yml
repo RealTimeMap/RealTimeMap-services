@@ -1,5 +1,20 @@
 include:
   - services/mark-service/docker-compose.yml
-  - docker-compose.kafka.yml
 
-# Общая сеть для всех сервисов
+services:
+  traefik:
+    image: traefik:v2.11
+    environment:
+      - DOCKER_API_VERSION=1.45
+    ports:
+      - "82:82"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
