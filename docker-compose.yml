@@ -15,6 +15,7 @@ services:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
       - /etc/letsencrypt/live/realtimemap.ru:/certs:ro
+      - /etc/letsencrypt/archive/realtimemap.ru:/archive/realtimemap.ru:ro
     networks:
       - web
 

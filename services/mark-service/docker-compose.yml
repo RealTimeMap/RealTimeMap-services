@@ -23,25 +23,25 @@ services:
       - "traefik.enable=true"
 
       # HTTP API Router
-      - "traefik.http.routers.mark.rule=PathPrefix(`/api/v2/`)"
+      - "traefik.http.routers.mark.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/`)"
       - "traefik.http.routers.mark.entrypoints=web,websecure"
       - "traefik.http.routers.mark.priority=1"
       - "traefik.http.routers.mark.tls=true"
 
       # Socket.IO Router (higher priority)
-      - "traefik.http.routers.mark-socketio.rule=PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.mark-socketio.rule=Host(`realtimemap.ru`) && PathPrefix(`/socket.io`)"
       - "traefik.http.routers.mark-socketio.entrypoints=web,websecure"
       - "traefik.http.routers.mark-socketio.priority=10"
       - "traefik.http.routers.mark-socketio.tls=true"
 
       # Swagger Router
-      - "traefik.http.routers.mark-swagger.rule=PathPrefix(`/swagger`)"
+      - "traefik.http.routers.mark-swagger.rule=Host(`realtimemap.ru`) && PathPrefix(`/swagger`)"
       - "traefik.http.routers.mark-swagger.entrypoints=web,websecure"
       - "traefik.http.routers.mark-swagger.priority=5"
       - "traefik.http.routers.mark-swagger.tls=true"
 
       # Static files Router (store)
-      - "traefik.http.routers.mark-store.rule=PathPrefix(`/store`)"
+      - "traefik.http.routers.mark-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store`)"
       - "traefik.http.routers.mark-store.entrypoints=web,websecure"
       - "traefik.http.routers.mark-store.priority=5"
       - "traefik.http.routers.mark-store.tls=true"

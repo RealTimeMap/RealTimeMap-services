@@ -25,7 +25,7 @@ func init() {
 // Ивенты Server -> Client
 // markCreated - создание новой метки
 func InitMarkNamespace(s *SocketServer) {
-	ns := s.io.Of("/mark")
+	ns := s.io.Of("/marks")
 	s.logger.Info("init mark namespace", zap.String("namespace", ns.Name))
 
 	ns.OnConnection(func(socket *socketio.Socket) {
