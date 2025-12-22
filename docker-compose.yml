@@ -8,10 +8,13 @@ services:
       - DOCKER_API_VERSION=1.45
     ports:
       - "82:82"
+      - "443:443"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - /etc/letsencrypt/live/realtimemap.ru:/certs:ro
     networks:
       - web
 

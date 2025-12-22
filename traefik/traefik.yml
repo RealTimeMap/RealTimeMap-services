@@ -5,6 +5,15 @@ api:
 entryPoints:
   web:
     address: ":82"
+    # Редирект на HTTPS (раскомментируйте если нужно)
+    # http:
+    #   redirections:
+    #     entryPoint:
+    #       to: websecure
+    #       scheme: https
+
+  websecure:
+    address: ":443"
 
 log:
   level: DEBUG
@@ -16,6 +25,10 @@ providers:
   docker:
     exposedByDefault: false
     network: web
+
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
 
 http:
   middlewares:
