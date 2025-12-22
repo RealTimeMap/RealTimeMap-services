@@ -47,10 +47,16 @@ func main() {
 
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"https://realtimemap.ru", "https://www.realtimemap.ru", "https://localhost:5173", "https://localhost:3000"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-User-ID", "X-User-Name", "X-User-Admin"},
-		ExposeHeaders:    []string{"X-Total-Count", "X-Page", "X-Per-Page"},
+		//AllowOrigins:     []string{"https://realtimemap.ru", "https://www.realtimemap.ru", "https://localhost:5173", "https://localhost:3000"},
+		//AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		//AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-User-ID", "X-User-Name", "X-User-Admin"},
+		//ExposeHeaders:    []string{"X-Total-Count", "X-Page", "X-Per-Page"},
+		//AllowCredentials: false,
+		//MaxAge:           12 * time.Hour,
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"*"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"*"},
 		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
 	}))
