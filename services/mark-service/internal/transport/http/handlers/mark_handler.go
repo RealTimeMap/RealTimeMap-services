@@ -27,7 +27,7 @@ type MarkHandler struct {
 
 func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logger *zap.Logger) {
 	handler := &MarkHandler{service: service, logger: logger}
-	markGroup := g.Group("/mark")
+	markGroup := g.Group("/marks")
 	{
 		markGroup.POST("/create", auth.AuthRequired(), handler.CreateMark)
 		markGroup.POST("/", handler.GetMarks)
