@@ -1,17 +1,15 @@
 http:
   routers:
-    # Публичные эндпоинты авторизации (только login и register доступны извне)
     auth-public:
-      rule: "Host(`realtimemap.ru`) && (Path(`/api/v1/auth/login`) || Path(`/api/v1/auth/register`) || Path(`/api/v1/auth/logout`) || Path(`/admin`) || Path(`/api/v1/auth/google`))"
+      rule: "Host(`realtimemap.ru`) && (PathPrefix(`/api/v1/auth/`) || PathPrefix(`/api/v1/user/`) || PathPrefix(`/docs/`) || PathPrefix(`/admin/`))"
       entryPoints:
-        - web
         - websecure
       service: auth-service
       priority: 100
       tls: {}
 
   services:
-    # Auth service (api/v1) - доступен только для /login, /register и ForwardAuth
+    # Auth service (api/v1) - доступен только для /user, /auth и ForwardAuth
     auth-service:
       loadBalancer:
         servers:
