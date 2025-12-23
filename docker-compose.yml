@@ -3,11 +3,11 @@ include:
 
 services:
   traefik:
-    image: traefik:v2.11
+    image: traefik:v3.6.1
     environment:
       - DOCKER_API_VERSION=1.45
     ports:
-      - "82:82"
+      - "80:80"
       - "443:443"
       - "8080:8080"
     volumes:

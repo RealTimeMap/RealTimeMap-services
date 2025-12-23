@@ -22,28 +22,56 @@ services:
     labels:
       - "traefik.enable=true"
 
-      # HTTP API Router
-      - "traefik.http.routers.mark.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/`)"
-      - "traefik.http.routers.mark.entrypoints=web,websecure"
-      - "traefik.http.routers.mark.priority=1"
-      - "traefik.http.routers.mark.tls=true"
+      # Публичные GET эндпоинты (без auth)
+      - "traefik.http.routers.mark-public.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/`) && Method(`GET`)"
+      - "traefik.http.routers.mark-public.entrypoints=web,websecure"
+      - "traefik.http.routers.mark-public.priority=5"
+      - "traefik.http.routers.mark-public.service=mark"
+      - "traefik.http.routers.mark-public.tls=true"
+
+      # Защищенные эндпоинты (POST /api/v2/mark/create)
+      - "traefik.http.routers.mark-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/mark/create`) && Method(`POST`)"
+      - "traefik.http.routers.mark-create.entrypoints=web,websecure"
+      - "traefik.http.routers.mark-create.priority=100"
+      - "traefik.http.routers.mark-create.middlewares=auth-check@file"
+      - "traefik.http.routers.mark-create.service=mark"
+      - "traefik.http.routers.mark-create.tls=true"
+
+      # Защищенные эндпоинты (PATCH/DELETE /api/v2/mark/:id)
+      - "traefik.http.routers.mark-modify.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/mark/`) && (Method(`PATCH`) || Method(`DELETE`))"
+      - "traefik.http.routers.mark-modify.entrypoints=web,websecure"
+      - "traefik.http.routers.mark-modify.priority=90"
+      - "traefik.http.routers.mark-modify.middlewares=auth-check@file"
+      - "traefik.http.routers.mark-modify.service=mark"
+      - "traefik.http.routers.mark-modify.tls=true"
+
+      # Защищенные эндпоинты (POST /api/v2/category)
+      - "traefik.http.routers.category-create.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/category`) && Method(`POST`)"
+      - "traefik.http.routers.category-create.entrypoints=web,websecure"
+      - "traefik.http.routers.category-create.priority=95"
+      - "traefik.http.routers.category-create.middlewares=auth-check@file"
+      - "traefik.http.routers.category-create.service=mark"
+      - "traefik.http.routers.category-create.tls=true"
 
       # Socket.IO Router (higher priority)
       - "traefik.http.routers.mark-socketio.rule=Host(`realtimemap.ru`) && PathPrefix(`/socket.io`)"
       - "traefik.http.routers.mark-socketio.entrypoints=web,websecure"
       - "traefik.http.routers.mark-socketio.priority=10"
+      - "traefik.http.routers.mark-socketio.service=mark"
       - "traefik.http.routers.mark-socketio.tls=true"
 
       # Swagger Router
       - "traefik.http.routers.mark-swagger.rule=Host(`realtimemap.ru`) && PathPrefix(`/swagger`)"
       - "traefik.http.routers.mark-swagger.entrypoints=web,websecure"
       - "traefik.http.routers.mark-swagger.priority=5"
+      - "traefik.http.routers.mark-swagger.service=mark"
       - "traefik.http.routers.mark-swagger.tls=true"
 
       # Static files Router (store)
       - "traefik.http.routers.mark-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store`)"
       - "traefik.http.routers.mark-store.entrypoints=web,websecure"
       - "traefik.http.routers.mark-store.priority=5"
+      - "traefik.http.routers.mark-store.service=mark"
       - "traefik.http.routers.mark-store.tls=true"
 
       # Service configuration
