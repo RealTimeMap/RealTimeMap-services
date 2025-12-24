@@ -21,12 +21,21 @@ services:
       - postgres
     labels:
       - "traefik.enable=true"
+      # CORS preflight OPTIONS для всех /api/v2/* эндпоинтов
+      - "traefik.http.routers.mark-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.mark-options.entrypoints=websecure"
+      - "traefik.http.routers.mark-options.priority=200"
+      - "traefik.http.routers.mark-options.service=mark"
+      - "traefik.http.routers.mark-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.mark-options.tls=true"
+
 
       # GET /api/v2/* - публичные (health, etc)
       - "traefik.http.routers.mark-public.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/`) && Method(`GET`)"
       - "traefik.http.routers.mark-public.entrypoints=websecure"
       - "traefik.http.routers.mark-public.priority=5"
       - "traefik.http.routers.mark-public.service=mark"
+      - "traefik.http.routers.mark-public.middlewares=cors-headers@file"
       - "traefik.http.routers.mark-public.tls=true"
 
       # POST /api/v2/marks/ - список меток с фильтрацией (публичный)
@@ -34,20 +43,22 @@ services:
       - "traefik.http.routers.marks-list.entrypoints=websecure"
       - "traefik.http.routers.marks-list.priority=96"
       - "traefik.http.routers.marks-list.service=mark"
+      - "traefik.http.routers.marks-list.middlewares=cors-headers@file"
       - "traefik.http.routers.marks-list.tls=true"
 
       # POST /api/v2/marks/:markID - детали метки (публичный)
-      - "traefik.http.routers.marks-detail.rule=Host(`realtimemap.ru`) && PathRegexp(`/api/v2/marks/[^/]+$`) && Method(`POST`)"
+      - "traefik.http.routers.marks-detail.rule=Host(`realtimemap.ru`) && PathRegexp(`/api/v2/marks/[^/]+$`) && Method(`GET`)"
       - "traefik.http.routers.marks-detail.entrypoints=websecure"
       - "traefik.http.routers.marks-detail.priority=94"
       - "traefik.http.routers.marks-detail.service=mark"
+      - "traefik.http.routers.marks-detail.middlewares=cors-headers@file"
       - "traefik.http.routers.marks-detail.tls=true"
 
       # POST /api/v2/marks/create - создание метки (с auth)
       - "traefik.http.routers.marks-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/marks/create`) && Method(`POST`)"
       - "traefik.http.routers.marks-create.entrypoints=websecure"
       - "traefik.http.routers.marks-create.priority=100"
-      - "traefik.http.routers.marks-create.middlewares=auth-check@file"
+      - "traefik.http.routers.marks-create.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.marks-create.service=mark"
       - "traefik.http.routers.marks-create.tls=true"
 
@@ -55,7 +66,7 @@ services:
       - "traefik.http.routers.marks-update.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/marks/`) && Method(`PATCH`)"
       - "traefik.http.routers.marks-update.entrypoints=websecure"
       - "traefik.http.routers.marks-update.priority=90"
-      - "traefik.http.routers.marks-update.middlewares=auth-check@file"
+      - "traefik.http.routers.marks-update.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.marks-update.service=mark"
       - "traefik.http.routers.marks-update.tls=true"
 
@@ -63,7 +74,7 @@ services:
       - "traefik.http.routers.marks-delete.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/marks/`) && Method(`DELETE`)"
       - "traefik.http.routers.marks-delete.entrypoints=websecure"
       - "traefik.http.routers.marks-delete.priority=90"
-      - "traefik.http.routers.marks-delete.middlewares=auth-check@file"
+      - "traefik.http.routers.marks-delete.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.marks-delete.service=mark"
       - "traefik.http.routers.marks-delete.tls=true"
 
@@ -71,7 +82,7 @@ services:
       - "traefik.http.routers.category-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/category/`) && Method(`POST`)"
       - "traefik.http.routers.category-create.entrypoints=websecure"
       - "traefik.http.routers.category-create.priority=95"
-      - "traefik.http.routers.category-create.middlewares=auth-check@file"
+      - "traefik.http.routers.category-create.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.category-create.service=mark"
       - "traefik.http.routers.category-create.tls=true"
 
@@ -79,7 +90,7 @@ services:
       - "traefik.http.routers.admin-marks.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/admin/`) && Method(`GET`)"
       - "traefik.http.routers.admin-marks.entrypoints=websecure"
       - "traefik.http.routers.admin-marks.priority=97"
-      - "traefik.http.routers.admin-marks.middlewares=auth-check@file"
+      - "traefik.http.routers.admin-marks.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.admin-marks.service=mark"
       - "traefik.http.routers.admin-marks.tls=true"
 
@@ -88,6 +99,7 @@ services:
       - "traefik.http.routers.mark-socketio.entrypoints=websecure"
       - "traefik.http.routers.mark-socketio.priority=10"
       - "traefik.http.routers.mark-socketio.service=mark"
+      - "traefik.http.routers.mark-socketio.middlewares=cors-headers@file"
       - "traefik.http.routers.mark-socketio.tls=true"
 
       # Swagger
@@ -95,6 +107,7 @@ services:
       - "traefik.http.routers.mark-swagger.entrypoints=websecure"
       - "traefik.http.routers.mark-swagger.priority=5"
       - "traefik.http.routers.mark-swagger.service=mark"
+      - "traefik.http.routers.mark-swagger.middlewares=cors-headers@file"
       - "traefik.http.routers.mark-swagger.tls=true"
 
       # Static files (store)
@@ -102,6 +115,7 @@ services:
       - "traefik.http.routers.mark-store.entrypoints=websecure"
       - "traefik.http.routers.mark-store.priority=5"
       - "traefik.http.routers.mark-store.service=mark"
+      - "traefik.http.routers.mark-store.middlewares=cors-headers@file"
       - "traefik.http.routers.mark-store.tls=true"
 
       # Service configuration

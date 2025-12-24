@@ -9,13 +9,43 @@ http:
       tls: {}
 
   services:
-    # Auth service (api/v1) - доступен только для /user, /auth и ForwardAuth
     auth-service:
       loadBalancer:
         servers:
           - url: "http://realtime-map-backend:8001"
 
   middlewares:
+    # CORS headers middleware
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "PATCH"
+          - "DELETE"
+          - "HEAD"
+          - "OPTIONS"
+        accessControlAllowOriginList:
+          - "https://real-time-map-frontend.vercel.app"
+          - "https://trip-scheduler.ru"
+          - "https://realtimemap.ru"
+          - "http://localhost:5173"
+          - "http://localhost:1420"
+        accessControlAllowHeaders:
+          - "Origin"
+          - "Content-Type"
+          - "Accept"
+          - "Authorization"
+          - "X-User-Id"
+          - "X-User-Name"
+          - "X-User-Ban"
+          - "X-User-Admin"
+        accessControlExposeHeaders:
+          - "Content-Length"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 43200
+
     # ForwardAuth middleware для проверки Bearer токена
     # auth-service вернет 401 если токен невалиден
     # Traefik автоматически проксирует эту ошибку клиенту
@@ -29,7 +59,6 @@ http:
           - "X-User-Admin"
         authRequestHeaders:
           - "Authorization"
-        trustForwardHeader: false
 
 tls:
   certificates:

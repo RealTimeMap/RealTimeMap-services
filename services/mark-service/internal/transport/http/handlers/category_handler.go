@@ -29,6 +29,8 @@ func InitCategoryHandler(g *gin.RouterGroup, service *service.CategoryService, l
 
 	categoryGroup := g.Group("/category")
 	{
+		// Support both with and without trailing slash
+		categoryGroup.POST("", auth.AdminOnly(), handler.CreateCategory)
 		categoryGroup.POST("/", auth.AdminOnly(), handler.CreateCategory)
 	}
 }

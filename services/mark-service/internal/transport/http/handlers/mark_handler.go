@@ -30,12 +30,12 @@ func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logge
 	handler := &MarkHandler{service: service, logger: logger}
 	markGroup := g.Group("/marks")
 	{
-		markGroup.POST("/create", auth.AuthRequired(), handler.CreateMark)
 		markGroup.POST("/", handler.GetMarks)
+		markGroup.GET("/create-data", handler.GetDataForCreate)
+		markGroup.POST("/create", auth.AuthRequired(), handler.CreateMark)
 		markGroup.POST("/:markID", handler.DetailMark)
 		markGroup.DELETE("/:markID", auth.AuthRequired(), handler.DeleteMark)
 		markGroup.PATCH("/:markID", auth.AuthRequired(), handler.UpdateMark)
-		markGroup.GET("/create-data", handler.GetDataForCreate)
 	}
 }
 
