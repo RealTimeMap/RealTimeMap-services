@@ -232,9 +232,11 @@ func (s *UserMarkService) applyUpdates(mark *model.Mark, input input.MarkUpdateI
 	}
 }
 
-// Медиа файлы
+func (s *UserMarkService) GetDataForCreate(ctx context.Context) ([]*model.Category, []int, error) {
+	categories, err := s.categoryRepo.GetAll(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return categories, model.AllowedDuration, nil
 
-// updatePhotos обрабатывает обновление фотографий:
-// 1. Удаляет старые фото из storage и массива
-// 2. Загружает новые фото в storage
-// 3. Возвращает обновленный массив фотографий
+}

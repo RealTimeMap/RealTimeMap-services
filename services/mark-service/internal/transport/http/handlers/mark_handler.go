@@ -12,6 +12,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/input"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/valueobject"
+	subdtocat "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/dto/category"
 	subdto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/dto/mark"
 	dto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/mark"
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,7 @@ func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logge
 		markGroup.POST("/:markID", handler.DetailMark)
 		markGroup.DELETE("/:markID", auth.AuthRequired(), handler.DeleteMark)
 		markGroup.PATCH("/:markID", auth.AuthRequired(), handler.UpdateMark)
+		markGroup.GET("/create-data", handler.GetDataForCreate)
 	}
 }
 
@@ -216,4 +218,15 @@ func (h *MarkHandler) DetailMark(c *gin.Context) {
 		return
 	}
 	c.JSON(200, dto.NewResponseMark(mark))
+}
+
+func (h *MarkHandler) GetDataForCreate(c *gin.Context) {
+
+	categories, durations, err := h.service.GetDataForCreate(c.Request.Context())
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	response := subdtocat.NewResponseCreateData(categories, durations)
+	c.JSON(200, response)
 }

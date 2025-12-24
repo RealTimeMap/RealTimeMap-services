@@ -12,4 +12,5 @@ type CategoryRepository interface {
 	GetByName(ctx context.Context, name string) (*model.Category, error)
 	GetByID(ctx context.Context, id int) (*model.Category, error)
 	Exist(ctx context.Context, id int) (bool, error)
+	GetAll(ctx context.Context) ([]*model.Category, error)
 }

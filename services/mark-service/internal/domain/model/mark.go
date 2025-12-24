@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var AllowedDuration = [4]int{12, 24, 36, 48}
+var AllowedDuration = []int{12, 24, 36, 48}
 
 type Mark struct {
 	gorm.Model

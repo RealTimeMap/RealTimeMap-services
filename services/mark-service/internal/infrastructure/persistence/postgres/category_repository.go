@@ -85,3 +85,14 @@ func (r *CategoryRepository) Exist(ctx context.Context, id int) (bool, error) {
 	}
 	return exists, nil
 }
+
+func (r *CategoryRepository) GetAll(ctx context.Context) ([]*model.Category, error) {
+	r.log.Info("get_category_by_name in: ", sl.String("layer", r.layer))
+	var categories []*model.Category
+	err := r.db.WithContext(ctx).Where("is_active = ?", true).Find(&categories).Error
+	if err != nil {
+		r.log.Error("get_category_by_name err: ", sl.String("layer", r.layer), zap.Error(err))
+		return nil, err
+	}
+	return categories, nil
+}

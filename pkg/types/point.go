@@ -15,8 +15,8 @@ type Point struct {
 	orb.Point
 }
 
-// TODO понять...
 // Scan реализует интерфейс sql.Scanner для чтения из БД
+// TODO понять...
 func (p *Point) Scan(val interface{}) error {
 	if val == nil {
 		*p = Point{}
