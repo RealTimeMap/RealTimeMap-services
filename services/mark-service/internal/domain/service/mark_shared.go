@@ -3,7 +3,8 @@ package service
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/events"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
@@ -108,7 +109,11 @@ func (s *markShared) sendCreateEvent(ctx context.Context, mark *model.Mark) {
 
 	payload := events.NewMarkPayload(mark.ID, mark.CategoryID, mark.UserID, mark.MarkName, mark.AdditionalInfo)
 	event := events.NewMarkCreate(payload)
-	_ = s.producer.Publish(ctx, fmt.Sprintf("%d", mark.ID), event)
+	_ = s.producer.PublishWithMeta(ctx, producer.EventMeta{
+		EventType: "mark.created",
+		UserID:    strconv.Itoa(mark.UserID),
+		SourceID:  strconv.Itoa(mark.ID),
+		Timestamp: time.Now().Format(time.RFC3339)}, event)
 }
 
 // applyUpdates вспомогательная функция для обновления полей метки

@@ -33,5 +33,5 @@ type MarkUpdateInput struct {
 	PhotosToDelete []string
 	Photos         []mediavalidator.PhotoInput // Чистые данные: []byte + filename
 
-	context.UserInput
+	context.UserInput // TODO Что это вообще за хуйня?!
 }

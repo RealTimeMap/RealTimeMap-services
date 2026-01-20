@@ -12,12 +12,12 @@ var (
 		return apperror.NewNotFoundErrorByID("mark", id)
 	}
 	ErrMarkNameRequired = func() error {
-		return apperror.NewRequiredError("mark_name")
+		return apperror.NewRequiredError("markName")
 	}
 
 	ErrMarkNameTooShort = func(name string) error {
 		return apperror.NewFieldValidationError(
-			"mark_name",
+			"markName",
 			"must be at least 3 characters",
 			"value_error.any_str.min_length",
 			name,
@@ -25,7 +25,7 @@ var (
 	}
 
 	ErrMarkNameTooLong = func(name string) error {
-		return apperror.NewTooLongError("mark_name", 100, name)
+		return apperror.NewTooLongError("markName", 100, name)
 	}
 
 	ErrInvalidDuration = func(duration int) error {
@@ -39,7 +39,7 @@ var (
 
 	ErrStartAtTooOld = func(maxDays int) error {
 		return apperror.NewFieldValidationError(
-			"start_at",
+			"startAt",
 			fmt.Sprintf("cannot be more than %d days in the past", maxDays),
 			"value_error.date.past_limit",
 			nil,
@@ -48,7 +48,7 @@ var (
 
 	ErrStartAtTooFuture = func(maxDays int) error {
 		return apperror.NewFieldValidationError(
-			"start_at",
+			"startAt",
 			fmt.Sprintf("cannot be more than %d days in the future", maxDays),
 			"value_error.date.future_limit",
 			nil,
@@ -88,7 +88,7 @@ var (
 
 	ErrCategoryNotActive = func(categoryId int) error {
 		return apperror.NewFieldValidationError(
-			"category_id",
+			"categoryId",
 			"category is not active",
 			"value_error.category.inactive",
 			categoryId,
@@ -101,7 +101,7 @@ var (
 var (
 	ErrDailyMarkLimitExceeded = func(limit int) error {
 		return apperror.NewConflictError(
-			"user_id",
+			"userId",
 			fmt.Sprintf("daily mark creation limit exceeded (%d marks per day)", limit),
 			nil,
 		)

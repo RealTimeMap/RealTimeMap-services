@@ -50,7 +50,7 @@ func (r *MarkRepository) Create(ctx context.Context, data *model.Mark) (*model.M
 }
 
 func (r *MarkRepository) Update(ctx context.Context, id int, mark *model.Mark) (*model.Mark, error) {
-	r.log.Info("update_mark_by_id", sl.String("layer", r.layer))
+	r.log.Info("MarkRepository.Update", zap.Int("id", id))
 
 	err := r.db.WithContext(ctx).Model(&model.Mark{}).Where("id = ?", id).Save(mark).Error
 	if err != nil {
@@ -108,12 +108,11 @@ func (r *MarkRepository) GetMarksInArea(ctx context.Context, filter repository.F
 	err := r.db.WithContext(ctx).Model(&model.Mark{}).
 		Joins("Category").
 		Where("geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)", bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat).
-		//Where("geohash IN (?)", filter.GeoHashes()).
 		Where("start_at >= ?", filter.StartAt).
 		Where("end_at >= ?", filter.EndAt).
 		Find(&marks).Error
 	if err != nil {
-		r.log.Error("failed to get marks in area", zap.Error(err))
+		r.log.Error("error MarkRepository.GetMarksInArea", zap.Error(err))
 		return nil, err
 	}
 
