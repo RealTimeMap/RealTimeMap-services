@@ -48,3 +48,10 @@ func GetUserInfo(c *gin.Context) (UserInput, error) {
 	return NewUserInput(userID, userName, isAdmin.(bool)), nil
 
 }
+
+func GetTraceID(c *gin.Context) string {
+	if traceID, ok := c.Get("traceID"); ok {
+		return traceID.(string)
+	}
+	return ""
+}

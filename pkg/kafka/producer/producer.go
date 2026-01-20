@@ -37,6 +37,12 @@ func DefaultConfig() Config {
 	}
 }
 
+// Header заголовоки метаинформации для сообщения
+type Header struct {
+	Key   string
+	Value []byte
+}
+
 // Producer отправляет события в Kafka.
 type Producer struct {
 	writer       *kafka.Writer
@@ -92,13 +98,13 @@ func (c Config) WithTopic(topic string) Config {
 
 // Publish отправляет событие в топик по умолчанию.
 // key используется для партиционирования (события с одинаковым ключом попадут в одну партицию).
-func (p *Producer) Publish(ctx context.Context, key string, event any) error {
-	return p.PublishTo(ctx, "", key, event)
+func (p *Producer) Publish(ctx context.Context, key string, event any, headers []Header) error {
+	return p.PublishTo(ctx, "", key, event, headers)
 }
 
 // PublishTo отправляет событие в указанный топик.
 // Если topic пустой — используется топик по умолчанию из конфига.
-func (p *Producer) PublishTo(ctx context.Context, topic, key string, event any) error {
+func (p *Producer) PublishTo(ctx context.Context, topic, key string, event any, headers []Header) error {
 	payload, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("marshal event: %w", err)
@@ -109,10 +115,16 @@ func (p *Producer) PublishTo(ctx context.Context, topic, key string, event any) 
 		topic = p.defaultTopic
 	}
 
+	kafkaHeaders := make([]kafka.Header, len(headers))
+	for i, h := range headers {
+		kafkaHeaders[i] = kafka.Header{Key: h.Key, Value: h.Value}
+	}
+
 	msg := kafka.Message{
-		Topic: topic,
-		Key:   []byte(key),
-		Value: payload,
+		Topic:   topic,
+		Key:     []byte(key),
+		Value:   payload,
+		Headers: kafkaHeaders,
 	}
 
 	if err := p.writer.WriteMessages(ctx, msg); err != nil {
@@ -135,7 +147,6 @@ func (p *Producer) PublishTo(ctx context.Context, topic, key string, event any) 
 // PublishBatch отправляет несколько событий одним batch.
 func (p *Producer) PublishBatch(ctx context.Context, messages []Message) error {
 	kafkaMessages := make([]kafka.Message, len(messages))
-
 	for i, m := range messages {
 		payload, err := json.Marshal(m.Event)
 		if err != nil {
@@ -161,6 +172,46 @@ type Message struct {
 	Topic string
 	Key   string
 	Event any
+}
+
+// PublishWithMeta отправляет событие с метаданными в headers.
+// Использует EventMeta для стандартных полей (event_type, user_id, source_id, timestamp).
+func (p *Producer) PublishWithMeta(ctx context.Context, meta EventMeta, payload any) error {
+	return p.PublishToWithMeta(ctx, "", meta, payload)
+}
+
+// PublishToWithMeta отправляет событие в указанный топик с метаданными.
+func (p *Producer) PublishToWithMeta(ctx context.Context, topic string, meta EventMeta, payload any) error {
+	headers := meta.ToHeaders()
+	return p.PublishTo(ctx, topic, meta.UserID, payload, headers)
+}
+
+// EventMeta — метаданные события для headers.
+type EventMeta struct {
+	EventType string
+	UserID    string
+	SourceID  string
+	Timestamp string
+}
+
+// ToHeaders конвертирует EventMeta в slice Headers.
+func (m EventMeta) ToHeaders() []Header {
+	headers := make([]Header, 0, 4)
+
+	if m.EventType != "" {
+		headers = append(headers, Header{Key: "event_type", Value: []byte(m.EventType)})
+	}
+	if m.UserID != "" {
+		headers = append(headers, Header{Key: "user_id", Value: []byte(m.UserID)})
+	}
+	if m.SourceID != "" {
+		headers = append(headers, Header{Key: "source_id", Value: []byte(m.SourceID)})
+	}
+	if m.Timestamp != "" {
+		headers = append(headers, Header{Key: "timestamp", Value: []byte(m.Timestamp)})
+	}
+
+	return headers
 }
 
 // Close закрывает producer.
