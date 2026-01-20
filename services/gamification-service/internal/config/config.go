@@ -1,6 +1,10 @@
 package config
 
-import pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+import (
+	"time"
+
+	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+)
 
 type Database struct {
 	Host     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
@@ -10,9 +14,19 @@ type Database struct {
 	DBName   string `yaml:"db_name" env:"DB_NAME" env-required:"true"`
 	SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE" env-default:"disable"`
 }
+
+type Kafka struct {
+	Brokers        []string      `yaml:"brokers" env:"KAFKA_BROKERS" env-default:"localhost:9092"`
+	Topic          string        `yaml:"topic" env:"KAFKA_TOPIC" env-default:"mark-service.events"`
+	GroupID        string        `yaml:"group_id" env:"KAFKA_GROUP_ID" env-default:"gamification-service"`
+	MaxWait        time.Duration `yaml:"max_wait" env-default:"500ms"`
+	CommitInterval time.Duration `yaml:"commit_interval" env-default:"0"`
+}
+
 type Config struct {
 	Env      string   `env:"ENV" env-default:"local"`
 	Database Database `yaml:"database"`
+	Kafka    Kafka    `yaml:"kafka"`
 }
 
 func MustLoad() *Config {

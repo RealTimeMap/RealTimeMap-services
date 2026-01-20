@@ -6,7 +6,7 @@ type LinearGenerator struct {
 
 func NewLinearGenerator() LevelGenerator {
 	return &LinearGenerator{
-		baseExp: 150,
+		baseExp: 300,
 	}
 }
 

@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
 	"go.uber.org/zap"
@@ -33,6 +35,9 @@ func (r *PgLevelRepository) GetByLevel(ctx context.Context, level uint) (*model.
 	var res *model.Level
 	err := r.db.WithContext(ctx).First(&res, "level = ?", level).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainerrors.ErrLevelNotFount(level)
+		}
 		return nil, err
 	}
 	return res, nil

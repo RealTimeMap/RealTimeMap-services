@@ -7,7 +7,8 @@ import (
 )
 
 type UserProgressRepository interface {
-	//Create(ctx context.Context, user *model.UserProgress) (*model.UserProgress, error)
 	Update(ctx context.Context, user *model.UserProgress) (*model.UserProgress, error)
+	Create(ctx context.Context, user *model.UserProgress) (*model.UserProgress, error)
+	GetOrCreate(ctx context.Context, userID uint) (*model.UserProgress, error)
 	GetByID(ctx context.Context, userID uint) (*model.UserProgress, error)
 }
