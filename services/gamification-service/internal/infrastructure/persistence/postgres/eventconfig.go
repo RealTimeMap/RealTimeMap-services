@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
 	"go.uber.org/zap"
@@ -25,7 +27,10 @@ func (r *PgEventConfigRepository) GetEventConfigByKafkaType(ctx context.Context,
 	var eventConfig *model.EventConfig
 	err := r.db.WithContext(ctx).First(&eventConfig, "kafka_event_type = ?", eventType).Error
 	if err != nil {
-		return nil, err // TODO 404
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainerrors.ErrConfigNotFount(eventType)
+		}
+		return nil, err
 	}
 	return eventConfig, nil
 }
