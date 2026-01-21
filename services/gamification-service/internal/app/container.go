@@ -20,10 +20,11 @@ func NewContainer(db *gorm.DB, logger *zap.Logger) *Container {
 	progressRepo := postgres.NewPgUserProgressRepository(db, logger)
 	levelRepo := postgres.NewPgLevelRepository(db, logger)
 	configRepo := postgres.NewPgEventConfigRepository(db, logger)
+	userHistoryRepo := postgres.NewPgUserExpHistoryRepository(db, logger)
 
 	strategy := levelgenerator.NewLinearGenerator()
 	levelService := levelservice.NewLevelService(levelRepo, strategy, logger)
-	gamificationService := gamificationservice.NewGamificationService(levelService, configRepo, progressRepo, logger)
+	gamificationService := gamificationservice.NewGamificationService(levelService, configRepo, progressRepo, userHistoryRepo, logger)
 	return &Container{
 		GamificationService: gamificationService,
 

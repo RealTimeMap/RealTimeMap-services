@@ -49,8 +49,26 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 		return consumer.Skip(err)
 	}
 
-	// Передаём обработку в сервис
-	h.gamificationService.GreatUserExp(ctx, uint(userID), meta.EventType)
+	sourceID, err := parseOptionalUint(meta.SourceID)
+	if err != nil {
+		h.logger.Warn("invalid source_id format", zap.String("source_id", meta.SourceID), zap.Error(err))
+		return consumer.Skip(err)
+	}
+
+	h.gamificationService.GreatUserExp(ctx, uint(userID), meta.EventType, sourceID)
 
 	return nil
+}
+
+// parseOptionalUint парсит строку в *uint.
+func parseOptionalUint(s string) (*uint, error) {
+	if s == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	id := uint(parsed)
+	return &id, nil
 }

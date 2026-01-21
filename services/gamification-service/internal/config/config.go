@@ -17,7 +17,7 @@ type Database struct {
 
 type Kafka struct {
 	Brokers        []string      `yaml:"brokers" env:"KAFKA_BROKERS" env-default:"localhost:9092"`
-	Topic          string        `yaml:"topic" env:"KAFKA_TOPIC" env-default:"mark-service.events"`
+	Topics         []string      `yaml:"topics"`
 	GroupID        string        `yaml:"group_id" env:"KAFKA_GROUP_ID" env-default:"gamification-service"`
 	MaxWait        time.Duration `yaml:"max_wait" env-default:"500ms"`
 	CommitInterval time.Duration `yaml:"commit_interval" env-default:"0"`

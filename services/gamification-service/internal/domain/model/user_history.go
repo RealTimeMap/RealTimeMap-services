@@ -21,7 +21,7 @@ type UserExpHistory struct {
 	UserID    uint
 	EarnedExp uint
 	Status    HistoryStatus
-	SoursID   *uint
+	SourceID  *uint
 	ConfigID  uint
 	Config    EventConfig `gorm:"foreignKey:ConfigID"`
 }

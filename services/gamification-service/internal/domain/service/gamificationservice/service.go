@@ -12,23 +12,25 @@ import (
 )
 
 type GamificationService struct {
-	levelService *levelservice.LevelService
-	eventRepo    repository.EventConfigRepository
-	progressRepo repository.UserProgressRepository
+	levelService    *levelservice.LevelService
+	eventRepo       repository.EventConfigRepository
+	progressRepo    repository.UserProgressRepository
+	userHistoryRepo repository.UserExpHistoryRepository
 
 	logger *zap.Logger
 }
 
-func NewGamificationService(levelService *levelservice.LevelService, eventRepo repository.EventConfigRepository, progressRepo repository.UserProgressRepository, logger *zap.Logger) *GamificationService {
+func NewGamificationService(levelService *levelservice.LevelService, eventRepo repository.EventConfigRepository, progressRepo repository.UserProgressRepository, userHistoryRepo repository.UserExpHistoryRepository, logger *zap.Logger) *GamificationService {
 	return &GamificationService{
-		levelService: levelService,
-		eventRepo:    eventRepo,
-		progressRepo: progressRepo,
-		logger:       logger,
+		levelService:    levelService,
+		eventRepo:       eventRepo,
+		progressRepo:    progressRepo,
+		userHistoryRepo: userHistoryRepo,
+		logger:          logger,
 	}
 }
 
-func (s *GamificationService) GreatUserExp(ctx context.Context, userID uint, event string) {
+func (s *GamificationService) GreatUserExp(ctx context.Context, userID uint, event string, sourceID *uint) {
 	s.logger.Info("start GamificationService.GreatUserExp", zap.String("event", event), zap.Uint("userID", userID))
 	config, err := s.getConfig(ctx, event)
 	if err != nil {
@@ -40,8 +42,8 @@ func (s *GamificationService) GreatUserExp(ctx context.Context, userID uint, eve
 		return
 	}
 	// Проверка лимитов начисления для этого события
-	if err := s.checkDailyLimits(ctx, userID, config); err != nil {
-		s.logger.Warn("reach daily limits", zap.Error(err))
+	if err := s.checkDailyLimits(ctx, userID, config, sourceID); err != nil {
+		s.logger.Info("Daily limits check failed", zap.Error(err))
 		return
 	}
 
@@ -51,6 +53,8 @@ func (s *GamificationService) GreatUserExp(ctx context.Context, userID uint, eve
 		return
 	}
 	s.logger.Info("update progress successfully", zap.Bool("isLevelUp", isLevelUp), zap.Any("updatedProgress", updatedProgress))
+
+	s.userHistoryRepo.Create(ctx, &model.UserExpHistory{UserID: userID, EarnedExp: config.RewardExp, Status: model.Credited, SourceID: sourceID, ConfigID: config.ID})
 }
 
 func (s *GamificationService) getConfig(ctx context.Context, event string) (*model.EventConfig, error) {
@@ -73,8 +77,26 @@ func (s *GamificationService) getOrCreateUserProgress(ctx context.Context, userI
 	return s.progressRepo.GetOrCreate(ctx, userID)
 }
 
-func (s *GamificationService) checkDailyLimits(ctx context.Context, userID uint, config *model.EventConfig) error {
-	_ = time.Now()
+func (s *GamificationService) checkDailyLimits(ctx context.Context, userID uint, config *model.EventConfig, sourceID *uint) error {
+	if sourceID != nil && !config.IsRepeatable {
+		exists, err := s.userHistoryRepo.ExistsBySourceID(ctx, userID, config.ID, *sourceID)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return domainerrors.ErrAlreadyEarnedForSource()
+		}
+	}
+	if config.DailyLimit != nil {
+		count, err := s.userHistoryRepo.CountForDay(ctx, userID, config.ID, time.Now())
+		if err != nil {
+			s.logger.Error("failed checkDailyLimits", zap.Error(err))
+			return err
+		}
+		if count >= int64(*config.DailyLimit) {
+			return domainerrors.ErrDailyLimitReached(*config.DailyLimit)
+		}
+	}
 	return nil
 }
 

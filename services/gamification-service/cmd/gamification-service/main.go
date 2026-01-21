@@ -40,7 +40,7 @@ func main() {
 	// Kafka Consumer
 	kafkaCfg := consumer.DefaultConfig().
 		WithBrokers(cfg.Kafka.Brokers...).
-		WithTopic(cfg.Kafka.Topic).
+		WithTopics(cfg.Kafka.Topics...).
 		WithGroupID(cfg.Kafka.GroupID)
 
 	kafkaConsumer := consumer.New(kafkaCfg, log)
@@ -63,7 +63,7 @@ func main() {
 	// Start consuming
 	log.Info("Starting Kafka consumer",
 		zap.Strings("brokers", cfg.Kafka.Brokers),
-		zap.String("topic", cfg.Kafka.Topic),
+		zap.Strings("topics", cfg.Kafka.Topics),
 		zap.String("group_id", cfg.Kafka.GroupID),
 	)
 
