@@ -19,15 +19,23 @@ type Consumer struct {
 }
 
 func New(cfg Config, log *zap.Logger) *Consumer {
-	reader := kafka.NewReader(kafka.ReaderConfig{
+	readerCfg := kafka.ReaderConfig{
 		Brokers:        cfg.Brokers,
-		Topic:          cfg.Topic,
 		GroupID:        cfg.GroupID,
 		MaxWait:        cfg.MaxWait,
 		MaxBytes:       cfg.MaxBytes,
 		MinBytes:       cfg.MinBytes,
 		CommitInterval: cfg.CommitInterval,
-	})
+	}
+
+	// Поддержка нескольких топиков
+	if len(cfg.Topics) > 1 {
+		readerCfg.GroupTopics = cfg.Topics
+	} else if len(cfg.Topics) == 1 {
+		readerCfg.Topic = cfg.Topics[0]
+	}
+
+	reader := kafka.NewReader(readerCfg)
 	return &Consumer{
 		reader:     reader,
 		log:        log,
@@ -36,7 +44,12 @@ func New(cfg Config, log *zap.Logger) *Consumer {
 }
 
 func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
-	c.log.Info("starting consumer", sl.String("topic", c.reader.Config().Topic), sl.String("groupId", c.reader.Config().GroupID))
+	cfg := c.reader.Config()
+	topics := cfg.GroupTopics
+	if len(topics) == 0 && cfg.Topic != "" {
+		topics = []string{cfg.Topic}
+	}
+	c.log.Info("starting consumer", zap.Strings("topics", topics), sl.String("groupId", cfg.GroupID))
 
 	for {
 		msg, err := c.reader.FetchMessage(ctx)

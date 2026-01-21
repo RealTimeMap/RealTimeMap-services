@@ -2,11 +2,10 @@ package consumer
 
 import "time"
 
-// Config конфиг для kafka
-
+// Config конфиг для kafka consumer.
 type Config struct {
 	Brokers        []string
-	Topic          string // Топик
+	Topics         []string // Несколько топиков для подписки
 	GroupID        string
 	MinBytes       int
 	MaxBytes       int
@@ -29,9 +28,15 @@ func (c Config) WithBrokers(brokers ...string) Config {
 	return c
 }
 
-// WithTopic устанавливает топик.
+// WithTopics устанавливает список топиков для подписки.
+func (c Config) WithTopics(topics ...string) Config {
+	c.Topics = topics
+	return c
+}
+
+// WithTopic устанавливает один топик (для обратной совместимости).
 func (c Config) WithTopic(topic string) Config {
-	c.Topic = topic
+	c.Topics = []string{topic}
 	return c
 }
 
