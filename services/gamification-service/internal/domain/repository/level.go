@@ -9,4 +9,5 @@ import (
 type LevelRepository interface {
 	Create(ctx context.Context, level *model.Level) (*model.Level, error)
 	GetByLevel(ctx context.Context, level uint) (*model.Level, error)
+	GetAll(ctx context.Context) ([]*model.Level, error)
 }

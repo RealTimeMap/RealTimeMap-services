@@ -27,11 +27,21 @@ type GRPC struct {
 	Port int `yaml:"port" env:"GRPC_PORT" env-default:"50051"`
 }
 
+type HTTP struct {
+	Port int `yaml:"port" env:"HTTP_PORT" env-default:"8080"`
+}
+type Redis struct {
+	Host string `yaml:"host" env:"REDIS_HOST" env-default:"localhost"`
+}
+
 type Config struct {
-	Env      string   `env:"ENV" env-default:"local"`
-	Database Database `yaml:"database"`
-	Kafka    Kafka    `yaml:"kafka"`
-	GRPC     GRPC     `yaml:"grpc"`
+	Env           string   `env:"ENV" env-default:"local"`
+	CacheStrategy string   ` yaml:"cacheStrategy" env:"CACHE_STRATEGY" env-required:"true"`
+	Database      Database `yaml:"database"`
+	Kafka         Kafka    `yaml:"kafka"`
+	GRPC          GRPC     `yaml:"grpc"`
+	HTTP          HTTP     `yaml:"http"`
+	Redis         Redis    `yaml:"redis"`
 }
 
 func MustLoad() *Config {

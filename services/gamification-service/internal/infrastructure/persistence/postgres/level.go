@@ -42,3 +42,12 @@ func (r *PgLevelRepository) GetByLevel(ctx context.Context, level uint) (*model.
 	}
 	return res, nil
 }
+
+func (r *PgLevelRepository) GetAll(ctx context.Context) ([]*model.Level, error) {
+	var res []*model.Level
+	err := r.db.WithContext(ctx).Find(&res).Error
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}

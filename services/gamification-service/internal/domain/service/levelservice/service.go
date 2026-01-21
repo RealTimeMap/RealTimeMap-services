@@ -45,6 +45,11 @@ func (s *LevelService) GetOrCreate(ctx context.Context, level uint) (*model.Leve
 	}
 	return createdLevel, nil
 }
+
 func (s *LevelService) GetNextLevel(ctx context.Context, currentLevel uint) (*model.Level, error) {
 	return s.GetOrCreate(ctx, currentLevel+1)
+}
+
+func (s *LevelService) GetLevels(ctx context.Context) ([]*model.Level, error) {
+	return s.levelRepo.GetAll(ctx)
 }

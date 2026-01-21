@@ -5,16 +5,22 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/consumer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/grpc"
+	httptransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/http"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/http/handlers"
 	kafkahandler "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/kafka"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -36,7 +42,7 @@ func main() {
 	db.AutoMigrate(&model.EventConfig{}, &model.Level{}, &model.UserProgress{}, &model.UserExpHistory{})
 
 	// Services
-	container := app.NewContainer(db, log)
+	container := app.NewContainer(cfg, db, log)
 
 	// gRPC Server
 	grpcHandler := grpctransport.NewHandler(container.ProgressRepo, container.LevelService, log)
@@ -44,6 +50,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to create gRPC server", zap.Error(err))
 	}
+
+	// HTTP Server
+	httpServer := httptransport.NewServer(cfg.HTTP.Port, log)
+
+	httpServer.Router().GET("/", cache.Middleware(container.CacheStrategy, cache.Options{Prefix: "debug", TTL: 1 * time.Minute}), testRouter)
+	handlers.NewLevelHandler(httpServer.Router().Group("/"), container.LevelService, container.CacheStrategy, container.Logger)
+	// Роуты можно регистрировать через httpServer.Router()
 
 	// Kafka Consumer
 	kafkaCfg := consumer.DefaultConfig().
@@ -54,39 +67,62 @@ func main() {
 	kafkaConsumer := consumer.New(kafkaCfg, log)
 	defer kafkaConsumer.Close()
 
-	handler := kafkahandler.NewHandler(container.GamificationService, log)
+	kafkaHandler := kafkahandler.NewHandler(container.GamificationService, log)
 
-	// Graceful shutdown
+	// Context with cancel for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Handle shutdown signals
 	go func() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
 		log.Info("Shutdown signal received")
-		grpcServer.Stop()
 		cancel()
 	}()
 
-	// Start gRPC server in goroutine
-	go func() {
-		if err := grpcServer.Run(); err != nil {
-			log.Error("gRPC server error", zap.Error(err))
-			cancel()
-		}
-	}()
+	// Run all servers with errgroup
+	g, gCtx := errgroup.WithContext(ctx)
 
-	// Start Kafka consumer
-	log.Info("Starting Kafka consumer",
-		zap.Strings("brokers", cfg.Kafka.Brokers),
-		zap.Strings("topics", cfg.Kafka.Topics),
-		zap.String("group_id", cfg.Kafka.GroupID),
-	)
+	// gRPC server
+	g.Go(func() error {
+		return grpcServer.Run()
+	})
+	g.Go(func() error {
+		<-gCtx.Done()
+		grpcServer.Stop()
+		return nil
+	})
 
-	if err := kafkaConsumer.Run(ctx, handler.HandleMessage); err != nil {
-		log.Error("Kafka consumer error", zap.Error(err))
+	// HTTP server
+	g.Go(func() error {
+		return httpServer.Run()
+	})
+	g.Go(func() error {
+		<-gCtx.Done()
+		return httpServer.Shutdown(context.Background())
+	})
+
+	// Kafka consumer
+	g.Go(func() error {
+		log.Info("Starting Kafka consumer",
+			zap.Strings("brokers", cfg.Kafka.Brokers),
+			zap.Strings("topics", cfg.Kafka.Topics),
+			zap.String("group_id", cfg.Kafka.GroupID),
+		)
+		return kafkaConsumer.Run(gCtx, kafkaHandler.HandleMessage)
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error("Server error", zap.Error(err))
 	}
 
 	log.Info("Gamification Service stopped")
+}
+
+func testRouter(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"message": "Hello World",
+	})
 }
