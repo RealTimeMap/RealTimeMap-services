@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package gamification;
+
+option go_package = "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/gamification";
+
+// ProgressService provides user progression data
+service ProgressService {
+  // GetUserProgress returns the current progress of a user
+  rpc GetUserProgress(GetUserProgressRequest) returns (UserProgressResponse);
+}
+
+message GetUserProgressRequest {
+  uint64 user_id = 1;
+}
+
+message UserProgressResponse {
+  uint64 user_id = 1;
+  uint64 current_level = 2;
+  uint64 current_xp = 3;
+  uint64 next_level = 4;
+  uint64 xp_for_next_level = 5;     // XP до некст уровня
+  double progress_percent = 6;      // Процентное отображение
+}

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"math"
 	"time"
 )
 
@@ -11,4 +12,13 @@ type Level struct {
 	Title      string `gorm:"type:varchar(100)"`
 	XPRequired uint   `gorm:"not null;check:xp_required >= 0"`
 	CreatedAt  time.Time
+}
+
+// Percent вычисляет процент прогресса достяжения до достяжения нового уровня
+func (l *Level) Percent(xp float64) float64 {
+	p := (xp / float64(l.XPRequired)) * 100
+	if p > 100 {
+		p = 100
+	}
+	return math.Round(p)
 }

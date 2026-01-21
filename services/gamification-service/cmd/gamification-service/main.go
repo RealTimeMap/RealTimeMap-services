@@ -12,6 +12,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
+	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/grpc"
 	kafkahandler "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/kafka"
 	"go.uber.org/zap"
 )
@@ -37,6 +38,13 @@ func main() {
 	// Services
 	container := app.NewContainer(db, log)
 
+	// gRPC Server
+	grpcHandler := grpctransport.NewHandler(container.ProgressRepo, container.LevelService, log)
+	grpcServer, err := grpctransport.NewServer(grpcHandler, cfg.GRPC.Port, log)
+	if err != nil {
+		log.Fatal("Failed to create gRPC server", zap.Error(err))
+	}
+
 	// Kafka Consumer
 	kafkaCfg := consumer.DefaultConfig().
 		WithBrokers(cfg.Kafka.Brokers...).
@@ -57,10 +65,19 @@ func main() {
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
 		log.Info("Shutdown signal received")
+		grpcServer.Stop()
 		cancel()
 	}()
 
-	// Start consuming
+	// Start gRPC server in goroutine
+	go func() {
+		if err := grpcServer.Run(); err != nil {
+			log.Error("gRPC server error", zap.Error(err))
+			cancel()
+		}
+	}()
+
+	// Start Kafka consumer
 	log.Info("Starting Kafka consumer",
 		zap.Strings("brokers", cfg.Kafka.Brokers),
 		zap.Strings("topics", cfg.Kafka.Topics),

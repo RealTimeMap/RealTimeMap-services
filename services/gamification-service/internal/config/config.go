@@ -23,10 +23,15 @@ type Kafka struct {
 	CommitInterval time.Duration `yaml:"commit_interval" env-default:"0"`
 }
 
+type GRPC struct {
+	Port int `yaml:"port" env:"GRPC_PORT" env-default:"50051"`
+}
+
 type Config struct {
 	Env      string   `env:"ENV" env-default:"local"`
 	Database Database `yaml:"database"`
 	Kafka    Kafka    `yaml:"kafka"`
+	GRPC     GRPC     `yaml:"grpc"`
 }
 
 func MustLoad() *Config {
