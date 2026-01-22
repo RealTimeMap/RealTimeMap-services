@@ -17,12 +17,17 @@ type Handler struct {
 
 	logger *zap.Logger
 }
+type LevelDeps struct {
+	Service *levelservice.LevelService
+	Cache   cache.Cache
+	Logger  *zap.Logger
+}
 
-func NewLevelHandler(g *gin.RouterGroup, service *levelservice.LevelService, strategy cache.Cache, logger *zap.Logger) {
-	h := &Handler{service: service, logger: logger}
+func RegisterLevelHandler(g *gin.RouterGroup, deps LevelDeps) {
+	h := &Handler{service: deps.Service, logger: deps.Logger}
 	r := g.Group("/level")
 	{
-		r.GET("/", cache.Middleware(strategy, cache.Options{Prefix: "levels", TTL: 15 * time.Minute}), h.GetLevels)
+		r.GET("/", cache.Middleware(deps.Cache, cache.Options{Prefix: "levels", TTL: 15 * time.Minute}), h.GetLevels)
 	}
 }
 

@@ -5,20 +5,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/consumer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/grpc"
 	httptransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/http"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/http/handlers"
 	kafkahandler "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/kafka"
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -53,10 +49,7 @@ func main() {
 
 	// HTTP Server
 	httpServer := httptransport.NewServer(cfg.HTTP.Port, log)
-
-	httpServer.Router().GET("/", cache.Middleware(container.CacheStrategy, cache.Options{Prefix: "debug", TTL: 1 * time.Minute}), testRouter)
-	handlers.NewLevelHandler(httpServer.Router().Group("/"), container.LevelService, container.CacheStrategy, container.Logger)
-	// Роуты можно регистрировать через httpServer.Router()
+	httptransport.RegisterRoutes(httpServer.Router(), container)
 
 	// Kafka Consumer
 	kafkaCfg := consumer.DefaultConfig().
@@ -119,10 +112,4 @@ func main() {
 	}
 
 	log.Info("Gamification Service stopped")
-}
-
-func testRouter(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"message": "Hello World",
-	})
 }

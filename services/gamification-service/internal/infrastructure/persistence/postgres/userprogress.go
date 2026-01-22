@@ -58,3 +58,12 @@ func (r *PgUserProgressRepository) GetByID(ctx context.Context, userID uint) (*m
 	}
 	return progress, nil
 }
+
+func (r *PgUserProgressRepository) GetTopUsers(ctx context.Context) ([]*model.UserProgress, error) {
+	var users []*model.UserProgress
+	err := r.db.WithContext(ctx).Model(&model.UserProgress{}).Order("current_level DESC").Limit(10).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}

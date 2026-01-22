@@ -11,4 +11,5 @@ type UserProgressRepository interface {
 	Create(ctx context.Context, user *model.UserProgress) (*model.UserProgress, error)
 	GetOrCreate(ctx context.Context, userID uint) (*model.UserProgress, error)
 	GetByID(ctx context.Context, userID uint) (*model.UserProgress, error)
+	GetTopUsers(ctx context.Context) ([]*model.UserProgress, error)
 }
