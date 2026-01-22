@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-gamification
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal-gamification
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-gamification
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal-gamification
+
+  gamification-service:
+    build:
+      context: ../..
+      dockerfile: services/gamification-service/Dockerfile
+    container_name: gamification-service
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    labels:
+      - "traefik.enable=true"
+
+      # CORS preflight OPTIONS для /api/v2/gamification/*
+      - "traefik.http.routers.gamification-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/gamification/`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.gamification-options.entrypoints=websecure"
+      - "traefik.http.routers.gamification-options.priority=200"
+      - "traefik.http.routers.gamification-options.service=gamification"
+      - "traefik.http.routers.gamification-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.gamification-options.tls=true"
+
+      # GET /api/v2/gamification/levels - список уровней (публичный)
+      - "traefik.http.routers.gamification-levels.rule=Host(`realtimemap.ru`) && Path(`/api/v2/gamification/levels`) && Method(`GET`)"
+      - "traefik.http.routers.gamification-levels.entrypoints=websecure"
+      - "traefik.http.routers.gamification-levels.priority=100"
+      - "traefik.http.routers.gamification-levels.service=gamification"
+      - "traefik.http.routers.gamification-levels.middlewares=cors-headers@file,strip-gamification"
+      - "traefik.http.routers.gamification-levels.tls=true"
+
+      # Service configuration
+      - "traefik.http.services.gamification.loadbalancer.server.port=8081"
+
+    networks:
+      - web
+      - internal-gamification
+      - kafka-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  web:
+    external: true
+  internal-gamification:
+  kafka-network:
+    external: true

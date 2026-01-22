@@ -95,20 +95,23 @@ services:
       - "traefik.http.routers.admin-marks.tls=true"
 
       # Socket.IO
-      - "traefik.http.routers.mark-socketio.rule=Host(`realtimemap.ru`) && PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.mark-socketio.rule=Host(`realtimemap.ru`) && PathPrefix(`/marks/socket.io`)"
       - "traefik.http.routers.mark-socketio.entrypoints=websecure"
-      - "traefik.http.routers.mark-socketio.priority=10"
+      - "traefik.http.routers.mark-socketio.priority=20"
       - "traefik.http.routers.mark-socketio.service=mark"
-      - "traefik.http.routers.mark-socketio.middlewares=cors-headers@file"
+      - "traefik.http.routers.mark-socketio.middlewares=cors-headers@file,strip-marks"
       - "traefik.http.routers.mark-socketio.tls=true"
 
-      # Swagger
-      - "traefik.http.routers.mark-swagger.rule=Host(`realtimemap.ru`) && PathPrefix(`/swagger`)"
-      - "traefik.http.routers.mark-swagger.entrypoints=websecure"
-      - "traefik.http.routers.mark-swagger.priority=5"
-      - "traefik.http.routers.mark-swagger.service=mark"
-      - "traefik.http.routers.mark-swagger.middlewares=cors-headers@file"
-      - "traefik.http.routers.mark-swagger.tls=true"
+      # Middleware для удаления /marks из пути
+      - "traefik.http.middlewares.strip-marks.stripprefix.prefixes=/marks"
+
+      # # Swagger
+      # - "traefik.http.routers.mark-swagger.rule=Host(`realtimemap.ru`) && PathPrefix(`/swagger`)"
+      # - "traefik.http.routers.mark-swagger.entrypoints=websecure"
+      # - "traefik.http.routers.mark-swagger.priority=5"
+      # - "traefik.http.routers.mark-swagger.service=mark"
+      # - "traefik.http.routers.mark-swagger.middlewares=cors-headers@file"
+      # - "traefik.http.routers.mark-swagger.tls=true"
 
       # Static files (store)
       - "traefik.http.routers.mark-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store`)"

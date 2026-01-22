@@ -5,6 +5,7 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
@@ -51,12 +52,11 @@ func main() {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"https://real-time-map-frontend.vercel.app", "https://trip-scheduler.ru", "https://realtimemap.ru", "http://localhost:5173", "http://localhost:1420"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-User-Id", "X-User-Name", "X-User-Ban", "X-User-Admin"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-User-Id", "X-User-Name", "X-User-Ban", "X-User-Admin", "X-Trace-Id"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-
 	router.HandleMethodNotAllowed = true
 
 	// Handle OPTIONS for all routes (including non-existent ones)
