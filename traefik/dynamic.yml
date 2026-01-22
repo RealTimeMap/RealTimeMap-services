@@ -8,11 +8,27 @@ http:
       priority: 100
       tls: {}
 
+    task-manager:
+      rule: "Host(`realtimemap.ru`) && PathPrefix(`/rttask`)"
+      entryPoints:
+        - websecure
+      service: rttask-service
+      middlewares:
+        - cors-headers
+        - strip-rttask
+      priority: 100
+      tls: {}
+
   services:
     auth-service:
       loadBalancer:
         servers:
           - url: "http://realtime-map-backend:8001"
+
+    rttask-service:
+      loadBalancer:
+        servers:
+          - url: "http://service-rttask:8080"
 
   middlewares:
     # CORS headers middleware
@@ -27,11 +43,11 @@ http:
           - "HEAD"
           - "OPTIONS"
         accessControlAllowOriginList:
-          - "https://real-time-map-frontend.vercel.app"
-          - "https://trip-scheduler.ru"
+          - "https://rt-task-frontend.vercel.app"
           - "https://realtimemap.ru"
           - "http://localhost:5173"
           - "http://localhost:1420"
+          - "http://localhost:8080"
         accessControlAllowHeaders:
           - "Origin"
           - "Content-Type"
@@ -41,10 +57,13 @@ http:
           - "X-User-Name"
           - "X-User-Ban"
           - "X-User-Admin"
+          - "X-Trace-Id"
         accessControlExposeHeaders:
           - "Content-Length"
         accessControlAllowCredentials: true
         accessControlMaxAge: 43200
+        # Добавь это для preflight
+        addVaryHeader: true
 
     # ForwardAuth middleware для проверки Bearer токена
     # auth-service вернет 401 если токен невалиден
@@ -59,7 +78,10 @@ http:
           - "X-User-Admin"
         authRequestHeaders:
           - "Authorization"
-
+    strip-rttask:
+      stripPrefix:
+        prefixes:
+          - "/rttask"
 tls:
   certificates:
     - certFile: /certs/fullchain.pem
