@@ -1,5 +1,7 @@
 include:
   - services/mark-service/docker-compose.yml
+  - services/gamification-service/docker-compose.yml
+  - docker-compose.kafka.yml
 
 services:
   traefik:

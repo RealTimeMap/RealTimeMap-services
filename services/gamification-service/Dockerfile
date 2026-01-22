@@ -57,7 +57,7 @@ COPY --chown=appuser:appgroup services/gamification-service/config/config.yaml .
 USER appuser
 
 # Expose порт приложения
-EXPOSE 8080
+EXPOSE 8081
 
 # Entrypoint
 ENTRYPOINT ["/app/gamification-service"]

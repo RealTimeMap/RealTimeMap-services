@@ -1,23 +1,23 @@
 services:
-  postgres:
+  gamification-postgres:
     image: postgres:16-alpine
-    container_name: postgres-gamification
+    container_name: gamification-postgres
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - gamification_postgres_data:/var/lib/postgresql/data
     networks:
       - internal-gamification
 
-  redis:
+  gamification-redis:
     image: redis:7-alpine
-    container_name: redis-gamification
+    container_name: gamification-redis
     restart: always
     volumes:
-      - redis_data:/data
+      - gamification_redis_data:/data
     networks:
       - internal-gamification
 
@@ -28,8 +28,8 @@ services:
     container_name: gamification-service
     restart: always
     depends_on:
-      - postgres
-      - redis
+      - gamification-postgres
+      - gamification-redis
     labels:
       - "traefik.enable=true"
 
@@ -58,12 +58,10 @@ services:
       - kafka-network
 
 volumes:
-  postgres_data:
-  redis_data:
+  gamification_postgres_data:
+  gamification_redis_data:
 
 networks:
   web:
     external: true
   internal-gamification:
-  kafka-network:
-    external: true

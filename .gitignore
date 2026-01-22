@@ -112,3 +112,4 @@ fabric.properties
 /.idea/realtimemap-services.iml
 /services/mark-service/config/config.yaml
 /.claude/
+!/services/gamification-service/config/config.yaml

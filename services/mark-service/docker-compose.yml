@@ -1,14 +1,14 @@
 services:
-  postgres:
+  mark-postgres:
     image: postgis/postgis:16-3.4-alpine
-    container_name: postgis
+    container_name: mark-postgres
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mark_postgres_data:/var/lib/postgresql/data
     networks:
       - internal-mark
 
@@ -18,7 +18,7 @@ services:
       dockerfile: services/mark-service/Dockerfile
     container_name: mark-service
     depends_on:
-      - postgres
+      - mark-postgres
     labels:
       - "traefik.enable=true"
       # CORS preflight OPTIONS для всех /api/v2/* эндпоинтов
@@ -132,7 +132,7 @@ services:
       - internal-mark
 
 volumes:
-  postgres_data:
+  mark_postgres_data:
 
 networks:
   web:
