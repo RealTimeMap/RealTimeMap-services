@@ -1,5 +1,6 @@
 package topic
 
 const (
-	UserEvents = "user-service"
+	UserEvents    = "user-service"
+	CommentEvents = "comment-service.events"
 )
