@@ -35,9 +35,7 @@ func main() {
 	db.AutoMigrate(&model.Comment{})
 
 	container := app.NewContainer(cfg, db, log)
-	if container.Producer != nil {
-		defer container.Producer.Close()
-	}
+	defer container.Close()
 
 	httpServer := httptransport.NewServer(cfg.HTTP.Port, log)
 	httptransport.RegisterRoutes(httpServer.Router(), container)

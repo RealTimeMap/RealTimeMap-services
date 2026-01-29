@@ -18,4 +18,12 @@ var (
 	EntityTypeNotAllowed = func(entity string) error {
 		return apperror.NewFieldValidationError("entityType", "entity not allowed", "value_error.entityType", entity)
 	}
+
+	CommentIsDeleted = func() error {
+		return apperror.NewConflictError("comment.status", "is deleted", "")
+	}
+
+	NotCommentOwner = func() error {
+		return apperror.NewForbiddenError("you are not the owner")
+	}
 )

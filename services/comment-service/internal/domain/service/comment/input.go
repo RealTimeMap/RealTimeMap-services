@@ -7,3 +7,7 @@ type CreateInput struct {
 
 	ParentID *uint
 }
+
+type UpdateInput struct {
+	Content string
+}

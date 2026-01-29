@@ -11,4 +11,5 @@ type CommentRepository interface {
 	Create(ctx context.Context, comment *model.Comment) (*model.Comment, error)
 	GetByID(ctx context.Context, id uint) (*model.Comment, error)
 	GetComments(ctx context.Context, filters model.CommentFilter) ([]*model.Comment, bool, error)
+	Update(ctx context.Context, comment *model.Comment) (*model.Comment, error)
 }

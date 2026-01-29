@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"net/http"
 	"strconv"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
@@ -25,7 +26,16 @@ func NewCommentRoute(g *gin.RouterGroup, service *comment.Service, logger *zap.L
 	r := g.Group("")
 	{
 		r.POST("/comments", auth.AuthRequired(), h.CreateComment)
+		r.POST("/comments/", auth.AuthRequired(), h.CreateComment)
+
 		r.GET("/:id/comments", h.GetComments)
+		r.GET("/:id/comments/", h.GetComments)
+
+		r.DELETE("/:id/comments", auth.AuthRequired(), h.DeleteComment)
+		r.DELETE("/:id/comments/", auth.AuthRequired(), h.DeleteComment)
+
+		r.PATCH("/:id/comments", auth.AuthRequired(), h.UpdateComment)
+		r.PATCH("/:id/comments/", auth.AuthRequired(), h.UpdateComment)
 	}
 }
 
@@ -72,4 +82,53 @@ func (h *Handler) GetComments(c *gin.Context) {
 		return
 	}
 	c.JSON(200, dto.NewCursorPaginateResponse(comments, hasMore))
+}
+
+func (h *Handler) DeleteComment(c *gin.Context) {
+	commentID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	userID, err := context.GetUserID(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	err = h.service.SoftDelete(c.Request.Context(), uint(userID), uint(commentID))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	c.Status(http.StatusNoContent)
+
+}
+
+func (h *Handler) UpdateComment(c *gin.Context) {
+	commentID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	userID, err := context.GetUserID(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	var req dto.CommentUpdateRequest
+	if err := c.ShouldBind(&req); err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	uComment, err := h.service.UpdateComment(c.Request.Context(), comment.UpdateInput{Content: req.Content}, uint(userID), uint(commentID))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.NewCommentResponse(uComment))
 }

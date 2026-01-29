@@ -39,6 +39,10 @@ type CommentRequest struct {
 	ParentID *uint  `form:"parentId" json:"parentId"`
 }
 
+type CommentUpdateRequest struct {
+	Content string `form:"content" json:"content" binding:"required"`
+}
+
 type Meta struct {
 	CanReply    bool `json:"canReply"`
 	HaveReplies bool `json:"haveReplies"`

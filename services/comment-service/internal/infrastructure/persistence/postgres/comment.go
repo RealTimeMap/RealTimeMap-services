@@ -28,6 +28,7 @@ func (r *PgCommentRepository) Create(ctx context.Context, comment *model.Comment
 	r.logger.Info("start PgCommentRepository.Create")
 	err := r.db.WithContext(ctx).Create(&comment).Error
 	if err != nil {
+		r.logger.Error("error PgCommentRepository.Create", zap.Error(err), zap.Uint("id", comment.ID))
 		return nil, err
 	}
 	return comment, nil
@@ -66,4 +67,14 @@ func (r *PgCommentRepository) GetComments(ctx context.Context, filters model.Com
 	}
 
 	return comments, hasMore, nil
+}
+
+func (r *PgCommentRepository) Update(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
+	r.logger.Info("start PgCommentRepository.Update")
+	err := r.db.WithContext(ctx).Save(&comment).Error
+	if err != nil {
+		r.logger.Error("error PgCommentRepository.Update", zap.Error(err), zap.Uint("id", comment.ID))
+		return nil, err
+	}
+	return comment, nil
 }
