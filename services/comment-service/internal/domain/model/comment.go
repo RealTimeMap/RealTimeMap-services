@@ -27,9 +27,10 @@ type Comment struct {
 	UserID  uint // ID Юзера
 	Content string
 
-	ParentID *uint     `gorm:"index"`
-	Parent   *Comment  `gorm:"foreignKey:ParentID"`
-	Replies  []Comment `gorm:"foreignKey:ParentID"`
+	ParentID     *uint     `gorm:"index"`
+	Parent       *Comment  `gorm:"foreignKey:ParentID"`
+	Replies      []Comment `gorm:"foreignKey:ParentID"`
+	RepliesCount int64     `gorm:"->" json:"-"`
 
 	EntityType EntityType `gorm:"size:32;not null;index:idx_entity"`
 	EntityID   uint       `gorm:"not null;index:idx_entity"`

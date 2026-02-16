@@ -28,6 +28,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput, userID uint) (*
 	if err := s.validateCreateInput(input); err != nil {
 		return nil, err
 	}
+
 	comment := &model.Comment{
 		UserID:     userID,
 		Content:    input.Content,
@@ -35,17 +36,20 @@ func (s *Service) Create(ctx context.Context, input CreateInput, userID uint) (*
 		EntityID:   input.EntityID,
 		Depth:      0,
 	}
+
 	if input.ParentID != nil {
 		parent, err := s.commentRepo.GetByID(ctx, *input.ParentID)
 		if err != nil {
 			return nil, err
 		}
+
 		if parent.Depth >= model.MaxDepth {
 			return nil, domainerrors.CommentMaxDepthReached()
 		}
 		comment.ParentID = input.ParentID
 		comment.Depth = parent.Depth + 1
 	}
+
 	newComment, err := s.commentRepo.Create(ctx, comment)
 	if err != nil {
 		return nil, err

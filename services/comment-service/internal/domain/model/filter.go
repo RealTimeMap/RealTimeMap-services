@@ -27,4 +27,5 @@ type CommentFilter struct {
 	Entity   string
 	EntityID uint
 	Sort     SortOrder
+	ParentID *uint
 }

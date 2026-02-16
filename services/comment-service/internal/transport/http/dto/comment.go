@@ -11,7 +11,7 @@ type CommentParams struct {
 	Cursor *uint  `form:"cursor"`
 }
 
-func (p CommentParams) ToFilter(entityID uint) model.CommentFilter {
+func (p CommentParams) ToFilter(entityID uint, parentID *uint) model.CommentFilter {
 	limit := p.Limit
 	if limit <= 0 || limit > 50 {
 		limit = 20
@@ -28,6 +28,7 @@ func (p CommentParams) ToFilter(entityID uint) model.CommentFilter {
 		Cursor:   p.Cursor,
 		Entity:   p.Entity,
 		EntityID: entityID,
+		ParentID: parentID,
 	}
 
 }
@@ -44,15 +45,17 @@ type CommentUpdateRequest struct {
 }
 
 type Meta struct {
-	CanReply    bool `json:"canReply"`
-	HaveReplies bool `json:"haveReplies"`
+	CanReply     bool  `json:"canReply"`
+	HaveReplies  bool  `json:"haveReplies"`
+	RepliesCount int64 `json:"repliesCount"`
 }
 
 func NewMeta(c *model.Comment) Meta {
 
 	return Meta{
-		CanReply:    c.Depth <= model.MaxDepth,
-		HaveReplies: c.Parent != nil,
+		CanReply:     c.Depth <= model.MaxDepth,
+		HaveReplies:  c.RepliesCount > 0,
+		RepliesCount: c.RepliesCount,
 	}
 
 }

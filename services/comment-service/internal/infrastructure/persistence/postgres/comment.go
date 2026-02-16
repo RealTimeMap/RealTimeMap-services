@@ -51,7 +51,15 @@ func (r *PgCommentRepository) GetComments(ctx context.Context, filters model.Com
 	r.logger.Info("start PgCommentRepository.GetComments")
 	var comments []*model.Comment
 
-	query := r.db.WithContext(ctx).Where("entity_type = ? AND entity_id = ? AND parent_id IS NULL", filters.Entity, filters.EntityID)
+	query := r.db.WithContext(ctx).
+		Select("*, (SELECT COUNT(*) FROM comments r WHERE r.parent_id = comments.id AND r.deleted_at IS NULL AND r.status = ?) AS replies_count", model.CommentActive).
+		Where("entity_type = ? AND entity_id = ?", filters.Entity, filters.EntityID)
+
+	if filters.ParentID != nil {
+		query = query.Where("parent_id = ?", *filters.ParentID)
+	} else {
+		query = query.Where("parent_id IS NULL")
+	}
 
 	if filters.Cursor != nil {
 		query = query.Where(filters.Sort.CursorCondition(), *filters.Cursor)
@@ -77,4 +85,17 @@ func (r *PgCommentRepository) Update(ctx context.Context, comment *model.Comment
 		return nil, err
 	}
 	return comment, nil
+}
+
+func (r *PgCommentRepository) CountRelies(ctx context.Context, id uint) (int64, error) {
+	r.logger.Info("start PgCommentRepository.CountRelies")
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.Comment{}).
+		Where("parent_id = ? AND status = ?", id, model.CommentActive).
+		Count(&count).Error
+	if err != nil {
+		r.logger.Error("error PgCommentRepository.Count", zap.Error(err), zap.Uint("id", id))
+		return 0, err
+	}
+	return count, nil
 }

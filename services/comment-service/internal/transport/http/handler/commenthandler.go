@@ -31,6 +31,9 @@ func NewCommentRoute(g *gin.RouterGroup, service *comment.Service, logger *zap.L
 		r.GET("/:id/comments", h.GetComments)
 		r.GET("/:id/comments/", h.GetComments)
 
+		r.GET("/:id/comments/:parentID/replies", h.GetReplies)
+		r.GET("/:id/comments/:parentID/replies/", h.GetReplies)
+
 		r.DELETE("/:id/comments", auth.AuthRequired(), h.DeleteComment)
 		r.DELETE("/:id/comments/", auth.AuthRequired(), h.DeleteComment)
 
@@ -63,31 +66,58 @@ func (h *Handler) CreateComment(c *gin.Context) {
 
 func (h *Handler) GetComments(c *gin.Context) {
 	var req dto.CommentParams
-	entityID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 
+	entityID, err := h.parseIDParam(c, "id")
 	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 
-	if err := c.ShouldBind(&req); err != nil {
+	if err = c.ShouldBind(&req); err != nil {
 		validation.AbortWithBindingError(c, err)
 		return
 	}
 
-	comments, hasMore, err := h.service.GetComments(c.Request.Context(), req.ToFilter(uint(entityID)))
+	comments, hasMore, err := h.service.GetComments(c.Request.Context(), req.ToFilter(entityID, nil))
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
+
 	c.JSON(200, dto.NewCursorPaginateResponse(comments, hasMore))
 }
 
-func (h *Handler) DeleteComment(c *gin.Context) {
-	commentID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+func (h *Handler) GetReplies(c *gin.Context) {
+	var req dto.CommentParams
+
+	entityID, err := h.parseIDParam(c, "id")
 	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	parentID, err := h.parseIDParam(c, "parentID")
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	if err = c.ShouldBind(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	replies, hasMore, err := h.service.GetComments(c.Request.Context(), req.ToFilter(entityID, &parentID))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	c.JSON(200, dto.NewCursorPaginateResponse(replies, hasMore))
+}
+
+func (h *Handler) DeleteComment(c *gin.Context) {
+	commentID, err := h.parseIDParam(c, "id")
+	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
@@ -97,7 +127,7 @@ func (h *Handler) DeleteComment(c *gin.Context) {
 		return
 	}
 
-	err = h.service.SoftDelete(c.Request.Context(), uint(userID), uint(commentID))
+	err = h.service.SoftDelete(c.Request.Context(), uint(userID), commentID)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -107,12 +137,12 @@ func (h *Handler) DeleteComment(c *gin.Context) {
 }
 
 func (h *Handler) UpdateComment(c *gin.Context) {
-	commentID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	commentID, err := h.parseIDParam(c, "id")
 	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
+
 	userID, err := context.GetUserID(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
@@ -124,11 +154,19 @@ func (h *Handler) UpdateComment(c *gin.Context) {
 		return
 	}
 
-	uComment, err := h.service.UpdateComment(c.Request.Context(), comment.UpdateInput{Content: req.Content}, uint(userID), uint(commentID))
+	uComment, err := h.service.UpdateComment(c.Request.Context(), comment.UpdateInput{Content: req.Content}, uint(userID), commentID)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 
 	c.JSON(http.StatusOK, dto.NewCommentResponse(uComment))
+}
+
+func (h *Handler) parseIDParam(c *gin.Context, param string) (uint, error) {
+	id, err := strconv.ParseUint(c.Param(param), 10, 64)
+	if err != nil {
+		return 0, apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
+	}
+	return uint(id), nil
 }
