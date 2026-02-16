@@ -12,12 +12,14 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/paulmach/orb v0.12.0
+	github.com/redis/go-redis/v9 v9.17.2
 	github.com/segmentio/kafka-go v0.4.49
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	go.uber.org/zap v1.27.1
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
+	golang.org/x/sync v0.19.0
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 	gorm.io/driver/postgres v1.6.0
@@ -74,7 +76,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.57.1 // indirect
-	github.com/redis/go-redis/v9 v9.17.2 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
@@ -89,7 +90,6 @@ require (
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
