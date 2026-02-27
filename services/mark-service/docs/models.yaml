@@ -1,0 +1,265 @@
+# Модели mark-service
+# Используются через $ref: ModelName (внутри сервиса)
+
+# --- Response модели ---
+
+MarkResponse:
+  description: Метка на карте
+  fields:
+    id:
+      type: integer
+      description: Уникальный идентификатор метки
+      example: 42
+    markName:
+      type: string
+      description: Название метки
+      example: "Концерт в парке"
+    additionalInfo:
+      type: string
+      nullable: true
+      description: Дополнительное описание
+      example: "Начало в 19:00, вход свободный"
+    category:
+      $ref: CategoryResponse
+      nullable: true
+    geom:
+      $ref: Coordinates
+    owner:
+      $ref: UserResponse
+    photos:
+      type: array
+      description: URL загруженных фотографий
+      items:
+        type: string
+        format: url
+      example: ["/store/marks/photo1.jpg"]
+
+CategoryResponse:
+  description: Категория метки
+  fields:
+    id:
+      type: integer
+      example: 1
+    categoryName:
+      type: string
+      description: Название категории
+      example: "Мероприятия"
+    color:
+      type: string
+      description: Цвет в формате HEX
+      example: "#FF5733"
+    icon:
+      type: string
+      format: url
+      description: URL иконки категории
+      example: "/store/categories/events.svg"
+
+Coordinates:
+  description: GeoJSON Point
+  fields:
+    type:
+      type: string
+      description: Тип геометрии
+      example: "Point"
+    coordinates:
+      type: array
+      description: "[longitude, latitude]"
+      items:
+        type: float
+      example: [37.6176, 55.7558]
+
+UserResponse:
+  description: Краткая информация о пользователе
+  fields:
+    id:
+      type: integer
+      example: 15
+    username:
+      type: string
+      example: "ivan_petrov"
+    avatar:
+      type: string
+      format: url
+      nullable: true
+      description: URL аватара
+
+ClusterResponse:
+  description: Кластер меток (при zoom < 12)
+  fields:
+    center:
+      $ref: Coordinates
+      description: Центр кластера
+    count:
+      type: integer
+      description: Количество меток в кластере
+      example: 24
+
+CreateDataResponse:
+  description: Данные для формы создания метки
+  fields:
+    allowedCategories:
+      type: array
+      description: Доступные категории
+      items:
+        $ref: CategoryResponse
+    allowedDuration:
+      type: array
+      description: Допустимые значения длительности (в часах)
+      items:
+        type: integer
+      example: [12, 24, 36, 48]
+
+# --- Request модели ---
+
+FilterParams:
+  description: Параметры фильтрации меток по области карты
+  fields:
+    screen:
+      $ref: Screen
+      required: true
+    zoomLevel:
+      type: integer
+      description: >
+        Уровень зума карты. При < 12 возвращаются кластеры,
+        при >= 12 — отдельные метки. По умолчанию 15.
+      default: 15
+    startAt:
+      type: datetime
+      required: true
+      description: Начало временного диапазона
+    endAt:
+      type: datetime
+      description: Конец временного диапазона. По умолчанию — текущее время UTC.
+
+Screen:
+  description: Видимая область карты (bounding box)
+  fields:
+    leftTop:
+      $ref: Coords
+      required: true
+      description: Верхний левый угол
+    center:
+      $ref: Coords
+      required: true
+      description: Центр экрана
+    rightBottom:
+      $ref: Coords
+      required: true
+      description: Нижний правый угол
+
+Coords:
+  description: Пара координат
+  fields:
+    lon:
+      type: float
+      required: true
+      description: Долгота
+      example: 37.6176
+    lat:
+      type: float
+      required: true
+      description: Широта
+      example: 55.7558
+
+RequestMark:
+  description: Создание метки (multipart/form-data)
+  fields:
+    markName:
+      type: string
+      required: true
+      description: Название метки
+      min_length: 3
+      max_length: 100
+      example: "Концерт в парке"
+    additionalInfo:
+      type: string
+      nullable: true
+      description: Дополнительное описание
+    categoryId:
+      type: integer
+      required: true
+      description: ID активной категории
+      example: 1
+    startAt:
+      type: datetime
+      description: >
+        Время начала. По умолчанию — текущее время.
+        Не может быть больше 1 дня в прошлом и 30 дней в будущем.
+    duration:
+      type: integer
+      required: true
+      description: Длительность в часах
+      enum: [12, 24, 36, 48]
+      example: 24
+    longitude:
+      type: float
+      required: true
+      description: Долгота
+      example: 37.6176
+    latitude:
+      type: float
+      required: true
+      description: Широта
+      example: 55.7558
+    photos:
+      type: array
+      description: >
+        Фотографии метки. Макс 10 файлов, до 5 МБ каждый.
+        Допустимые форматы: JPEG, PNG, WebP.
+      items:
+        type: file
+
+RequestUpdateMark:
+  description: Обновление метки (multipart/form-data). Все поля опциональны.
+  fields:
+    markName:
+      type: string
+      nullable: true
+      description: Новое название
+      min_length: 3
+      max_length: 100
+    additionalInfo:
+      type: string
+      nullable: true
+      description: Новое описание
+    categoryId:
+      type: integer
+      nullable: true
+      description: Новая категория
+    duration:
+      type: integer
+      nullable: true
+      description: Новая длительность
+      enum: [12, 24, 36, 48]
+    photosToDelete:
+      type: array
+      description: URL фотографий для удаления
+      items:
+        type: string
+    photos:
+      type: array
+      description: Новые фотографии для загрузки
+      items:
+        type: file
+
+RequestCategory:
+  description: Создание категории (multipart/form-data)
+  fields:
+    category_name:
+      type: string
+      required: true
+      description: Название категории
+      max_length: 64
+      example: "Мероприятия"
+    color:
+      type: string
+      required: true
+      description: Цвет в формате HEX
+      max_length: 7
+      example: "#FF5733"
+    icon:
+      type: file
+      required: true
+      description: >
+        Иконка категории. До 5 МБ.
+        Допустимые форматы: JPEG, PNG, WebP, SVG.

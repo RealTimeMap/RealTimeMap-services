@@ -1,0 +1,41 @@
+name: mark-service
+displayName: Сервис меток
+description: >
+  Основной сервис платформы. Управление метками на карте:
+  создание, редактирование, удаление, пространственная фильтрация,
+  кластеризация и real-time обновления через SocketIO.
+version: 2.0.0
+
+owner:
+  team: backend-core
+
+language: go
+
+struct:
+  language: golang
+  protocols:
+    - http
+    - socketio
+
+depends_on:
+  - service: auth (via API Gateway)
+    protocol: http
+    description: >
+      Аутентификация через заголовки X-User-Id, X-User-Name,
+      X-User-Ban, X-User-Admin, проставляемые gateway.
+
+infrastructure:
+  type:
+  - postgres
+  - kafka
+  - local-storage
+  description:
+    - PostGIS — хранение меток с геоданными, категорий
+    - Продюсер событий mark.created (опционально, включается через конфиг)
+    - Хранение фотографий меток и иконок категорий
+
+tags:
+  - marks
+  - map
+  - geospatial
+  - core

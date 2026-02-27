@@ -1,0 +1,300 @@
+http:
+  base_path: /api/v2
+
+  default_headers:
+    Authorization:
+      type: string
+      required: true
+      description: "Bearer {access_token}"
+      example: "Bearer eyJhbGciOiJIUzI1NiIs..."
+
+  groups:
+    - name: Метки
+      description: CRUD операции с метками на карте
+      endpoints:
+
+        - path: /marks/
+          method: POST
+          summary: Получить метки/кластеры в области карты
+          description: >
+            Возвращает метки или кластеры в зависимости от уровня зума.
+            При zoomLevel < 12 — кластеры (ClusterResponse[]),
+            при zoomLevel >= 12 — отдельные метки (MarkResponse[]).
+          headers: none
+          request:
+            content_type: application/json
+            body:
+              $ref: FilterParams
+          responses:
+            200:
+              description: Список меток (zoom >= 12)
+              content_type: application/json
+              body:
+                type: array
+                items:
+                  $ref: MarkResponse
+            200_clusters:
+              description: Список кластеров (zoom < 12)
+              content_type: application/json
+              body:
+                type: array
+                items:
+                  $ref: ClusterResponse
+            422:
+              description: Ошибка валидации параметров
+              body:
+                $ref: shared.ValidationErrorResponse
+
+        - path: /marks/create-data
+          method: GET
+          summary: Данные для формы создания метки
+          description: >
+            Возвращает список активных категорий и допустимые
+            значения длительности.
+          headers: none
+          responses:
+            200:
+              description: Категории и допустимые длительности
+              content_type: application/json
+              body:
+                $ref: CreateDataResponse
+
+        - path: /marks/create
+          method: POST
+          summary: Создать метку
+          description: >
+            Создание новой метки на карте. Требует авторизации.
+            Лимит: 100 меток в день на пользователя.
+          request:
+            content_type: multipart/form-data
+            body:
+              $ref: RequestMark
+          responses:
+            201:
+              description: Метка создана
+              content_type: application/json
+              body:
+                $ref: MarkResponse
+            404:
+              description: Категория не найдена или неактивна
+              body:
+                $ref: shared.ValidationErrorResponse
+            409:
+              description: Превышен дневной лимит меток
+              body:
+                $ref: shared.ValidationErrorResponse
+            422:
+              description: Ошибка валидации
+              body:
+                $ref: shared.ValidationErrorResponse
+
+        - path: /marks/:markID
+          method: GET
+          summary: Детальная информация о метке
+          headers: none
+          parameters:
+            - name: markID
+              in: path
+              type: integer
+              required: true
+              description: ID метки
+          responses:
+            200:
+              content_type: application/json
+              body:
+                $ref: MarkResponse
+            404:
+              description: Метка не найдена
+              body:
+                $ref: shared.ValidationErrorResponse
+
+        - path: /marks/:markID
+          method: PATCH
+          summary: Обновить метку
+          description: >
+            Частичное обновление метки. Только владелец может обновлять.
+            Все поля опциональны.
+          parameters:
+            - name: markID
+              in: path
+              type: integer
+              required: true
+          request:
+            content_type: multipart/form-data
+            body:
+              $ref: RequestUpdateMark
+          responses:
+            200:
+              description: Метка обновлена
+              content_type: application/json
+              body:
+                $ref: MarkResponse
+            403:
+              description: Нет прав на редактирование
+              body:
+                $ref: shared.SimpleErrorResponse
+            404:
+              description: Метка не найдена
+              body:
+                $ref: shared.ValidationErrorResponse
+            422:
+              description: Ошибка валидации
+              body:
+                $ref: shared.ValidationErrorResponse
+
+        - path: /marks/:markID
+          method: DELETE
+          summary: Удалить метку
+          description: Удаление метки. Только владелец может удалять.
+          parameters:
+            - name: markID
+              in: path
+              type: integer
+              required: true
+          responses:
+            204:
+              description: Метка удалена
+            403:
+              description: Нет прав на удаление
+              body:
+                $ref: shared.SimpleErrorResponse
+            404:
+              description: Метка не найдена
+              body:
+                $ref: shared.ValidationErrorResponse
+
+    - name: Категории
+      description: Управление категориями меток
+      endpoints:
+
+        - path: /category/
+          method: POST
+          summary: Создать категорию
+          description: >
+            Создание новой категории. Только для администраторов.
+          request:
+            content_type: multipart/form-data
+            body:
+              $ref: RequestCategory
+          responses:
+            201:
+              description: Категория создана
+              content_type: application/json
+              body:
+                $ref: CategoryResponse
+            409:
+              description: Категория с таким именем уже существует
+              body:
+                $ref: shared.ValidationErrorResponse
+            422:
+              description: Ошибка валидации
+              body:
+                $ref: shared.ValidationErrorResponse
+
+    - name: Администрирование
+      description: Эндпоинты для администраторов
+      endpoints:
+
+        - path: /admin/mark/
+          method: GET
+          summary: Все метки с пагинацией
+          description: Получение всех меток. Только для администраторов.
+          parameters:
+            - name: page
+              in: query
+              type: integer
+              default: 1
+              description: Номер страницы
+            - name: pageSize
+              in: query
+              type: integer
+              default: 20
+              description: Элементов на странице
+          responses:
+            200:
+              description: Пагинированный список меток
+              content_type: application/json
+              body:
+                $ref: shared.PaginatedResponse
+                items:
+                  $ref: MarkResponse
+
+    - name: Здоровье
+      description: Проверка работоспособности
+      endpoints:
+
+        - path: /health
+          method: GET
+          summary: Health check
+          description: Проверка подключения к базе данных
+          headers: none
+          responses:
+            200:
+              description: Сервис работает
+            503:
+              description: База данных недоступна
+
+socketio:
+  namespace: /marks
+  description: >
+    Real-time обновления меток на карте.
+    Подключение без авторизации.
+
+  events:
+    - name: message
+      direction: client-to-server
+      summary: Запрос меток/кластеров по фильтру
+      description: >
+        Клиент отправляет параметры фильтрации (область карты, зум, время).
+        Сервер возвращает метки или кластеры через ack callback.
+        При zoom < 12 — кластеры, при >= 12 — отдельные метки.
+      request:
+        $ref: FilterParams
+      response:
+        event: ack
+        payload:
+          success:
+            type: boolean
+            description: Успешность запроса
+          marks:
+            type: array
+            nullable: true
+            description: Метки (при zoom >= 12)
+            items:
+              $ref: MarkResponse
+          cluster:
+            type: array
+            nullable: true
+            description: Кластеры (при zoom < 12)
+            items:
+              $ref: ClusterResponse
+          error:
+            type: string
+            nullable: true
+            description: Описание ошибки (при success=false)
+
+    - name: markCreated
+      direction: server-to-client
+      summary: Уведомление о создании метки
+      description: >
+        [TODO] Уведомляет клиентов о новой метке в их видимой области.
+      payload:
+        $ref: MarkResponse
+
+    - name: markDeleted
+      direction: server-to-client
+      summary: Уведомление об удалении метки
+      description: >
+        [TODO] Уведомляет клиентов об удалении метки.
+      payload:
+        id:
+          type: integer
+          description: ID удалённой метки
+
+    - name: markUpdated
+      direction: server-to-client
+      summary: Уведомление об обновлении метки
+      description: >
+        [TODO] Уведомляет клиентов об обновлении метки в их области.
+      payload:
+        $ref: MarkResponse
