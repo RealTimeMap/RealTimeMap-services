@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultOutputPath   = "output.json"
+	defaultOutputPath   = "../../services/docs-service/output.json"
 	sharedModelsRelPath = "docs/shared/models.yaml"
 )
 
@@ -34,7 +34,7 @@ func buildServicesDocs() {
 
 	fmt.Printf("Найдено сервисов: %d\n", len(services))
 
-	// Путь к shared models — относительно корня проекта (на уровень выше services/)
+	// Путь к shared model — относительно корня проекта (на уровень выше services/)
 	projectRoot := filepath.Dir(servicesDir)
 	sharedModelsPath := filepath.Join(projectRoot, sharedModelsRelPath)
 

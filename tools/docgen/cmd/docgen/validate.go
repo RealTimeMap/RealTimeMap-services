@@ -68,11 +68,12 @@ func validateService(svc scaner.ServiceDocs) int {
 		errorCount += printFileErrors("models.yaml", errs)
 	}
 
-	// api.yaml — пока только проверяем наличие
+	// Валидация api.yaml
 	if svc.APIPath == "" {
 		fmt.Println("  [WARN] api.yaml не найден")
 	} else {
-		fmt.Println("  [OK]   api.yaml найден")
+		errs := validateAPIFromFile(svc.APIPath)
+		errorCount += printFileErrors("api.yaml", errs)
 	}
 
 	fmt.Println()
@@ -105,6 +106,20 @@ func validateModelsFromFile(path string) []error {
 	}
 
 	return validator.ValidateModels(modelMap)
+}
+
+func validateAPIFromFile(path string) []error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return []error{fmt.Errorf("не удалось прочитать файл: %w", err)}
+	}
+
+	var api models.API
+	if err := yaml.Unmarshal(data, &api); err != nil {
+		return []error{fmt.Errorf("ошибка парсинга YAML: %w", err)}
+	}
+
+	return validator.ValidateAPI(api)
 }
 
 func printFileErrors(filename string, errs []error) int {

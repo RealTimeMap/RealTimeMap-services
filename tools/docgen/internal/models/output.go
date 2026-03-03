@@ -9,8 +9,8 @@ type ServiceOutput struct {
 	Struct         Struct           `json:"struct"`
 	Infrastructure Infrastructure   `json:"infrastructure"`
 	Tags           []string         `json:"tags"`
-	Models         map[string]Model `json:"models,omitempty"`
-	API            API              `json:"api,omitempty"`
+	Models         map[string]Model `json:"model,omitempty"`
+	API            *API             `json:"api,omitempty"`
 }
 
 // BuildOutput — корневая структура итогового JSON.
