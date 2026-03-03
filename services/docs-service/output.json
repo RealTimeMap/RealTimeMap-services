@@ -1,0 +1,2591 @@
+{
+  "services": [
+    {
+      "name": "mark-service",
+      "displayName": "Сервис меток",
+      "description": "Основной сервис платформы. Управление метками на карте: создание, редактирование, удаление, пространственная фильтрация, кластеризация и real-time обновления через SocketIO.\n",
+      "version": "2.0.0",
+      "struct": {
+        "language": "golang",
+        "protocols": [
+          "http",
+          "socketio"
+        ]
+      },
+      "infrastructure": {
+        "type": [
+          "postgres",
+          "kafka",
+          "local-storage"
+        ],
+        "description": [
+          "PostGIS — хранение меток с геоданными, категорий",
+          "Продюсер событий mark.created (опционально, включается через конфиг)",
+          "Хранение фотографий меток и иконок категорий"
+        ]
+      },
+      "tags": [
+        "marks",
+        "map",
+        "geospatial",
+        "core"
+      ],
+      "model": {
+        "CategoryResponse": {
+          "description": "Категория метки",
+          "fields": {
+            "categoryName": {
+              "type": "string",
+              "description": "Название категории",
+              "example": "Мероприятия"
+            },
+            "color": {
+              "type": "string",
+              "description": "Цвет в формате HEX",
+              "example": "#FF5733"
+            },
+            "icon": {
+              "type": "string",
+              "description": "URL иконки категории",
+              "format": "url",
+              "example": "/store/categories/events.svg"
+            },
+            "id": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        },
+        "ClusterResponse": {
+          "description": "Кластер меток (при zoom \u003c 12)",
+          "fields": {
+            "center": {
+              "type": "object",
+              "description": "Центр кластера",
+              "fields": {
+                "coordinates": {
+                  "type": "array",
+                  "description": "[longitude, latitude]",
+                  "example": [
+                    37.6176,
+                    55.7558
+                  ],
+                  "items": {
+                    "type": "float"
+                  }
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Тип геометрии",
+                  "example": "Point"
+                }
+              }
+            },
+            "count": {
+              "type": "integer",
+              "description": "Количество меток в кластере",
+              "example": 24
+            }
+          }
+        },
+        "Coordinates": {
+          "description": "GeoJSON Point",
+          "fields": {
+            "coordinates": {
+              "type": "array",
+              "description": "[longitude, latitude]",
+              "example": [
+                37.6176,
+                55.7558
+              ],
+              "items": {
+                "type": "float"
+              }
+            },
+            "type": {
+              "type": "string",
+              "description": "Тип геометрии",
+              "example": "Point"
+            }
+          }
+        },
+        "Coords": {
+          "description": "Пара координат",
+          "fields": {
+            "lat": {
+              "type": "float",
+              "description": "Широта",
+              "required": true,
+              "example": 55.7558
+            },
+            "lon": {
+              "type": "float",
+              "description": "Долгота",
+              "required": true,
+              "example": 37.6176
+            }
+          }
+        },
+        "CreateDataResponse": {
+          "description": "Данные для формы создания метки",
+          "fields": {
+            "allowedCategories": {
+              "type": "array",
+              "description": "Доступные категории",
+              "items": {
+                "type": "object",
+                "description": "Категория метки",
+                "fields": {
+                  "categoryName": {
+                    "type": "string",
+                    "description": "Название категории",
+                    "example": "Мероприятия"
+                  },
+                  "color": {
+                    "type": "string",
+                    "description": "Цвет в формате HEX",
+                    "example": "#FF5733"
+                  },
+                  "icon": {
+                    "type": "string",
+                    "description": "URL иконки категории",
+                    "format": "url",
+                    "example": "/store/categories/events.svg"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  }
+                }
+              }
+            },
+            "allowedDuration": {
+              "type": "array",
+              "description": "Допустимые значения длительности (в часах)",
+              "example": [
+                12,
+                24,
+                36,
+                48
+              ],
+              "items": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "FilterParams": {
+          "description": "Параметры фильтрации меток по области карты",
+          "fields": {
+            "endAt": {
+              "type": "datetime",
+              "description": "Конец временного диапазона. По умолчанию — текущее время UTC."
+            },
+            "screen": {
+              "type": "object",
+              "description": "Видимая область карты (bounding box)",
+              "required": true,
+              "fields": {
+                "center": {
+                  "type": "object",
+                  "description": "Центр экрана",
+                  "required": true,
+                  "fields": {
+                    "lat": {
+                      "type": "float",
+                      "description": "Широта",
+                      "required": true,
+                      "example": 55.7558
+                    },
+                    "lon": {
+                      "type": "float",
+                      "description": "Долгота",
+                      "required": true,
+                      "example": 37.6176
+                    }
+                  }
+                },
+                "leftTop": {
+                  "type": "object",
+                  "description": "Верхний левый угол",
+                  "required": true,
+                  "fields": {
+                    "lat": {
+                      "type": "float",
+                      "description": "Широта",
+                      "required": true,
+                      "example": 55.7558
+                    },
+                    "lon": {
+                      "type": "float",
+                      "description": "Долгота",
+                      "required": true,
+                      "example": 37.6176
+                    }
+                  }
+                },
+                "rightBottom": {
+                  "type": "object",
+                  "description": "Нижний правый угол",
+                  "required": true,
+                  "fields": {
+                    "lat": {
+                      "type": "float",
+                      "description": "Широта",
+                      "required": true,
+                      "example": 55.7558
+                    },
+                    "lon": {
+                      "type": "float",
+                      "description": "Долгота",
+                      "required": true,
+                      "example": 37.6176
+                    }
+                  }
+                }
+              }
+            },
+            "startAt": {
+              "type": "datetime",
+              "description": "Начало временного диапазона",
+              "required": true
+            },
+            "zoomLevel": {
+              "type": "integer",
+              "description": "Уровень зума карты. При \u003c 12 возвращаются кластеры, при \u003e= 12 — отдельные метки. По умолчанию 15.\n",
+              "default": 15
+            }
+          }
+        },
+        "MarkResponse": {
+          "description": "Метка на карте",
+          "fields": {
+            "additionalInfo": {
+              "type": "string",
+              "description": "Дополнительное описание",
+              "nullable": true,
+              "example": "Начало в 19:00, вход свободный"
+            },
+            "category": {
+              "type": "object",
+              "description": "Категория метки",
+              "nullable": true,
+              "fields": {
+                "categoryName": {
+                  "type": "string",
+                  "description": "Название категории",
+                  "example": "Мероприятия"
+                },
+                "color": {
+                  "type": "string",
+                  "description": "Цвет в формате HEX",
+                  "example": "#FF5733"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "URL иконки категории",
+                  "format": "url",
+                  "example": "/store/categories/events.svg"
+                },
+                "id": {
+                  "type": "integer",
+                  "example": 1
+                }
+              }
+            },
+            "geom": {
+              "type": "object",
+              "description": "GeoJSON Point",
+              "fields": {
+                "coordinates": {
+                  "type": "array",
+                  "description": "[longitude, latitude]",
+                  "example": [
+                    37.6176,
+                    55.7558
+                  ],
+                  "items": {
+                    "type": "float"
+                  }
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Тип геометрии",
+                  "example": "Point"
+                }
+              }
+            },
+            "id": {
+              "type": "integer",
+              "description": "Уникальный идентификатор метки",
+              "example": 42
+            },
+            "markName": {
+              "type": "string",
+              "description": "Название метки",
+              "example": "Концерт в парке"
+            },
+            "owner": {
+              "type": "object",
+              "description": "Краткая информация о пользователе",
+              "fields": {
+                "avatar": {
+                  "type": "string",
+                  "description": "URL аватара",
+                  "format": "url",
+                  "nullable": true
+                },
+                "id": {
+                  "type": "integer",
+                  "example": 15
+                },
+                "username": {
+                  "type": "string",
+                  "example": "ivan_petrov"
+                }
+              }
+            },
+            "photos": {
+              "type": "array",
+              "description": "URL загруженных фотографий",
+              "example": [
+                "/store/marks/photo1.jpg"
+              ],
+              "items": {
+                "type": "string",
+                "format": "url"
+              }
+            }
+          }
+        },
+        "RequestCategory": {
+          "description": "Создание категории (multipart/form-data)",
+          "fields": {
+            "category_name": {
+              "type": "string",
+              "description": "Название категории",
+              "required": true,
+              "example": "Мероприятия",
+              "max_length": 64
+            },
+            "color": {
+              "type": "string",
+              "description": "Цвет в формате HEX",
+              "required": true,
+              "example": "#FF5733",
+              "max_length": 7
+            },
+            "icon": {
+              "type": "file",
+              "description": "Иконка категории. До 5 МБ. Допустимые форматы: JPEG, PNG, WebP, SVG.\n",
+              "required": true
+            }
+          }
+        },
+        "RequestMark": {
+          "description": "Создание метки (multipart/form-data)",
+          "fields": {
+            "additionalInfo": {
+              "type": "string",
+              "description": "Дополнительное описание",
+              "nullable": true
+            },
+            "categoryId": {
+              "type": "integer",
+              "description": "ID активной категории",
+              "required": true,
+              "example": 1
+            },
+            "duration": {
+              "type": "integer",
+              "description": "Длительность в часах",
+              "required": true,
+              "example": 24,
+              "enum": [
+                12,
+                24,
+                36,
+                48
+              ]
+            },
+            "latitude": {
+              "type": "float",
+              "description": "Широта",
+              "required": true,
+              "example": 55.7558
+            },
+            "longitude": {
+              "type": "float",
+              "description": "Долгота",
+              "required": true,
+              "example": 37.6176
+            },
+            "markName": {
+              "type": "string",
+              "description": "Название метки",
+              "required": true,
+              "example": "Концерт в парке",
+              "min_length": 3,
+              "max_length": 100
+            },
+            "photos": {
+              "type": "array",
+              "description": "Фотографии метки. Макс 10 файлов, до 5 МБ каждый. Допустимые форматы: JPEG, PNG, WebP.\n",
+              "items": {
+                "type": "file"
+              }
+            },
+            "startAt": {
+              "type": "datetime",
+              "description": "Время начала. По умолчанию — текущее время. Не может быть больше 1 дня в прошлом и 30 дней в будущем.\n"
+            }
+          }
+        },
+        "RequestUpdateMark": {
+          "description": "Обновление метки (multipart/form-data). Все поля опциональны.",
+          "fields": {
+            "additionalInfo": {
+              "type": "string",
+              "description": "Новое описание",
+              "nullable": true
+            },
+            "categoryId": {
+              "type": "integer",
+              "description": "Новая категория",
+              "nullable": true
+            },
+            "duration": {
+              "type": "integer",
+              "description": "Новая длительность",
+              "nullable": true,
+              "enum": [
+                12,
+                24,
+                36,
+                48
+              ]
+            },
+            "markName": {
+              "type": "string",
+              "description": "Новое название",
+              "nullable": true,
+              "min_length": 3,
+              "max_length": 100
+            },
+            "photos": {
+              "type": "array",
+              "description": "Новые фотографии для загрузки",
+              "items": {
+                "type": "file"
+              }
+            },
+            "photosToDelete": {
+              "type": "array",
+              "description": "URL фотографий для удаления",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "Screen": {
+          "description": "Видимая область карты (bounding box)",
+          "fields": {
+            "center": {
+              "type": "object",
+              "description": "Центр экрана",
+              "required": true,
+              "fields": {
+                "lat": {
+                  "type": "float",
+                  "description": "Широта",
+                  "required": true,
+                  "example": 55.7558
+                },
+                "lon": {
+                  "type": "float",
+                  "description": "Долгота",
+                  "required": true,
+                  "example": 37.6176
+                }
+              }
+            },
+            "leftTop": {
+              "type": "object",
+              "description": "Верхний левый угол",
+              "required": true,
+              "fields": {
+                "lat": {
+                  "type": "float",
+                  "description": "Широта",
+                  "required": true,
+                  "example": 55.7558
+                },
+                "lon": {
+                  "type": "float",
+                  "description": "Долгота",
+                  "required": true,
+                  "example": 37.6176
+                }
+              }
+            },
+            "rightBottom": {
+              "type": "object",
+              "description": "Нижний правый угол",
+              "required": true,
+              "fields": {
+                "lat": {
+                  "type": "float",
+                  "description": "Широта",
+                  "required": true,
+                  "example": 55.7558
+                },
+                "lon": {
+                  "type": "float",
+                  "description": "Долгота",
+                  "required": true,
+                  "example": 37.6176
+                }
+              }
+            }
+          }
+        },
+        "UserResponse": {
+          "description": "Краткая информация о пользователе",
+          "fields": {
+            "avatar": {
+              "type": "string",
+              "description": "URL аватара",
+              "format": "url",
+              "nullable": true
+            },
+            "id": {
+              "type": "integer",
+              "example": 15
+            },
+            "username": {
+              "type": "string",
+              "example": "ivan_petrov"
+            }
+          }
+        }
+      },
+      "api": {
+        "http": {
+          "base_path": "/api/v2",
+          "default_headers": {
+            "Authorization": {
+              "type": "string",
+              "description": "Bearer {access_token}",
+              "required": true,
+              "example": "Bearer eyJhbGciOiJIUzI1NiIs..."
+            }
+          },
+          "groups": [
+            {
+              "name": "Метки",
+              "description": "CRUD операции с метками на карте",
+              "endpoints": [
+                {
+                  "path": "/marks/",
+                  "method": "POST",
+                  "summary": "Получить метки/кластеры в области карты",
+                  "description": "Возвращает метки или кластеры в зависимости от уровня зума. При zoomLevel \u003c 12 — кластеры (ClusterResponse[]), при zoomLevel \u003e= 12 — отдельные метки (MarkResponse[]).\n",
+                  "headers": "none",
+                  "request": {
+                    "content_type": "application/json",
+                    "body": {
+                      "$self": {
+                        "type": "object",
+                        "description": "Параметры фильтрации меток по области карты",
+                        "fields": {
+                          "endAt": {
+                            "type": "datetime",
+                            "description": "Конец временного диапазона. По умолчанию — текущее время UTC."
+                          },
+                          "screen": {
+                            "type": "object",
+                            "description": "Видимая область карты (bounding box)",
+                            "required": true,
+                            "fields": {
+                              "center": {
+                                "type": "object",
+                                "description": "Центр экрана",
+                                "required": true,
+                                "fields": {
+                                  "lat": {
+                                    "type": "float",
+                                    "description": "Широта",
+                                    "required": true,
+                                    "example": 55.7558
+                                  },
+                                  "lon": {
+                                    "type": "float",
+                                    "description": "Долгота",
+                                    "required": true,
+                                    "example": 37.6176
+                                  }
+                                }
+                              },
+                              "leftTop": {
+                                "type": "object",
+                                "description": "Верхний левый угол",
+                                "required": true,
+                                "fields": {
+                                  "lat": {
+                                    "type": "float",
+                                    "description": "Широта",
+                                    "required": true,
+                                    "example": 55.7558
+                                  },
+                                  "lon": {
+                                    "type": "float",
+                                    "description": "Долгота",
+                                    "required": true,
+                                    "example": 37.6176
+                                  }
+                                }
+                              },
+                              "rightBottom": {
+                                "type": "object",
+                                "description": "Нижний правый угол",
+                                "required": true,
+                                "fields": {
+                                  "lat": {
+                                    "type": "float",
+                                    "description": "Широта",
+                                    "required": true,
+                                    "example": 55.7558
+                                  },
+                                  "lon": {
+                                    "type": "float",
+                                    "description": "Долгота",
+                                    "required": true,
+                                    "example": 37.6176
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "startAt": {
+                            "type": "datetime",
+                            "description": "Начало временного диапазона",
+                            "required": true
+                          },
+                          "zoomLevel": {
+                            "type": "integer",
+                            "description": "Уровень зума карты. При \u003c 12 возвращаются кластеры, при \u003e= 12 — отдельные метки. По умолчанию 15.\n",
+                            "default": 15
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "responses": {
+                    "200": {
+                      "description": "Список меток (zoom \u003e= 12)",
+                      "content_type": "application/json",
+                      "body": {
+                        "$self": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "description": "Метка на карте",
+                            "fields": {
+                              "additionalInfo": {
+                                "type": "string",
+                                "description": "Дополнительное описание",
+                                "nullable": true,
+                                "example": "Начало в 19:00, вход свободный"
+                              },
+                              "category": {
+                                "type": "object",
+                                "description": "Категория метки",
+                                "nullable": true,
+                                "fields": {
+                                  "categoryName": {
+                                    "type": "string",
+                                    "description": "Название категории",
+                                    "example": "Мероприятия"
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "description": "Цвет в формате HEX",
+                                    "example": "#FF5733"
+                                  },
+                                  "icon": {
+                                    "type": "string",
+                                    "description": "URL иконки категории",
+                                    "format": "url",
+                                    "example": "/store/categories/events.svg"
+                                  },
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  }
+                                }
+                              },
+                              "geom": {
+                                "type": "object",
+                                "description": "GeoJSON Point",
+                                "fields": {
+                                  "coordinates": {
+                                    "type": "array",
+                                    "description": "[longitude, latitude]",
+                                    "example": [
+                                      37.6176,
+                                      55.7558
+                                    ],
+                                    "items": {
+                                      "type": "float"
+                                    }
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Тип геометрии",
+                                    "example": "Point"
+                                  }
+                                }
+                              },
+                              "id": {
+                                "type": "integer",
+                                "description": "Уникальный идентификатор метки",
+                                "example": 42
+                              },
+                              "markName": {
+                                "type": "string",
+                                "description": "Название метки",
+                                "example": "Концерт в парке"
+                              },
+                              "owner": {
+                                "type": "object",
+                                "description": "Краткая информация о пользователе",
+                                "fields": {
+                                  "avatar": {
+                                    "type": "string",
+                                    "description": "URL аватара",
+                                    "format": "url",
+                                    "nullable": true
+                                  },
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 15
+                                  },
+                                  "username": {
+                                    "type": "string",
+                                    "example": "ivan_petrov"
+                                  }
+                                }
+                              },
+                              "photos": {
+                                "type": "array",
+                                "description": "URL загруженных фотографий",
+                                "example": [
+                                  "/store/marks/photo1.jpg"
+                                ],
+                                "items": {
+                                  "type": "string",
+                                  "format": "url"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "200_clusters": {
+                      "description": "Список кластеров (zoom \u003c 12)",
+                      "content_type": "application/json",
+                      "body": {
+                        "$self": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "description": "Кластер меток (при zoom \u003c 12)",
+                            "fields": {
+                              "center": {
+                                "type": "object",
+                                "description": "Центр кластера",
+                                "fields": {
+                                  "coordinates": {
+                                    "type": "array",
+                                    "description": "[longitude, latitude]",
+                                    "example": [
+                                      37.6176,
+                                      55.7558
+                                    ],
+                                    "items": {
+                                      "type": "float"
+                                    }
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Тип геометрии",
+                                    "example": "Point"
+                                  }
+                                }
+                              },
+                              "count": {
+                                "type": "integer",
+                                "description": "Количество меток в кластере",
+                                "example": 24
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "422": {
+                      "description": "Ошибка валидации параметров",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "path": "/marks/create-data",
+                  "method": "GET",
+                  "summary": "Данные для формы создания метки",
+                  "description": "Возвращает список активных категорий и допустимые значения длительности.\n",
+                  "headers": "none",
+                  "responses": {
+                    "200": {
+                      "description": "Категории и допустимые длительности",
+                      "content_type": "application/json",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Данные для формы создания метки",
+                          "fields": {
+                            "allowedCategories": {
+                              "type": "array",
+                              "description": "Доступные категории",
+                              "items": {
+                                "type": "object",
+                                "description": "Категория метки",
+                                "fields": {
+                                  "categoryName": {
+                                    "type": "string",
+                                    "description": "Название категории",
+                                    "example": "Мероприятия"
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "description": "Цвет в формате HEX",
+                                    "example": "#FF5733"
+                                  },
+                                  "icon": {
+                                    "type": "string",
+                                    "description": "URL иконки категории",
+                                    "format": "url",
+                                    "example": "/store/categories/events.svg"
+                                  },
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  }
+                                }
+                              }
+                            },
+                            "allowedDuration": {
+                              "type": "array",
+                              "description": "Допустимые значения длительности (в часах)",
+                              "example": [
+                                12,
+                                24,
+                                36,
+                                48
+                              ],
+                              "items": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "path": "/marks/create",
+                  "method": "POST",
+                  "summary": "Создать метку",
+                  "description": "Создание новой метки на карте. Требует авторизации. Лимит: 100 меток в день на пользователя.\n",
+                  "request": {
+                    "content_type": "multipart/form-data",
+                    "body": {
+                      "$self": {
+                        "type": "object",
+                        "description": "Создание метки (multipart/form-data)",
+                        "fields": {
+                          "additionalInfo": {
+                            "type": "string",
+                            "description": "Дополнительное описание",
+                            "nullable": true
+                          },
+                          "categoryId": {
+                            "type": "integer",
+                            "description": "ID активной категории",
+                            "required": true,
+                            "example": 1
+                          },
+                          "duration": {
+                            "type": "integer",
+                            "description": "Длительность в часах",
+                            "required": true,
+                            "example": 24,
+                            "enum": [
+                              12,
+                              24,
+                              36,
+                              48
+                            ]
+                          },
+                          "latitude": {
+                            "type": "float",
+                            "description": "Широта",
+                            "required": true,
+                            "example": 55.7558
+                          },
+                          "longitude": {
+                            "type": "float",
+                            "description": "Долгота",
+                            "required": true,
+                            "example": 37.6176
+                          },
+                          "markName": {
+                            "type": "string",
+                            "description": "Название метки",
+                            "required": true,
+                            "example": "Концерт в парке",
+                            "min_length": 3,
+                            "max_length": 100
+                          },
+                          "photos": {
+                            "type": "array",
+                            "description": "Фотографии метки. Макс 10 файлов, до 5 МБ каждый. Допустимые форматы: JPEG, PNG, WebP.\n",
+                            "items": {
+                              "type": "file"
+                            }
+                          },
+                          "startAt": {
+                            "type": "datetime",
+                            "description": "Время начала. По умолчанию — текущее время. Не может быть больше 1 дня в прошлом и 30 дней в будущем.\n"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "responses": {
+                    "201": {
+                      "description": "Метка создана",
+                      "content_type": "application/json",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Метка на карте",
+                          "fields": {
+                            "additionalInfo": {
+                              "type": "string",
+                              "description": "Дополнительное описание",
+                              "nullable": true,
+                              "example": "Начало в 19:00, вход свободный"
+                            },
+                            "category": {
+                              "type": "object",
+                              "description": "Категория метки",
+                              "nullable": true,
+                              "fields": {
+                                "categoryName": {
+                                  "type": "string",
+                                  "description": "Название категории",
+                                  "example": "Мероприятия"
+                                },
+                                "color": {
+                                  "type": "string",
+                                  "description": "Цвет в формате HEX",
+                                  "example": "#FF5733"
+                                },
+                                "icon": {
+                                  "type": "string",
+                                  "description": "URL иконки категории",
+                                  "format": "url",
+                                  "example": "/store/categories/events.svg"
+                                },
+                                "id": {
+                                  "type": "integer",
+                                  "example": 1
+                                }
+                              }
+                            },
+                            "geom": {
+                              "type": "object",
+                              "description": "GeoJSON Point",
+                              "fields": {
+                                "coordinates": {
+                                  "type": "array",
+                                  "description": "[longitude, latitude]",
+                                  "example": [
+                                    37.6176,
+                                    55.7558
+                                  ],
+                                  "items": {
+                                    "type": "float"
+                                  }
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "description": "Тип геометрии",
+                                  "example": "Point"
+                                }
+                              }
+                            },
+                            "id": {
+                              "type": "integer",
+                              "description": "Уникальный идентификатор метки",
+                              "example": 42
+                            },
+                            "markName": {
+                              "type": "string",
+                              "description": "Название метки",
+                              "example": "Концерт в парке"
+                            },
+                            "owner": {
+                              "type": "object",
+                              "description": "Краткая информация о пользователе",
+                              "fields": {
+                                "avatar": {
+                                  "type": "string",
+                                  "description": "URL аватара",
+                                  "format": "url",
+                                  "nullable": true
+                                },
+                                "id": {
+                                  "type": "integer",
+                                  "example": 15
+                                },
+                                "username": {
+                                  "type": "string",
+                                  "example": "ivan_petrov"
+                                }
+                              }
+                            },
+                            "photos": {
+                              "type": "array",
+                              "description": "URL загруженных фотографий",
+                              "example": [
+                                "/store/marks/photo1.jpg"
+                              ],
+                              "items": {
+                                "type": "string",
+                                "format": "url"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "404": {
+                      "description": "Категория не найдена или неактивна",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "409": {
+                      "description": "Превышен дневной лимит меток",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "422": {
+                      "description": "Ошибка валидации",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "path": "/marks/:markID",
+                  "method": "GET",
+                  "summary": "Детальная информация о метке",
+                  "headers": "none",
+                  "parameters": [
+                    {
+                      "name": "markID",
+                      "in": "path",
+                      "type": "integer",
+                      "required": true,
+                      "description": "ID метки"
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "content_type": "application/json",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Метка на карте",
+                          "fields": {
+                            "additionalInfo": {
+                              "type": "string",
+                              "description": "Дополнительное описание",
+                              "nullable": true,
+                              "example": "Начало в 19:00, вход свободный"
+                            },
+                            "category": {
+                              "type": "object",
+                              "description": "Категория метки",
+                              "nullable": true,
+                              "fields": {
+                                "categoryName": {
+                                  "type": "string",
+                                  "description": "Название категории",
+                                  "example": "Мероприятия"
+                                },
+                                "color": {
+                                  "type": "string",
+                                  "description": "Цвет в формате HEX",
+                                  "example": "#FF5733"
+                                },
+                                "icon": {
+                                  "type": "string",
+                                  "description": "URL иконки категории",
+                                  "format": "url",
+                                  "example": "/store/categories/events.svg"
+                                },
+                                "id": {
+                                  "type": "integer",
+                                  "example": 1
+                                }
+                              }
+                            },
+                            "geom": {
+                              "type": "object",
+                              "description": "GeoJSON Point",
+                              "fields": {
+                                "coordinates": {
+                                  "type": "array",
+                                  "description": "[longitude, latitude]",
+                                  "example": [
+                                    37.6176,
+                                    55.7558
+                                  ],
+                                  "items": {
+                                    "type": "float"
+                                  }
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "description": "Тип геометрии",
+                                  "example": "Point"
+                                }
+                              }
+                            },
+                            "id": {
+                              "type": "integer",
+                              "description": "Уникальный идентификатор метки",
+                              "example": 42
+                            },
+                            "markName": {
+                              "type": "string",
+                              "description": "Название метки",
+                              "example": "Концерт в парке"
+                            },
+                            "owner": {
+                              "type": "object",
+                              "description": "Краткая информация о пользователе",
+                              "fields": {
+                                "avatar": {
+                                  "type": "string",
+                                  "description": "URL аватара",
+                                  "format": "url",
+                                  "nullable": true
+                                },
+                                "id": {
+                                  "type": "integer",
+                                  "example": 15
+                                },
+                                "username": {
+                                  "type": "string",
+                                  "example": "ivan_petrov"
+                                }
+                              }
+                            },
+                            "photos": {
+                              "type": "array",
+                              "description": "URL загруженных фотографий",
+                              "example": [
+                                "/store/marks/photo1.jpg"
+                              ],
+                              "items": {
+                                "type": "string",
+                                "format": "url"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "404": {
+                      "description": "Метка не найдена",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "path": "/marks/:markID",
+                  "method": "PATCH",
+                  "summary": "Обновить метку",
+                  "description": "Частичное обновление метки. Только владелец может обновлять. Все поля опциональны.\n",
+                  "parameters": [
+                    {
+                      "name": "markID",
+                      "in": "path",
+                      "type": "integer",
+                      "required": true
+                    }
+                  ],
+                  "request": {
+                    "content_type": "multipart/form-data",
+                    "body": {
+                      "$self": {
+                        "type": "object",
+                        "description": "Обновление метки (multipart/form-data). Все поля опциональны.",
+                        "fields": {
+                          "additionalInfo": {
+                            "type": "string",
+                            "description": "Новое описание",
+                            "nullable": true
+                          },
+                          "categoryId": {
+                            "type": "integer",
+                            "description": "Новая категория",
+                            "nullable": true
+                          },
+                          "duration": {
+                            "type": "integer",
+                            "description": "Новая длительность",
+                            "nullable": true,
+                            "enum": [
+                              12,
+                              24,
+                              36,
+                              48
+                            ]
+                          },
+                          "markName": {
+                            "type": "string",
+                            "description": "Новое название",
+                            "nullable": true,
+                            "min_length": 3,
+                            "max_length": 100
+                          },
+                          "photos": {
+                            "type": "array",
+                            "description": "Новые фотографии для загрузки",
+                            "items": {
+                              "type": "file"
+                            }
+                          },
+                          "photosToDelete": {
+                            "type": "array",
+                            "description": "URL фотографий для удаления",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "responses": {
+                    "200": {
+                      "description": "Метка обновлена",
+                      "content_type": "application/json",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Метка на карте",
+                          "fields": {
+                            "additionalInfo": {
+                              "type": "string",
+                              "description": "Дополнительное описание",
+                              "nullable": true,
+                              "example": "Начало в 19:00, вход свободный"
+                            },
+                            "category": {
+                              "type": "object",
+                              "description": "Категория метки",
+                              "nullable": true,
+                              "fields": {
+                                "categoryName": {
+                                  "type": "string",
+                                  "description": "Название категории",
+                                  "example": "Мероприятия"
+                                },
+                                "color": {
+                                  "type": "string",
+                                  "description": "Цвет в формате HEX",
+                                  "example": "#FF5733"
+                                },
+                                "icon": {
+                                  "type": "string",
+                                  "description": "URL иконки категории",
+                                  "format": "url",
+                                  "example": "/store/categories/events.svg"
+                                },
+                                "id": {
+                                  "type": "integer",
+                                  "example": 1
+                                }
+                              }
+                            },
+                            "geom": {
+                              "type": "object",
+                              "description": "GeoJSON Point",
+                              "fields": {
+                                "coordinates": {
+                                  "type": "array",
+                                  "description": "[longitude, latitude]",
+                                  "example": [
+                                    37.6176,
+                                    55.7558
+                                  ],
+                                  "items": {
+                                    "type": "float"
+                                  }
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "description": "Тип геометрии",
+                                  "example": "Point"
+                                }
+                              }
+                            },
+                            "id": {
+                              "type": "integer",
+                              "description": "Уникальный идентификатор метки",
+                              "example": 42
+                            },
+                            "markName": {
+                              "type": "string",
+                              "description": "Название метки",
+                              "example": "Концерт в парке"
+                            },
+                            "owner": {
+                              "type": "object",
+                              "description": "Краткая информация о пользователе",
+                              "fields": {
+                                "avatar": {
+                                  "type": "string",
+                                  "description": "URL аватара",
+                                  "format": "url",
+                                  "nullable": true
+                                },
+                                "id": {
+                                  "type": "integer",
+                                  "example": 15
+                                },
+                                "username": {
+                                  "type": "string",
+                                  "example": "ivan_petrov"
+                                }
+                              }
+                            },
+                            "photos": {
+                              "type": "array",
+                              "description": "URL загруженных фотографий",
+                              "example": [
+                                "/store/marks/photo1.jpg"
+                              ],
+                              "items": {
+                                "type": "string",
+                                "format": "url"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "403": {
+                      "description": "Нет прав на редактирование",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Простой формат ошибки для 403 Forbidden и 500 Internal Server Error.\n",
+                          "fields": {
+                            "error": {
+                              "type": "string",
+                              "description": "Краткое описание ошибки",
+                              "example": "internal server error"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "404": {
+                      "description": "Метка не найдена",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "422": {
+                      "description": "Ошибка валидации",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "path": "/marks/:markID",
+                  "method": "DELETE",
+                  "summary": "Удалить метку",
+                  "description": "Удаление метки. Только владелец может удалять.",
+                  "parameters": [
+                    {
+                      "name": "markID",
+                      "in": "path",
+                      "type": "integer",
+                      "required": true
+                    }
+                  ],
+                  "responses": {
+                    "204": {
+                      "description": "Метка удалена"
+                    },
+                    "403": {
+                      "description": "Нет прав на удаление",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Простой формат ошибки для 403 Forbidden и 500 Internal Server Error.\n",
+                          "fields": {
+                            "error": {
+                              "type": "string",
+                              "description": "Краткое описание ошибки",
+                              "example": "internal server error"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "404": {
+                      "description": "Метка не найдена",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Категории",
+              "description": "Управление категориями меток",
+              "endpoints": [
+                {
+                  "path": "/category/",
+                  "method": "POST",
+                  "summary": "Создать категорию",
+                  "description": "Создание новой категории. Только для администраторов.\n",
+                  "request": {
+                    "content_type": "multipart/form-data",
+                    "body": {
+                      "$self": {
+                        "type": "object",
+                        "description": "Создание категории (multipart/form-data)",
+                        "fields": {
+                          "category_name": {
+                            "type": "string",
+                            "description": "Название категории",
+                            "required": true,
+                            "example": "Мероприятия",
+                            "max_length": 64
+                          },
+                          "color": {
+                            "type": "string",
+                            "description": "Цвет в формате HEX",
+                            "required": true,
+                            "example": "#FF5733",
+                            "max_length": 7
+                          },
+                          "icon": {
+                            "type": "file",
+                            "description": "Иконка категории. До 5 МБ. Допустимые форматы: JPEG, PNG, WebP, SVG.\n",
+                            "required": true
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "responses": {
+                    "201": {
+                      "description": "Категория создана",
+                      "content_type": "application/json",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Категория метки",
+                          "fields": {
+                            "categoryName": {
+                              "type": "string",
+                              "description": "Название категории",
+                              "example": "Мероприятия"
+                            },
+                            "color": {
+                              "type": "string",
+                              "description": "Цвет в формате HEX",
+                              "example": "#FF5733"
+                            },
+                            "icon": {
+                              "type": "string",
+                              "description": "URL иконки категории",
+                              "format": "url",
+                              "example": "/store/categories/events.svg"
+                            },
+                            "id": {
+                              "type": "integer",
+                              "example": 1
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "409": {
+                      "description": "Категория с таким именем уже существует",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "422": {
+                      "description": "Ошибка валидации",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Стандартный ответ при ошибках валидации, не найденных ресурсах и конфликтах (422, 404, 409).\n",
+                          "fields": {
+                            "detail": {
+                              "type": "array",
+                              "description": "Список ошибок",
+                              "items": {
+                                "type": "object",
+                                "description": "Одна ошибка валидации",
+                                "fields": {
+                                  "input": {
+                                    "type": "object",
+                                    "description": "Значение, вызвавшее ошибку (если применимо)",
+                                    "nullable": true
+                                  },
+                                  "loc": {
+                                    "type": "array",
+                                    "description": "Путь до проблемного поля. Первый элемент — источник (body, query, path), второй — имя поля.\n",
+                                    "example": [
+                                      "body",
+                                      "email"
+                                    ],
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "msg": {
+                                    "type": "string",
+                                    "description": "Человекочитаемое описание ошибки",
+                                    "example": "field is required"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "Машиночитаемый тип ошибки",
+                                    "example": "value_error.missing"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Администрирование",
+              "description": "Эндпоинты для администраторов",
+              "endpoints": [
+                {
+                  "path": "/admin/mark/",
+                  "method": "GET",
+                  "summary": "Все метки с пагинацией",
+                  "description": "Получение всех меток. Только для администраторов.",
+                  "parameters": [
+                    {
+                      "name": "page",
+                      "in": "query",
+                      "type": "integer",
+                      "description": "Номер страницы",
+                      "default": 1
+                    },
+                    {
+                      "name": "pageSize",
+                      "in": "query",
+                      "type": "integer",
+                      "description": "Элементов на странице",
+                      "default": 20
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "description": "Пагинированный список меток",
+                      "content_type": "application/json",
+                      "body": {
+                        "$self": {
+                          "type": "object",
+                          "description": "Обёртка для пагинированных ответов. Поле items содержит элементы конкретного типа в зависимости от эндпоинта.\n",
+                          "fields": {
+                            "has_next": {
+                              "type": "boolean",
+                              "description": "Есть ли следующая страница",
+                              "example": true
+                            },
+                            "has_prev": {
+                              "type": "boolean",
+                              "description": "Есть ли предыдущая страница",
+                              "example": false
+                            },
+                            "items": {
+                              "type": "array",
+                              "description": "Элементы текущей страницы"
+                            },
+                            "page": {
+                              "type": "integer",
+                              "description": "Текущая страница (начиная с 1)",
+                              "example": 1
+                            },
+                            "page_size": {
+                              "type": "integer",
+                              "description": "Количество элементов на странице",
+                              "example": 20
+                            },
+                            "total": {
+                              "type": "integer",
+                              "description": "Общее количество элементов",
+                              "example": 100
+                            },
+                            "total_pages": {
+                              "type": "integer",
+                              "description": "Общее количество страниц",
+                              "example": 5
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Здоровье",
+              "description": "Проверка работоспособности",
+              "endpoints": [
+                {
+                  "path": "/health",
+                  "method": "GET",
+                  "summary": "Health check",
+                  "description": "Проверка подключения к базе данных",
+                  "headers": "none",
+                  "responses": {
+                    "200": {
+                      "description": "Сервис работает"
+                    },
+                    "503": {
+                      "description": "База данных недоступна"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "socketio": {
+          "namespace": "/marks",
+          "description": "Real-time обновления меток на карте. Подключение без авторизации.\n",
+          "events": [
+            {
+              "name": "message",
+              "direction": "client-to-server",
+              "summary": "Запрос меток/кластеров по фильтру",
+              "description": "Клиент отправляет параметры фильтрации (область карты, зум, время). Сервер возвращает метки или кластеры через ack callback. При zoom \u003c 12 — кластеры, при \u003e= 12 — отдельные метки.\n",
+              "request": {
+                "$self": {
+                  "type": "object",
+                  "description": "Параметры фильтрации меток по области карты",
+                  "fields": {
+                    "endAt": {
+                      "type": "datetime",
+                      "description": "Конец временного диапазона. По умолчанию — текущее время UTC."
+                    },
+                    "screen": {
+                      "type": "object",
+                      "description": "Видимая область карты (bounding box)",
+                      "required": true,
+                      "fields": {
+                        "center": {
+                          "type": "object",
+                          "description": "Центр экрана",
+                          "required": true,
+                          "fields": {
+                            "lat": {
+                              "type": "float",
+                              "description": "Широта",
+                              "required": true,
+                              "example": 55.7558
+                            },
+                            "lon": {
+                              "type": "float",
+                              "description": "Долгота",
+                              "required": true,
+                              "example": 37.6176
+                            }
+                          }
+                        },
+                        "leftTop": {
+                          "type": "object",
+                          "description": "Верхний левый угол",
+                          "required": true,
+                          "fields": {
+                            "lat": {
+                              "type": "float",
+                              "description": "Широта",
+                              "required": true,
+                              "example": 55.7558
+                            },
+                            "lon": {
+                              "type": "float",
+                              "description": "Долгота",
+                              "required": true,
+                              "example": 37.6176
+                            }
+                          }
+                        },
+                        "rightBottom": {
+                          "type": "object",
+                          "description": "Нижний правый угол",
+                          "required": true,
+                          "fields": {
+                            "lat": {
+                              "type": "float",
+                              "description": "Широта",
+                              "required": true,
+                              "example": 55.7558
+                            },
+                            "lon": {
+                              "type": "float",
+                              "description": "Долгота",
+                              "required": true,
+                              "example": 37.6176
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "startAt": {
+                      "type": "datetime",
+                      "description": "Начало временного диапазона",
+                      "required": true
+                    },
+                    "zoomLevel": {
+                      "type": "integer",
+                      "description": "Уровень зума карты. При \u003c 12 возвращаются кластеры, при \u003e= 12 — отдельные метки. По умолчанию 15.\n",
+                      "default": 15
+                    }
+                  }
+                }
+              },
+              "response": {
+                "event": "ack",
+                "payload": {
+                  "cluster": {
+                    "type": "array",
+                    "description": "Кластеры (при zoom \u003c 12)",
+                    "nullable": true,
+                    "items": {
+                      "type": "object",
+                      "description": "Кластер меток (при zoom \u003c 12)",
+                      "fields": {
+                        "center": {
+                          "type": "object",
+                          "description": "Центр кластера",
+                          "fields": {
+                            "coordinates": {
+                              "type": "array",
+                              "description": "[longitude, latitude]",
+                              "example": [
+                                37.6176,
+                                55.7558
+                              ],
+                              "items": {
+                                "type": "float"
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "description": "Тип геометрии",
+                              "example": "Point"
+                            }
+                          }
+                        },
+                        "count": {
+                          "type": "integer",
+                          "description": "Количество меток в кластере",
+                          "example": 24
+                        }
+                      }
+                    }
+                  },
+                  "error": {
+                    "type": "string",
+                    "description": "Описание ошибки (при success=false)",
+                    "nullable": true
+                  },
+                  "marks": {
+                    "type": "array",
+                    "description": "Метки (при zoom \u003e= 12)",
+                    "nullable": true,
+                    "items": {
+                      "type": "object",
+                      "description": "Метка на карте",
+                      "fields": {
+                        "additionalInfo": {
+                          "type": "string",
+                          "description": "Дополнительное описание",
+                          "nullable": true,
+                          "example": "Начало в 19:00, вход свободный"
+                        },
+                        "category": {
+                          "type": "object",
+                          "description": "Категория метки",
+                          "nullable": true,
+                          "fields": {
+                            "categoryName": {
+                              "type": "string",
+                              "description": "Название категории",
+                              "example": "Мероприятия"
+                            },
+                            "color": {
+                              "type": "string",
+                              "description": "Цвет в формате HEX",
+                              "example": "#FF5733"
+                            },
+                            "icon": {
+                              "type": "string",
+                              "description": "URL иконки категории",
+                              "format": "url",
+                              "example": "/store/categories/events.svg"
+                            },
+                            "id": {
+                              "type": "integer",
+                              "example": 1
+                            }
+                          }
+                        },
+                        "geom": {
+                          "type": "object",
+                          "description": "GeoJSON Point",
+                          "fields": {
+                            "coordinates": {
+                              "type": "array",
+                              "description": "[longitude, latitude]",
+                              "example": [
+                                37.6176,
+                                55.7558
+                              ],
+                              "items": {
+                                "type": "float"
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "description": "Тип геометрии",
+                              "example": "Point"
+                            }
+                          }
+                        },
+                        "id": {
+                          "type": "integer",
+                          "description": "Уникальный идентификатор метки",
+                          "example": 42
+                        },
+                        "markName": {
+                          "type": "string",
+                          "description": "Название метки",
+                          "example": "Концерт в парке"
+                        },
+                        "owner": {
+                          "type": "object",
+                          "description": "Краткая информация о пользователе",
+                          "fields": {
+                            "avatar": {
+                              "type": "string",
+                              "description": "URL аватара",
+                              "format": "url",
+                              "nullable": true
+                            },
+                            "id": {
+                              "type": "integer",
+                              "example": 15
+                            },
+                            "username": {
+                              "type": "string",
+                              "example": "ivan_petrov"
+                            }
+                          }
+                        },
+                        "photos": {
+                          "type": "array",
+                          "description": "URL загруженных фотографий",
+                          "example": [
+                            "/store/marks/photo1.jpg"
+                          ],
+                          "items": {
+                            "type": "string",
+                            "format": "url"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "success": {
+                    "type": "boolean",
+                    "description": "Успешность запроса"
+                  }
+                }
+              }
+            },
+            {
+              "name": "markCreated",
+              "direction": "server-to-client",
+              "summary": "Уведомление о создании метки",
+              "description": "[TODO] Уведомляет клиентов о новой метке в их видимой области.\n",
+              "payload": {
+                "$self": {
+                  "type": "object",
+                  "description": "Метка на карте",
+                  "fields": {
+                    "additionalInfo": {
+                      "type": "string",
+                      "description": "Дополнительное описание",
+                      "nullable": true,
+                      "example": "Начало в 19:00, вход свободный"
+                    },
+                    "category": {
+                      "type": "object",
+                      "description": "Категория метки",
+                      "nullable": true,
+                      "fields": {
+                        "categoryName": {
+                          "type": "string",
+                          "description": "Название категории",
+                          "example": "Мероприятия"
+                        },
+                        "color": {
+                          "type": "string",
+                          "description": "Цвет в формате HEX",
+                          "example": "#FF5733"
+                        },
+                        "icon": {
+                          "type": "string",
+                          "description": "URL иконки категории",
+                          "format": "url",
+                          "example": "/store/categories/events.svg"
+                        },
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        }
+                      }
+                    },
+                    "geom": {
+                      "type": "object",
+                      "description": "GeoJSON Point",
+                      "fields": {
+                        "coordinates": {
+                          "type": "array",
+                          "description": "[longitude, latitude]",
+                          "example": [
+                            37.6176,
+                            55.7558
+                          ],
+                          "items": {
+                            "type": "float"
+                          }
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "Тип геометрии",
+                          "example": "Point"
+                        }
+                      }
+                    },
+                    "id": {
+                      "type": "integer",
+                      "description": "Уникальный идентификатор метки",
+                      "example": 42
+                    },
+                    "markName": {
+                      "type": "string",
+                      "description": "Название метки",
+                      "example": "Концерт в парке"
+                    },
+                    "owner": {
+                      "type": "object",
+                      "description": "Краткая информация о пользователе",
+                      "fields": {
+                        "avatar": {
+                          "type": "string",
+                          "description": "URL аватара",
+                          "format": "url",
+                          "nullable": true
+                        },
+                        "id": {
+                          "type": "integer",
+                          "example": 15
+                        },
+                        "username": {
+                          "type": "string",
+                          "example": "ivan_petrov"
+                        }
+                      }
+                    },
+                    "photos": {
+                      "type": "array",
+                      "description": "URL загруженных фотографий",
+                      "example": [
+                        "/store/marks/photo1.jpg"
+                      ],
+                      "items": {
+                        "type": "string",
+                        "format": "url"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "markDeleted",
+              "direction": "server-to-client",
+              "summary": "Уведомление об удалении метки",
+              "description": "[TODO] Уведомляет клиентов об удалении метки.\n",
+              "payload": {
+                "id": {
+                  "type": "integer",
+                  "description": "ID удалённой метки"
+                }
+              }
+            },
+            {
+              "name": "markUpdated",
+              "direction": "server-to-client",
+              "summary": "Уведомление об обновлении метки",
+              "description": "[TODO] Уведомляет клиентов об обновлении метки в их области.\n",
+              "payload": {
+                "$self": {
+                  "type": "object",
+                  "description": "Метка на карте",
+                  "fields": {
+                    "additionalInfo": {
+                      "type": "string",
+                      "description": "Дополнительное описание",
+                      "nullable": true,
+                      "example": "Начало в 19:00, вход свободный"
+                    },
+                    "category": {
+                      "type": "object",
+                      "description": "Категория метки",
+                      "nullable": true,
+                      "fields": {
+                        "categoryName": {
+                          "type": "string",
+                          "description": "Название категории",
+                          "example": "Мероприятия"
+                        },
+                        "color": {
+                          "type": "string",
+                          "description": "Цвет в формате HEX",
+                          "example": "#FF5733"
+                        },
+                        "icon": {
+                          "type": "string",
+                          "description": "URL иконки категории",
+                          "format": "url",
+                          "example": "/store/categories/events.svg"
+                        },
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        }
+                      }
+                    },
+                    "geom": {
+                      "type": "object",
+                      "description": "GeoJSON Point",
+                      "fields": {
+                        "coordinates": {
+                          "type": "array",
+                          "description": "[longitude, latitude]",
+                          "example": [
+                            37.6176,
+                            55.7558
+                          ],
+                          "items": {
+                            "type": "float"
+                          }
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "Тип геометрии",
+                          "example": "Point"
+                        }
+                      }
+                    },
+                    "id": {
+                      "type": "integer",
+                      "description": "Уникальный идентификатор метки",
+                      "example": 42
+                    },
+                    "markName": {
+                      "type": "string",
+                      "description": "Название метки",
+                      "example": "Концерт в парке"
+                    },
+                    "owner": {
+                      "type": "object",
+                      "description": "Краткая информация о пользователе",
+                      "fields": {
+                        "avatar": {
+                          "type": "string",
+                          "description": "URL аватара",
+                          "format": "url",
+                          "nullable": true
+                        },
+                        "id": {
+                          "type": "integer",
+                          "example": 15
+                        },
+                        "username": {
+                          "type": "string",
+                          "example": "ivan_petrov"
+                        }
+                      }
+                    },
+                    "photos": {
+                      "type": "array",
+                      "description": "URL загруженных фотографий",
+                      "example": [
+                        "/store/marks/photo1.jpg"
+                      ],
+                      "items": {
+                        "type": "string",
+                        "format": "url"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "",
+      "displayName": "",
+      "description": "",
+      "version": "",
+      "struct": {
+        "language": "",
+        "protocols": null
+      },
+      "infrastructure": {
+        "type": null,
+        "description": null
+      },
+      "tags": null
+    }
+  ]
+}
