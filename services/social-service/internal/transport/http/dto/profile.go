@@ -2,6 +2,22 @@ package dto
 
 import "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
 
+type BaseProfileResponse struct {
+	UserID    uint   `json:"userId"`
+	Username  string `json:"username"`
+	Avatar    string `json:"avatar"`
+	IsPrivate bool   `json:"isPrivate"`
+}
+
+func NewBaseProfileResponse(data *model.Profile) BaseProfileResponse {
+	return BaseProfileResponse{
+		UserID:    data.UserID,
+		Username:  data.Username,
+		Avatar:    data.Avatar.URL,
+		IsPrivate: data.IsPrivate,
+	}
+}
+
 type UserSettings struct {
 	ShowInSearch bool `json:"showInSearch"`
 }
@@ -13,23 +29,19 @@ func NewUserSettings(data model.PrivacySettings) UserSettings {
 }
 
 type PersonalProfileResponse struct {
-	UserID    uint         `json:"userId"`
-	Username  string       `json:"username"`
-	Avatar    string       `json:"avatar"`
-	IsPrivate bool         `json:"isPrivate"`
-	Settings  UserSettings `json:"settings"`
+	BaseProfileResponse
+	Settings UserSettings `json:"settings"`
 }
 
 func NewPersonalProfileResponse(data *model.Profile) *PersonalProfileResponse {
 	response := &PersonalProfileResponse{
-		UserID:    data.UserID,
-		Username:  data.Username,
-		Avatar:    data.Avatar.URL,
-		IsPrivate: data.IsPrivate,
-		Settings:  NewUserSettings(data.PrivacySettings),
+		BaseProfileResponse: NewBaseProfileResponse(data),
+		Settings:            NewUserSettings(data.PrivacySettings),
 	}
 	return response
 }
+
+// Поиск профилей
 
 type SearchProfileRequest struct {
 	Query    string `form:"q"`
@@ -38,16 +50,12 @@ type SearchProfileRequest struct {
 }
 
 type SearchProfileItem struct {
-	UserID   uint   `json:"userId"`
-	Username string `json:"username"`
-	Avatar   string `json:"avatar"`
+	BaseProfileResponse
 }
 
 func NewSearchProfileItem(p *model.Profile) SearchProfileItem {
 	return SearchProfileItem{
-		UserID:   p.UserID,
-		Username: p.Username,
-		Avatar:   p.Avatar.URL,
+		BaseProfileResponse: NewBaseProfileResponse(p),
 	}
 }
 

@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
@@ -34,6 +36,7 @@ func RegisterProfileHandler(g *gin.RouterGroup, deps ProfileDeps) {
 	{
 		profileGroup.GET("/me", auth.AuthRequired(), handler.GetMyProfile)
 		profileGroup.GET("/search", handler.SearchProfile)
+		profileGroup.GET("/:profileID", handler.GetDetailProfile)
 	}
 }
 
@@ -75,4 +78,19 @@ func (h *ProfileHandler) SearchProfile(c *gin.Context) {
 
 	items := dto.NewSearchProfileItems(profiles)
 	c.JSON(http.StatusOK, pagination.NewResponse(items, input.Pagination, total))
+}
+
+func (h *ProfileHandler) GetDetailProfile(c *gin.Context) {
+	pID, err := strconv.Atoi(c.Param("profileID"))
+	if err != nil {
+		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
+		errorhandler.HandleError(c, err, h.logger)
+	}
+
+	profile, err := h.service.GetProfile(c.Request.Context(), uint(pID))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewBaseProfileResponse(profile))
 }
