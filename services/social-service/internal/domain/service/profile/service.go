@@ -51,6 +51,10 @@ func (s *Service) CreateProfile(ctx context.Context, input CreateProfileInput) (
 func (s *Service) checkProfileExists(ctx context.Context, userId uint) error {
 	profile, err := s.profileRepo.GetProfile(ctx, userId)
 	if err != nil {
+		if errors.Is(err, domainerrors.ProfileNotFound(userId)) {
+			return nil
+		}
+
 		return err
 	}
 	if profile != nil {

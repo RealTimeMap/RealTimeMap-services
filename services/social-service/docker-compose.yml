@@ -1,0 +1,71 @@
+services:
+  social-postgres:
+    image: postgres:16-alpine
+    container_name: social-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - social_postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal-social
+
+  social-service:
+    build:
+      context: ../..
+      dockerfile: services/social-service/Dockerfile
+    container_name: social-service
+    restart: always
+    depends_on:
+      - social-postgres
+    labels:
+      - "traefik.enable=true"
+
+      # CORS preflight OPTIONS для /api/v2/profile/*
+      - "traefik.http.routers.social-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/profile/`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.social-options.entrypoints=websecure"
+      - "traefik.http.routers.social-options.priority=200"
+      - "traefik.http.routers.social-options.service=social"
+      - "traefik.http.routers.social-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.social-options.tls=true"
+
+      # GET /api/v2/profile/me - мой профиль (с auth)
+      - "traefik.http.routers.social-me.rule=Host(`realtimemap.ru`) && Path(`/api/v2/profile/me`) && Method(`GET`)"
+      - "traefik.http.routers.social-me.entrypoints=websecure"
+      - "traefik.http.routers.social-me.priority=100"
+      - "traefik.http.routers.social-me.service=social"
+      - "traefik.http.routers.social-me.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-me.tls=true"
+
+      # GET /api/v2/profile/search - поиск профилей (публичный)
+      - "traefik.http.routers.social-search.rule=Host(`realtimemap.ru`) && Path(`/api/v2/profile/search`) && Method(`GET`)"
+      - "traefik.http.routers.social-search.entrypoints=websecure"
+      - "traefik.http.routers.social-search.priority=100"
+      - "traefik.http.routers.social-search.service=social"
+      - "traefik.http.routers.social-search.middlewares=cors-headers@file"
+      - "traefik.http.routers.social-search.tls=true"
+
+      # GET /api/v2/profile/:profileID - детали профиля (публичный)
+      - "traefik.http.routers.social-detail.rule=Host(`realtimemap.ru`) && PathRegexp(`/api/v2/profile/[0-9]+$`) && Method(`GET`)"
+      - "traefik.http.routers.social-detail.entrypoints=websecure"
+      - "traefik.http.routers.social-detail.priority=90"
+      - "traefik.http.routers.social-detail.service=social"
+      - "traefik.http.routers.social-detail.middlewares=cors-headers@file"
+      - "traefik.http.routers.social-detail.tls=true"
+
+      # Service configuration
+      - "traefik.http.services.social.loadbalancer.server.port=8080"
+
+    networks:
+      - web
+      - internal-social
+
+volumes:
+  social_postgres_data:
+
+networks:
+  web:
+    external: true
+  internal-social:
