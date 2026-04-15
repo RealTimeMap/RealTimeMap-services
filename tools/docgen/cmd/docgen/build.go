@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultOutputPath   = "../../services/docs-service/output.json"
+	outputRelPath       = "docs-service/output.json"
 	sharedModelsRelPath = "docs/shared/models.yaml"
 )
 
@@ -34,9 +34,10 @@ func buildServicesDocs() {
 
 	fmt.Printf("Найдено сервисов: %d\n", len(services))
 
-	// Путь к shared model — относительно корня проекта (на уровень выше services/)
+	// Путь к shared models и output — относительно корня проекта (на уровень выше services/)
 	projectRoot := filepath.Dir(servicesDir)
 	sharedModelsPath := filepath.Join(projectRoot, sharedModelsRelPath)
+	outputPath := filepath.Join(servicesDir, outputRelPath)
 
 	// Сборка
 	b := builder.New(services)
@@ -53,11 +54,11 @@ func buildServicesDocs() {
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(defaultOutputPath, data, 0644); err != nil {
+	if err := os.WriteFile(outputPath, data, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "Ошибка записи файла: %s\n", err)
 		os.Exit(1)
 	}
 
 	fmt.Printf("Собрано сервисов: %d\n", len(output.Services))
-	fmt.Printf("Записано в: %s\n", defaultOutputPath)
+	fmt.Printf("Записано в: %s\n", outputPath)
 }
