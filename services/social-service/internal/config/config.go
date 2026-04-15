@@ -11,9 +11,13 @@ type Database struct {
 	SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE" env-default:"disable"`
 }
 
+type HttpServer struct {
+	Port int `yaml:"port" env:"HTTP_PORT" env-default:"8080"`
+}
 type Config struct {
-	Env      string   `env:"ENV" env-default:"local"`
-	Database Database `yaml:"database"`
+	Env      string     `env:"ENV" env-default:"local"`
+	Database Database   `yaml:"database"`
+	Http     HttpServer `yaml:"http_server"`
 }
 
 func MustLoad() *Config {
