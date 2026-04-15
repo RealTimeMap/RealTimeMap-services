@@ -20,8 +20,12 @@ type Container struct {
 
 func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Container {
 
+	// Транзакции
+	txManager := postgres.NewTxManager(db)
+
 	// Репозитории
 	commentRepo := postgres.NewPgCommentRepository(db, logger)
+	reactionRepo := postgres.NewPgReactionRepository(db, logger)
 
 	// Kafka producer (только если включен)
 	var publisher service.EventPublisher
@@ -40,7 +44,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	}
 
 	// Сервисы
-	commentService := comment.NewCommentService(commentRepo, publisher, logger)
+	commentService := comment.NewCommentService(commentRepo, reactionRepo, publisher, txManager, logger)
 
 	return &Container{
 		CommentService: commentService,

@@ -12,14 +12,28 @@ import (
 )
 
 type Service struct {
-	commentRepo repository.CommentRepository
-	producer    service.EventPublisher
+	commentRepo  repository.CommentRepository
+	reactionRepo repository.ReactionRepository
+	producer     service.EventPublisher
+	txManager    service.TxManager
 
 	logger *zap.Logger
 }
 
-func NewCommentService(commentRepo repository.CommentRepository, producer service.EventPublisher, logger *zap.Logger) *Service {
-	return &Service{commentRepo: commentRepo, producer: producer, logger: logger}
+func NewCommentService(
+	commentRepo repository.CommentRepository,
+	reactionRepo repository.ReactionRepository,
+	producer service.EventPublisher,
+	txManager service.TxManager,
+	logger *zap.Logger,
+) *Service {
+	return &Service{
+		commentRepo:  commentRepo,
+		reactionRepo: reactionRepo,
+		producer:     producer,
+		txManager:    txManager,
+		logger:       logger,
+	}
 }
 
 // TODO В будущем добавить проверку существавание записи выбранной модели через gRPC
@@ -67,7 +81,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput, userID uint) (*
 }
 
 func (s *Service) GetComments(ctx context.Context, filters model.CommentFilter) ([]*model.Comment, bool, error) {
-	s.logger.Info("start PgCommentRepository.GetComments")
+	s.logger.Info("start CommentService.GetComments")
 
 	comments, hasMore, err := s.commentRepo.GetComments(ctx, filters)
 	if err != nil {
@@ -78,7 +92,7 @@ func (s *Service) GetComments(ctx context.Context, filters model.CommentFilter) 
 }
 
 func (s *Service) SoftDelete(ctx context.Context, userID, commentID uint) error {
-	s.logger.Info("start PgCommentRepository.SoftDelete")
+	s.logger.Info("start CommentService.SoftDelete")
 
 	comment, err := s.commentRepo.GetByID(ctx, commentID)
 	if err != nil {
@@ -124,6 +138,81 @@ func (s *Service) UpdateComment(ctx context.Context, input UpdateInput, userID, 
 	return newComment, nil
 }
 
+func (s *Service) ToggleReaction(ctx context.Context, input ToggleReactionInput, userID, commentID uint) (*model.ToggleResult, error) {
+	s.logger.Info("start CommentService.ToggleReaction")
+
+	comment, err := s.commentRepo.GetByID(ctx, commentID)
+	if err != nil {
+		return nil, err
+	}
+	if comment.IsDeleted() {
+		return nil, domainerrors.CommentIsDeleted()
+	}
+
+	var result model.ToggleResult
+
+	err = s.txManager.WithTx(ctx, func(txCtx context.Context) error {
+		existing, err := s.reactionRepo.FindByUserAndComment(txCtx, userID, commentID)
+		if err != nil {
+			return err
+		}
+
+		if existing == nil {
+			// Реакции нет → создаём
+			reaction := &model.Reaction{
+				UserID:    userID,
+				CommentID: commentID,
+				Type:      input.Type,
+			}
+			if err := s.reactionRepo.Create(txCtx, reaction); err != nil {
+				return err
+			}
+			if err := s.commentRepo.IncrementCounter(txCtx, commentID, counterColumn(input.Type), 1); err != nil {
+				return err
+			}
+			result.Reaction = reaction
+		} else if existing.Type == input.Type {
+			// Та же реакция → удаляем
+			if err := s.reactionRepo.Delete(txCtx, existing.ID); err != nil {
+				return err
+			}
+			if err := s.commentRepo.IncrementCounter(txCtx, commentID, counterColumn(input.Type), -1); err != nil {
+				return err
+			}
+			result.Reaction = nil
+		} else {
+			// Другая реакция → переключаем
+			oldType := existing.Type
+			if err := s.reactionRepo.UpdateType(txCtx, existing.ID, input.Type); err != nil {
+				return err
+			}
+			if err := s.commentRepo.IncrementCounter(txCtx, commentID, counterColumn(oldType), -1); err != nil {
+				return err
+			}
+			if err := s.commentRepo.IncrementCounter(txCtx, commentID, counterColumn(input.Type), 1); err != nil {
+				return err
+			}
+			existing.Type = input.Type
+			result.Reaction = existing
+		}
+
+		// Получаем актуальные счётчики
+		updated, err := s.commentRepo.GetByID(txCtx, commentID)
+		if err != nil {
+			return err
+		}
+		result.LikesCount = updated.LikesCount
+		result.DislikesCount = updated.DislikesCount
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 func (s *Service) checkOwnerShip(userID uint, comment *model.Comment) error {
 	if comment.UserID != userID {
 		return domainerrors.NotCommentOwner()
@@ -143,4 +232,11 @@ func (s *Service) validateCreateInput(input CreateInput) error {
 		return domainerrors.ContentSooLong(len(input.Content))
 	}
 	return nil
+}
+
+func counterColumn(t model.ReactionType) string {
+	if t == model.Like {
+		return "likes_count"
+	}
+	return "dislikes_count"
 }

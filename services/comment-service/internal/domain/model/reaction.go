@@ -17,3 +17,9 @@ type Reaction struct {
 
 	Type ReactionType
 }
+
+type ToggleResult struct {
+	Reaction      *Reaction
+	LikesCount    uint
+	DislikesCount uint
+}

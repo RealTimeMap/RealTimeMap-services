@@ -28,7 +28,6 @@ type Config struct {
 	Kafka    Kafka    `yaml:"kafka"`
 }
 
-// some test
 func MustLoad() *Config {
 	return pkgconfig.MustLoad[Config](
 		pkgconfig.WithPaths(
