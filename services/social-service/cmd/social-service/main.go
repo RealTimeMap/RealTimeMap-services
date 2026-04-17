@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -33,7 +34,7 @@ func main() {
 	}, log)
 	defer database.Close(db)
 
-	db.AutoMigrate(&model.Profile{}, &model.Friendship{})
+	db.AutoMigrate(&model.Profile{}, &model.Friendship{}, &model.BlockedUser{})
 
 	container := app.NewContainer(db, log)
 
@@ -67,4 +68,5 @@ func main() {
 	}
 
 	log.Info("Social Service stopped")
+
 }

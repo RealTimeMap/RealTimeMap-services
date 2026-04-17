@@ -5,8 +5,8 @@ import "time"
 type FriendshipStatus string
 
 const (
-	waiting  FriendshipStatus = "waiting"
-	accepted FriendshipStatus = "accepted"
+	Waiting  FriendshipStatus = "waiting"
+	Accepted FriendshipStatus = "accepted"
 )
 
 type Friendship struct {

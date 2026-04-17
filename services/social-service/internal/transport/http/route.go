@@ -13,4 +13,25 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 		Service: container.ProfileService,
 		Logger:  container.Logger,
 	})
+	handlers.RegisterBlockedUserHandler(api, handlers.BlockedDeps{
+		Service: container.BlockedUserService,
+		Logger:  container.Logger,
+	})
+	healthHandler := func(c *gin.Context) {
+		// Проверка подключения к БД
+		sqlDB, err := container.DB.DB()
+		if err != nil || sqlDB.Ping() != nil {
+			c.JSON(503, gin.H{
+				"status":   "unhealthy",
+				"database": "down",
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"status":  "healthy",
+			"service": "social-service",
+		})
+	}
+	api.GET("/health", healthHandler)
 }
