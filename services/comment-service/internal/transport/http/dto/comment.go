@@ -33,6 +33,29 @@ func (p CommentParams) ToFilter(entityID uint, parentID *uint) model.CommentFilt
 
 }
 
+type ReactionRequest struct {
+	Type string `json:"type" binding:"required,oneof=like dislike"`
+}
+
+type ReactionResponse struct {
+	UserReaction  *string `json:"userReaction"`
+	LikesCount    uint    `json:"likesCount"`
+	DislikesCount uint    `json:"dislikesCount"`
+}
+
+func NewReactionResponse(result *model.ToggleResult) ReactionResponse {
+	var userReaction *string
+	if result.Reaction != nil {
+		t := string(result.Reaction.Type)
+		userReaction = &t
+	}
+	return ReactionResponse{
+		UserReaction:  userReaction,
+		LikesCount:    result.LikesCount,
+		DislikesCount: result.DislikesCount,
+	}
+}
+
 type CommentRequest struct {
 	Content  string `form:"content" json:"content" binding:"required"`
 	EntityID uint   `form:"entityId" json:"entityId" binding:"required"`

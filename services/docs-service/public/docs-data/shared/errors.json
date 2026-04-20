@@ -1,0 +1,173 @@
+{
+  "errors": {
+    "validation-error": {
+      "id": "validation-error",
+      "statusCode": 422,
+      "description": "Ошибка валидации. Одно или несколько полей не прошли проверку.",
+      "schema": [
+        {
+          "name": "detail",
+          "type": "array",
+          "required": true,
+          "description": "Список ошибок валидации",
+          "children": [
+            { "name": "loc", "type": "array", "required": true, "description": "Путь до поля с ошибкой (например, [\"body\", \"email\"])" },
+            { "name": "msg", "type": "string", "required": true, "description": "Описание ошибки" },
+            { "name": "type", "type": "string", "required": true, "description": "Тип ошибки (например, value_error.missing)" },
+            { "name": "input", "type": "any", "required": false, "description": "Значение, которое вызвало ошибку" }
+          ]
+        }
+      ],
+      "example": {
+        "detail": [
+          {
+            "loc": ["body", "email"],
+            "msg": "field required",
+            "type": "value_error.missing",
+            "input": null
+          }
+        ]
+      }
+    },
+    "not-found": {
+      "id": "not-found",
+      "statusCode": 404,
+      "description": "Запрашиваемый ресурс не найден.",
+      "schema": [
+        {
+          "name": "detail",
+          "type": "array",
+          "required": true,
+          "children": [
+            { "name": "loc", "type": "array", "required": true, "description": "Путь до поля" },
+            { "name": "msg", "type": "string", "required": true, "description": "Описание ошибки" },
+            { "name": "type", "type": "string", "required": true, "description": "Тип ошибки" },
+            { "name": "input", "type": "any", "required": false, "description": "Входное значение" }
+          ]
+        }
+      ],
+      "example": {
+        "detail": [
+          {
+            "loc": ["body", "user_id"],
+            "msg": "profile not found",
+            "type": "value_error.not_found",
+            "input": 5
+          }
+        ]
+      }
+    },
+    "unauthorized": {
+      "id": "unauthorized",
+      "statusCode": 401,
+      "description": "Пользователь не авторизован. Требуется валидный JWT-токен.",
+      "schema": [
+        {
+          "name": "detail",
+          "type": "array",
+          "required": true,
+          "children": [
+            { "name": "loc", "type": "array", "required": true, "description": "Путь до поля" },
+            { "name": "msg", "type": "string", "required": true, "description": "Описание ошибки" },
+            { "name": "type", "type": "string", "required": true, "description": "Тип ошибки" },
+            { "name": "input", "type": "any", "required": false, "description": "Входное значение" }
+          ]
+        }
+      ],
+      "example": {
+        "detail": [
+          {
+            "loc": ["header", "authorization"],
+            "msg": "token is invalid or expired",
+            "type": "value_error.unauthorized",
+            "input": null
+          }
+        ]
+      }
+    },
+    "forbidden": {
+      "id": "forbidden",
+      "statusCode": 403,
+      "description": "Доступ запрещён. Недостаточно прав для выполнения операции.",
+      "schema": [
+        {
+          "name": "detail",
+          "type": "array",
+          "required": true,
+          "children": [
+            { "name": "loc", "type": "array", "required": true, "description": "Путь до поля" },
+            { "name": "msg", "type": "string", "required": true, "description": "Описание ошибки" },
+            { "name": "type", "type": "string", "required": true, "description": "Тип ошибки" },
+            { "name": "input", "type": "any", "required": false, "description": "Входное значение" }
+          ]
+        }
+      ],
+      "example": {
+        "detail": [
+          {
+            "loc": ["header", "authorization"],
+            "msg": "insufficient permissions",
+            "type": "value_error.forbidden",
+            "input": null
+          }
+        ]
+      }
+    },
+    "conflict": {
+      "id": "conflict",
+      "statusCode": 409,
+      "description": "Конфликт. Ресурс уже существует или операция невозможна в текущем состоянии.",
+      "schema": [
+        {
+          "name": "detail",
+          "type": "array",
+          "required": true,
+          "children": [
+            { "name": "loc", "type": "array", "required": true, "description": "Путь до поля" },
+            { "name": "msg", "type": "string", "required": true, "description": "Описание ошибки" },
+            { "name": "type", "type": "string", "required": true, "description": "Тип ошибки" },
+            { "name": "input", "type": "any", "required": false, "description": "Входное значение" }
+          ]
+        }
+      ],
+      "example": {
+        "detail": [
+          {
+            "loc": ["body", "email"],
+            "msg": "already exists",
+            "type": "value_error.conflict",
+            "input": "user@example.com"
+          }
+        ]
+      }
+    },
+    "internal-error": {
+      "id": "internal-error",
+      "statusCode": 500,
+      "description": "Внутренняя ошибка сервера.",
+      "schema": [
+        {
+          "name": "detail",
+          "type": "array",
+          "required": true,
+          "children": [
+            { "name": "loc", "type": "array", "required": true, "description": "Путь до поля" },
+            { "name": "msg", "type": "string", "required": true, "description": "Описание ошибки" },
+            { "name": "type", "type": "string", "required": true, "description": "Тип ошибки" },
+            { "name": "input", "type": "any", "required": false, "description": "Входное значение" }
+          ]
+        }
+      ],
+      "example": {
+        "detail": [
+          {
+            "loc": ["server"],
+            "msg": "internal server error",
+            "type": "server_error",
+            "input": null
+          }
+        ]
+      }
+    }
+  }
+}

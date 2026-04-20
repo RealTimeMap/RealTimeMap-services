@@ -1,6 +1,8 @@
 include:
   - services/mark-service/docker-compose.yml
   - services/gamification-service/docker-compose.yml
+  - services/docs-service/docker-compose.yml
+  - services/social-service/docker-compose.yml
   - docker-compose.kafka.yml
 
 services:
@@ -16,8 +18,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-      - /etc/letsencrypt/live/realtimemap.ru:/certs:ro
-      - /etc/letsencrypt/archive/realtimemap.ru:/archive/realtimemap.ru:ro
+      - /etc/letsencrypt/live/realtimemap.ru:/etc/letsencrypt/live/realtimemap.ru:ro
+      - /etc/letsencrypt/archive/realtimemap.ru:/etc/letsencrypt/archive/realtimemap.ru:ro
     networks:
       - web
 

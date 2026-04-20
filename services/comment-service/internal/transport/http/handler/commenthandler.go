@@ -9,6 +9,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/service/comment"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/transport/http/dto"
 	"github.com/gin-gonic/gin"
@@ -39,6 +40,9 @@ func NewCommentRoute(g *gin.RouterGroup, service *comment.Service, logger *zap.L
 
 		r.PATCH("/:id/comments", auth.AuthRequired(), h.UpdateComment)
 		r.PATCH("/:id/comments/", auth.AuthRequired(), h.UpdateComment)
+
+		r.POST("/:id/comments/reaction", auth.AuthRequired(), h.ToggleReaction)
+		r.POST("/:id/comments/reaction/", auth.AuthRequired(), h.ToggleReaction)
 	}
 }
 
@@ -161,6 +165,34 @@ func (h *Handler) UpdateComment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.NewCommentResponse(uComment))
+}
+
+func (h *Handler) ToggleReaction(c *gin.Context) {
+	commentID, err := h.parseIDParam(c, "id")
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	userID, err := context.GetUserID(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	var req dto.ReactionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	result, err := h.service.ToggleReaction(c.Request.Context(), comment.ToggleReactionInput{Type: model.ReactionType(req.Type)}, uint(userID), commentID)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.NewReactionResponse(result))
 }
 
 func (h *Handler) parseIDParam(c *gin.Context, param string) (uint, error) {

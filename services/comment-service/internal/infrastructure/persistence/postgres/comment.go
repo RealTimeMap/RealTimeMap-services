@@ -26,7 +26,7 @@ func NewPgCommentRepository(db *gorm.DB, logger *zap.Logger) repository.CommentR
 
 func (r *PgCommentRepository) Create(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
 	r.logger.Info("start PgCommentRepository.Create")
-	err := r.db.WithContext(ctx).Create(&comment).Error
+	err := DBFromCtx(ctx, r.db).Create(&comment).Error
 	if err != nil {
 		r.logger.Error("error PgCommentRepository.Create", zap.Error(err), zap.Uint("id", comment.ID))
 		return nil, err
@@ -37,7 +37,7 @@ func (r *PgCommentRepository) Create(ctx context.Context, comment *model.Comment
 func (r *PgCommentRepository) GetByID(ctx context.Context, id uint) (*model.Comment, error) {
 	r.logger.Info("start PgCommentRepository.GetByID")
 	var comment *model.Comment
-	err := r.db.WithContext(ctx).Preload("Parent").First(&comment, id).Error
+	err := DBFromCtx(ctx, r.db).Preload("Parent").First(&comment, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domainerrors.CommentNotFound(id)
@@ -51,7 +51,7 @@ func (r *PgCommentRepository) GetComments(ctx context.Context, filters model.Com
 	r.logger.Info("start PgCommentRepository.GetComments")
 	var comments []*model.Comment
 
-	query := r.db.WithContext(ctx).
+	query := DBFromCtx(ctx, r.db).
 		Select("*, (SELECT COUNT(*) FROM comments r WHERE r.parent_id = comments.id AND r.deleted_at IS NULL AND r.status = ?) AS replies_count", model.CommentActive).
 		Where("entity_type = ? AND entity_id = ?", filters.Entity, filters.EntityID)
 
@@ -79,7 +79,7 @@ func (r *PgCommentRepository) GetComments(ctx context.Context, filters model.Com
 
 func (r *PgCommentRepository) Update(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
 	r.logger.Info("start PgCommentRepository.Update")
-	err := r.db.WithContext(ctx).Save(&comment).Error
+	err := DBFromCtx(ctx, r.db).Save(&comment).Error
 	if err != nil {
 		r.logger.Error("error PgCommentRepository.Update", zap.Error(err), zap.Uint("id", comment.ID))
 		return nil, err
@@ -87,10 +87,17 @@ func (r *PgCommentRepository) Update(ctx context.Context, comment *model.Comment
 	return comment, nil
 }
 
+func (r *PgCommentRepository) IncrementCounter(ctx context.Context, commentID uint, column string, delta int) error {
+	r.logger.Info("start PgCommentRepository.IncrementCounter")
+	return DBFromCtx(ctx, r.db).Model(&model.Comment{}).
+		Where("id = ?", commentID).
+		Update(column, gorm.Expr(column+" + ?", delta)).Error
+}
+
 func (r *PgCommentRepository) CountRelies(ctx context.Context, id uint) (int64, error) {
 	r.logger.Info("start PgCommentRepository.CountRelies")
 	var count int64
-	err := r.db.WithContext(ctx).Model(&model.Comment{}).
+	err := DBFromCtx(ctx, r.db).Model(&model.Comment{}).
 		Where("parent_id = ? AND status = ?", id, model.CommentActive).
 		Count(&count).Error
 	if err != nil {

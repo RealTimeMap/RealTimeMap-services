@@ -1,0 +1,11 @@
+{
+  "id": "auth-service",
+  "name": "auth-service",
+  "description": "Сервис аутентификации и авторизации пользователей.",
+  "fullDescription": "Управляет регистрацией, входом, JWT-токенами, обновлением токенов и сессиями пользователей.",
+  "protocols": ["http"],
+  "availableEnvs": ["dev", "staging", "prod"],
+  "healthPath": "/health",
+  "team": "Backend",
+  "repository": "https://github.com/example/auth-service"
+}

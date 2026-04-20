@@ -6,11 +6,11 @@ import "math"
 type Response[T any] struct {
 	Items      []T   `json:"items"`
 	Page       int   `json:"page"`
-	PageSize   int   `json:"page_size"`
-	TotalPages int   `json:"total_pages"`
+	PageSize   int   `json:"pageSize"`
+	TotalPages int   `json:"totalPages"`
 	Total      int64 `json:"total"`
-	HasNext    bool  `json:"has_next"`
-	HasPrev    bool  `json:"has_prev"`
+	HasNext    bool  `json:"hasNext"`
+	HasPrev    bool  `json:"hasPrev"`
 }
 
 // NewResponse создает новый ответ с пагинацией

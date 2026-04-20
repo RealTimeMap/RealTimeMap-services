@@ -1,0 +1,31 @@
+{
+  "pagination": {
+    "page": {
+      "id": "page",
+      "name": "Постраничная пагинация",
+      "description": "Стандартная постраничная пагинация. Оборачивает массив результатов в объект с метаданными.",
+      "wrapperSchema": [
+        { "name": "items", "type": "array", "required": true, "description": "Массив элементов текущей страницы", "children": [] },
+        { "name": "page", "type": "integer", "required": true, "description": "Номер текущей страницы (начиная с 1)" },
+        { "name": "pageSize", "type": "integer", "required": true, "description": "Количество элементов на странице" },
+        { "name": "totalPages", "type": "integer", "required": true, "description": "Общее количество страниц" },
+        { "name": "total", "type": "integer", "required": true, "description": "Общее количество элементов" },
+        { "name": "hasNext", "type": "boolean", "required": true, "description": "Есть ли следующая страница" },
+        { "name": "hasPrev", "type": "boolean", "required": true, "description": "Есть ли предыдущая страница" }
+      ],
+      "queryParams": [
+        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы", "example": "1", "location": "query" },
+        { "name": "pageSize", "type": "integer", "required": false, "description": "Размер страницы", "example": "10", "location": "query" }
+      ],
+      "example": {
+        "items": [],
+        "page": 1,
+        "pageSize": 10,
+        "totalPages": 1,
+        "total": 0,
+        "hasNext": false,
+        "hasPrev": false
+      }
+    }
+  }
+}

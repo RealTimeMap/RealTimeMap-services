@@ -1,0 +1,34 @@
+{
+  "schemas": {
+    "profile": {
+      "id": "profile",
+      "name": "Профиль пользователя",
+      "description": "Базовая информация о профиле пользователя",
+      "fields": [
+        { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя" },
+        { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+        { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" },
+        { "name": "bio", "type": "string", "required": false, "description": "Описание профиля" }
+      ]
+    },
+    "token-pair": {
+      "id": "token-pair",
+      "name": "Пара JWT-токенов",
+      "description": "Access и refresh токены для авторизации",
+      "fields": [
+        { "name": "accessToken", "type": "string", "required": true, "description": "JWT access token" },
+        { "name": "refreshToken", "type": "string", "required": true, "description": "JWT refresh token" }
+      ]
+    },
+    "user": {
+      "id": "user",
+      "name": "Пользователь",
+      "description": "Данные пользователя",
+      "fields": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID пользователя" },
+        { "name": "email", "type": "string", "required": true, "description": "Email пользователя" },
+        { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" }
+      ]
+    }
+  }
+}

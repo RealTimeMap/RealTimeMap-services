@@ -1,5 +1,7 @@
 package comment
 
+import "github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/model"
+
 type CreateInput struct {
 	Content    string
 	EntityType string
@@ -10,4 +12,8 @@ type CreateInput struct {
 
 type UpdateInput struct {
 	Content string
+}
+
+type ToggleReactionInput struct {
+	Type model.ReactionType
 }

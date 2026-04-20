@@ -1,0 +1,30 @@
+services:
+  docs-service:
+    build:
+      context: ../..
+      dockerfile: services/docs-service/Dockerfile
+    container_name: docs-service
+    restart: always
+    labels:
+      - "traefik.enable=true"
+
+      # Основной роутер — SPA документации
+      - "traefik.http.routers.docs.rule=Host(`realtimemap.ru`) && PathPrefix(`/docs-ui`)"
+      - "traefik.http.routers.docs.entrypoints=websecure"
+      - "traefik.http.routers.docs.priority=100"
+      - "traefik.http.routers.docs.service=docs"
+      - "traefik.http.routers.docs.middlewares=cors-headers@file,strip-docs-ui"
+      - "traefik.http.routers.docs.tls=true"
+
+      # Middleware для удаления префикса /docs-ui
+      - "traefik.http.middlewares.strip-docs-ui.stripprefix.prefixes=/docs-ui"
+
+      # Service configuration
+      - "traefik.http.services.docs.loadbalancer.server.port=80"
+
+    networks:
+      - web
+
+networks:
+  web:
+    external: true

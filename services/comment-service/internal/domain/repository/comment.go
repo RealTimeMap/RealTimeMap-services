@@ -12,4 +12,5 @@ type CommentRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Comment, error)
 	GetComments(ctx context.Context, filters model.CommentFilter) ([]*model.Comment, bool, error)
 	Update(ctx context.Context, comment *model.Comment) (*model.Comment, error)
+	IncrementCounter(ctx context.Context, commentID uint, column string, delta int) error
 }
