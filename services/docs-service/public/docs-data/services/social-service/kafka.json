@@ -1,0 +1,24 @@
+{
+  "topics": [
+    {
+      "id": "user-friend-added",
+      "name": "social.friend.added",
+      "summary": "Событие добавления друга",
+      "description": "Публикуется при принятии запроса на дружбу.",
+      "producers": ["social-service"],
+      "consumers": ["notification-service"],
+      "partitionKey": "userId",
+      "retention": "7d",
+      "schema": [
+        { "name": "userId", "type": "string", "required": true, "description": "ID инициатора" },
+        { "name": "friendId", "type": "string", "required": true, "description": "ID друга" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "ISO 8601 дата" }
+      ],
+      "example": {
+        "userId": "550e8400-...",
+        "friendId": "660e8400-...",
+        "timestamp": "2026-04-17T10:00:00Z"
+      }
+    }
+  ]
+}

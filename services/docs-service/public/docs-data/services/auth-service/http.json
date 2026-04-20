@@ -1,0 +1,91 @@
+{
+  "endpoints": [
+    {
+      "id": "register",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "summary": "Регистрация нового пользователя",
+      "description": "Создаёт новый аккаунт пользователя. Возвращает JWT-токены доступа и обновления.",
+      "tags": ["Auth"],
+      "requestBody": {
+        "description": "Данные для регистрации",
+        "schema": [
+          { "name": "email", "type": "string", "required": true, "description": "Email пользователя", "example": "user@example.com" },
+          { "name": "password", "type": "string", "required": true, "description": "Пароль (мин. 8 символов)", "example": "secretPass123" },
+          { "name": "username", "type": "string", "required": true, "description": "Имя пользователя", "example": "john_doe" }
+        ],
+        "example": {
+          "email": "user@example.com",
+          "password": "secretPass123",
+          "username": "john_doe"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 201,
+          "description": "Пользователь успешно зарегистрирован",
+          "schema": [
+            { "name": "accessToken", "type": "string", "description": "JWT access token" },
+            { "name": "refreshToken", "type": "string", "description": "JWT refresh token" },
+            { "name": "user", "type": "object", "description": "Данные пользователя", "children": [
+              { "name": "id", "type": "string", "description": "UUID пользователя" },
+              { "name": "email", "type": "string", "description": "Email" },
+              { "name": "username", "type": "string", "description": "Имя пользователя" }
+            ]}
+          ],
+          "example": {
+            "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+            "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+            "user": { "id": "550e8400-e29b-41d4-a716-446655440000", "email": "user@example.com", "username": "john_doe" }
+          }
+        }
+      ],
+      "errors": ["validation-error", "conflict"]
+    },
+    {
+      "id": "login",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "summary": "Вход в систему",
+      "description": "Аутентификация пользователя по email и паролю.",
+      "tags": ["Auth"],
+      "requestBody": {
+        "schema": [
+          { "name": "email", "type": "string", "required": true, "description": "Email", "example": "user@example.com" },
+          { "name": "password", "type": "string", "required": true, "description": "Пароль", "example": "secretPass123" }
+        ],
+        "example": { "email": "user@example.com", "password": "secretPass123" }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Успешный вход",
+          "example": {
+            "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+            "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+          }
+        }
+      ],
+      "errors": ["validation-error", "unauthorized"]
+    },
+    {
+      "id": "me",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "summary": "Получить текущего пользователя",
+      "description": "Возвращает данные авторизованного пользователя по JWT-токену.",
+      "tags": ["Users"],
+      "parameters": [
+        { "name": "Authorization", "type": "string", "required": true, "description": "Bearer JWT token", "example": "Bearer eyJhbG...", "location": "header" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Данные пользователя",
+          "example": { "id": "550e8400-e29b-41d4-a716-446655440000", "email": "user@example.com", "username": "john_doe" }
+        }
+      ],
+      "errors": ["unauthorized"]
+    }
+  ]
+}

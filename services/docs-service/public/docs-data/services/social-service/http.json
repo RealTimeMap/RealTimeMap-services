@@ -1,0 +1,35 @@
+{
+  "endpoints": [
+    {
+      "id": "search-profile",
+      "method": "GET",
+      "path": "/profile/search",
+      "summary": "Поиск профиля пользователя",
+      "tags": ["Профили"],
+      "pagination": "page",
+      "parameters": [
+        { "name": "q", "type": "string", "required": false, "description": "username пользователя", "location": "query" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список профилей (с пагинацией)",
+          "schemaRef": "profile",
+          "example": {
+            "items": [
+              { "userId": 4, "username": "base", "avatar": "" },
+              { "userId": 3, "username": "admin", "avatar": "" }
+            ],
+            "page": 1,
+            "pageSize": 10,
+            "totalPages": 1,
+            "total": 4,
+            "hasNext": false,
+            "hasPrev": false
+          }
+        }
+      ],
+      "errors": ["validation-error"]
+    }
+  ]
+}

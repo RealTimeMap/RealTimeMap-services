@@ -1,0 +1,10 @@
+{
+  "id": "social-service",
+  "name": "social-service",
+  "description": "Социальный сервис: профили пользователей, друзья, блокировки.",
+  "protocols": ["http", "kafka"],
+  "availableEnvs": ["dev", "staging", "prod"],
+  "healthPath": "/health",
+  "team": "Backend",
+  "repository": "https://github.com/example/social-service"
+}

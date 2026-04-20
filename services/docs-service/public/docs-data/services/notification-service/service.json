@@ -1,0 +1,9 @@
+{
+  "id": "notification-service",
+  "name": "notification-service",
+  "description": "Сервис уведомлений: push, email, in-app нотификации в реальном времени.",
+  "protocols": ["http", "kafka", "socketio"],
+  "availableEnvs": ["dev", "staging", "prod"],
+  "healthPath": "/health",
+  "team": "Backend"
+}
