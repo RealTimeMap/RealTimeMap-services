@@ -5,18 +5,13 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/handlers"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
-
-	_ "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/docs"
 )
 
 // @title           Your API
@@ -50,7 +45,7 @@ func main() {
 
 	// CORS middleware
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"https://real-time-map-frontend.vercel.app", "https://trip-scheduler.ru", "https://realtimemap.ru", "http://localhost:5173", "http://localhost:1420"},
+		AllowOrigins:     []string{"https://real-time-map-frontend.vercel.app", "https://trip-scheduler.ru", "https://realtimemap.ru", "http://localhost:5173", "http://localhost:1420", "http://localhost:9003"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-User-Id", "X-User-Name", "X-User-Ban", "X-User-Admin", "X-Trace-Id"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -75,8 +70,6 @@ func main() {
 		}
 		c.JSON(405, gin.H{"error": "Method not allowed"})
 	})
-
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	router.GET("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
 	router.POST("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
@@ -107,8 +100,8 @@ func main() {
 	}
 
 	// Support both GET and HEAD methods for health check
-	apiV1.GET("/health", healthHandler)
-	apiV1.HEAD("/health", healthHandler)
+	apiV1.GET("/mark/health", healthHandler)
+	apiV1.HEAD("/mark/health", healthHandler)
 
 	router.Run(":8080")
 }

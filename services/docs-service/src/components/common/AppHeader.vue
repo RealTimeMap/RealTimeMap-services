@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { useEnvironmentStore } from '@/stores/environment'
+import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
 import { ENVIRONMENT_LABELS } from '@/constants'
 
 const envStore = useEnvironmentStore()
+const authStore = useAuthStore()
 const { isDark, toggle: toggleTheme } = useTheme()
 
 const environments = Object.entries(ENVIRONMENT_LABELS)
+
+function handleLogout() {
+  authStore.logout()
+  window.location.reload()
+}
 </script>
 
 <template>
@@ -38,6 +45,23 @@ const environments = Object.entries(ENVIRONMENT_LABELS)
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
           </svg>
         </button>
+
+        <template v-if="authStore.isAuthenticated">
+          <span class="user-info" :title="'ID: ' + (authStore.userInfo?.userId ?? '')">
+            <svg class="user-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            {{ authStore.userInfo?.userName || 'Пользователь' }}
+          </span>
+          <button class="logout-btn" title="Выйти" @click="handleLogout">
+            <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </template>
       </div>
     </div>
   </header>
@@ -106,5 +130,36 @@ const environments = Object.entries(ENVIRONMENT_LABELS)
 .theme-icon {
   width: 20px;
   height: 20px;
+}
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+}
+.user-icon {
+  width: 16px;
+  height: 16px;
+}
+.logout-btn {
+  border-radius: var(--radius-md);
+  padding: 8px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.logout-btn:hover {
+  color: var(--color-error);
+  background-color: color-mix(in srgb, var(--color-error) 10%, transparent);
+}
+.logout-icon {
+  width: 18px;
+  height: 18px;
 }
 </style>

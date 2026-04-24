@@ -3,16 +3,17 @@
     {
       "id": "register",
       "method": "POST",
-      "path": "/api/v1/auth/register",
+      "path": "/api/v2/auth/register",
       "summary": "Регистрация нового пользователя",
-      "description": "Создаёт новый аккаунт пользователя. Возвращает JWT-токены доступа и обновления.",
+      "description": "Создаёт новый аккаунт пользователя. Возвращает данные созданного пользователя.",
       "tags": ["Auth"],
       "requestBody": {
         "description": "Данные для регистрации",
+        "contentType": "json",
         "schema": [
-          { "name": "email", "type": "string", "required": true, "description": "Email пользователя", "example": "user@example.com" },
-          { "name": "password", "type": "string", "required": true, "description": "Пароль (мин. 8 символов)", "example": "secretPass123" },
-          { "name": "username", "type": "string", "required": true, "description": "Имя пользователя", "example": "john_doe" }
+          { "name": "email", "type": "string", "required": true, "description": "Email пользователя" },
+          { "name": "password", "type": "string", "required": true, "description": "Пароль (мин. 8 символов)" },
+          { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" }
         ],
         "example": {
           "email": "user@example.com",
@@ -25,18 +26,24 @@
           "statusCode": 201,
           "description": "Пользователь успешно зарегистрирован",
           "schema": [
-            { "name": "accessToken", "type": "string", "description": "JWT access token" },
-            { "name": "refreshToken", "type": "string", "description": "JWT refresh token" },
-            { "name": "user", "type": "object", "description": "Данные пользователя", "children": [
-              { "name": "id", "type": "string", "description": "UUID пользователя" },
-              { "name": "email", "type": "string", "description": "Email" },
-              { "name": "username", "type": "string", "description": "Имя пользователя" }
-            ]}
+            { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+            { "name": "email", "type": "string", "required": true, "description": "Email пользователя" },
+            { "name": "is_active", "type": "boolean", "required": true, "description": "Активен ли аккаунт" },
+            { "name": "is_superuser", "type": "boolean", "required": true, "description": "Является ли суперпользователем" },
+            { "name": "is_verified", "type": "boolean", "required": true, "description": "Подтверждён ли email" },
+            { "name": "phone", "type": "string", "required": false, "description": "Номер телефона" },
+            { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+            { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" }
           ],
           "example": {
-            "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-            "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
-            "user": { "id": "550e8400-e29b-41d4-a716-446655440000", "email": "user@example.com", "username": "john_doe" }
+            "id": 60,
+            "email": "user@example.com",
+            "is_active": true,
+            "is_superuser": false,
+            "is_verified": false,
+            "phone": null,
+            "username": "john_doe",
+            "avatar": null
           }
         }
       ],
@@ -45,44 +52,55 @@
     {
       "id": "login",
       "method": "POST",
-      "path": "/api/v1/auth/login",
+      "path": "/api/v2/auth/login",
       "summary": "Вход в систему",
-      "description": "Аутентификация пользователя по email и паролю.",
+      "description": "Аутентификация пользователя по email и паролю. Возвращает access token.",
       "tags": ["Auth"],
       "requestBody": {
+        "description": "Данные для входа",
+        "contentType": "json",
         "schema": [
-          { "name": "email", "type": "string", "required": true, "description": "Email", "example": "user@example.com" },
-          { "name": "password", "type": "string", "required": true, "description": "Пароль", "example": "secretPass123" }
+          { "name": "username", "type": "string", "required": true, "description": "username пользователя" },
+          { "name": "password", "type": "string", "required": true, "description": "Пароль" }
         ],
-        "example": { "email": "user@example.com", "password": "secretPass123" }
+        "example": {
+          "username": "user",
+          "password": "secretPass123"
+        }
       },
       "responses": [
         {
           "statusCode": 200,
-          "description": "Успешный вход",
+          "description": "Успешная аутентификация",
+          "schema": [
+            { "name": "accessToken", "type": "string", "required": true, "description": "JWT access token" },
+            { "name": "tokenType", "type": "string", "required": true, "description": "Тип токена (bearer)" }
+          ],
           "example": {
             "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-            "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+            "tokenType": "bearer"
           }
         }
       ],
       "errors": ["validation-error", "unauthorized"]
     },
     {
-      "id": "me",
+      "id": "token-validate",
       "method": "GET",
-      "path": "/api/v1/auth/me",
-      "summary": "Получить текущего пользователя",
-      "description": "Возвращает данные авторизованного пользователя по JWT-токену.",
-      "tags": ["Users"],
-      "parameters": [
-        { "name": "Authorization", "type": "string", "required": true, "description": "Bearer JWT token", "example": "Bearer eyJhbG...", "location": "header" }
-      ],
+      "path": "/api/v2/auth/token-validate",
+      "summary": "Валидация токена",
+      "description": "Проверяет валидность Bearer токена. Используется Traefik forwardAuth middleware. При успехе возвращает заголовки X-User-Id, X-User-Name, X-User-Ban, X-User-Admin. Служит для внутрисервисной связи.",
+      "tags": ["Auth"],
+      "auth": true,
+      "parameters": [],
       "responses": [
         {
           "statusCode": 200,
-          "description": "Данные пользователя",
-          "example": { "id": "550e8400-e29b-41d4-a716-446655440000", "email": "user@example.com", "username": "john_doe" }
+          "description": "Токен валиден"
+        },
+        {
+          "statusCode": 401,
+          "description": "Токен невалиден или истёк"
         }
       ],
       "errors": ["unauthorized"]

@@ -8,7 +8,27 @@
         { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя" },
         { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
         { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" },
-        { "name": "bio", "type": "string", "required": false, "description": "Описание профиля" }
+        { "name": "isPrivate", "type": "boolean", "required": true, "description": "Приватный ли профиль" }
+      ]
+    },
+    "personal-profile": {
+      "id": "personal-profile",
+      "name": "Персональный профиль",
+      "description": "Профиль текущего пользователя с настройками приватности",
+      "fields": [
+        { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя" },
+        { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+        { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" },
+        { "name": "isPrivate", "type": "boolean", "required": true, "description": "Приватный ли профиль" },
+        {
+          "name": "settings",
+          "type": "object",
+          "required": true,
+          "description": "Настройки приватности",
+          "children": [
+            { "name": "showInSearch", "type": "boolean", "required": true, "description": "Показывать профиль в поиске" }
+          ]
+        }
       ]
     },
     "token-pair": {

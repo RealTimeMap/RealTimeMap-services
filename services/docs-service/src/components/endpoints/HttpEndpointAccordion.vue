@@ -86,6 +86,12 @@ const responseSchemas = computed(() => {
       <HttpMethodBadge :method="endpoint.method" />
       <code class="endpoint-path">{{ endpoint.path }}</code>
       <span class="endpoint-summary truncate">{{ endpoint.summary }}</span>
+      <span v-if="endpoint.auth" class="auth-badge" title="Требуется авторизация">
+        <svg class="auth-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </span>
       <span v-if="endpoint.pagination" class="pagination-badge">
         {{ paginationInfo?.name ?? endpoint.pagination }}
       </span>
@@ -253,6 +259,16 @@ const responseSchemas = computed(() => {
   font-size: 13px;
   color: var(--color-text-secondary);
   flex: 1;
+}
+.auth-badge {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--color-warning);
+}
+.auth-icon {
+  width: 14px;
+  height: 14px;
 }
 .pagination-badge {
   border-radius: var(--radius-full);

@@ -1,0 +1,36 @@
+{
+  "endpoints": [
+    {
+      "id": "create-data",
+      "method": "GET",
+      "path": "/api/v2/marks/create-data",
+      "summary": "Получение актуальных данных для создания метки.",
+      "description": "Отдает актуальные данные для полноценного создания метки. Доступные категории и разрешенная длительность метки.",
+      "tags": ["Auth"],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Актуальные данные",
+          "schema": [
+            { "name": "id", "type": "array", "required": true, "description": "ID пользователя" }
+          ],
+          "example": {
+            "allowedCategories": [
+              {
+                "id": 123,
+                "categoryName": "asd",
+                "color": "#ffffff",
+                "icon": "https://realtimemap.ru/store/photos/categories/2026/01/b3b0884e-8740-4b28-a358-30db1c594d35.png"
+              }
+            ],
+            "allowedDuration": [
+              12,
+              24
+            ]
+          }
+        }
+      ],
+      "errors": ["validation-error", "conflict"]
+    }
+  ]
+}

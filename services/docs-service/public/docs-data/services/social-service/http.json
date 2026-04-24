@@ -1,35 +1,172 @@
 {
   "endpoints": [
     {
+      "id": "get-my-profile",
+      "method": "GET",
+      "path": "/api/v2/profile/me",
+      "summary": "Получить свой профиль",
+      "description": "Возвращает профиль текущего авторизованного пользователя с настройками приватности. Требуется авторизация.",
+      "tags": ["Профили"],
+      "auth": true,
+      "parameters": [],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Персональный профиль пользователя",
+          "schemaRef": "personal-profile",
+          "example": {
+            "userId": 1,
+            "username": "john_doe",
+            "avatar": "https://example.com/avatar.jpg",
+            "isPrivate": false,
+            "settings": {
+              "showInSearch": true
+            }
+          }
+        }
+      ],
+      "errors": ["unauthorized"]
+    },
+    {
       "id": "search-profile",
       "method": "GET",
-      "path": "/profile/search",
-      "summary": "Поиск профиля пользователя",
+      "path": "/api/v2/profile/search",
+      "summary": "Поиск профилей",
+      "description": "Поиск профилей пользователей по username. Публичный endpoint, авторизация не требуется.",
       "tags": ["Профили"],
       "pagination": "page",
       "parameters": [
-        { "name": "q", "type": "string", "required": false, "description": "username пользователя", "location": "query" }
+        { "name": "q", "type": "string", "required": false, "description": "Поисковый запрос по username", "location": "query", "example": "admin" }
       ],
       "responses": [
         {
           "statusCode": 200,
-          "description": "Список профилей (с пагинацией)",
+          "description": "Список профилей с пагинацией",
           "schemaRef": "profile",
           "example": {
             "items": [
-              { "userId": 4, "username": "base", "avatar": "" },
-              { "userId": 3, "username": "admin", "avatar": "" }
+              { "userId": 4, "username": "base", "avatar": "", "isPrivate": false },
+              { "userId": 3, "username": "admin", "avatar": "", "isPrivate": false }
             ],
             "page": 1,
             "pageSize": 10,
             "totalPages": 1,
-            "total": 4,
+            "total": 2,
             "hasNext": false,
             "hasPrev": false
           }
         }
       ],
       "errors": ["validation-error"]
+    },
+    {
+      "id": "get-detail-profile",
+      "method": "GET",
+      "path": "/api/v2/profile/{profileID}",
+      "summary": "Получить профиль по ID",
+      "description": "Возвращает базовую информацию о профиле пользователя. Публичный endpoint.",
+      "tags": ["Профили"],
+      "parameters": [
+        { "name": "profileID", "type": "integer", "required": true, "description": "ID пользователя", "location": "path", "example": "1" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Профиль пользователя",
+          "schemaRef": "profile",
+          "example": {
+            "userId": 1,
+            "username": "john_doe",
+            "avatar": "https://example.com/avatar.jpg",
+            "isPrivate": false
+          }
+        }
+      ],
+      "errors": ["validation-error", "not-found"]
+    },
+    {
+      "id": "block-user",
+      "method": "POST",
+      "path": "/api/v2/friends/block",
+      "summary": "Заблокировать пользователя",
+      "description": "Блокирует указанного пользователя. Нельзя заблокировать самого себя. Требуется авторизация.",
+      "tags": ["Блокировки"],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "ID пользователя для блокировки",
+        "contentType": "json",
+        "schema": [
+          { "name": "UserId", "type": "integer", "required": true, "description": "ID пользователя для блокировки" }
+        ],
+        "example": {
+          "UserId": 5
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Пользователь успешно заблокирован"
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "conflict", "not-found"]
+    },
+    {
+      "id": "unblock-user",
+      "method": "POST",
+      "path": "/api/v2/friends/unblock",
+      "summary": "Разблокировать пользователя",
+      "description": "Снимает блокировку с указанного пользователя. Требуется авторизация.",
+      "tags": ["Блокировки"],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "ID пользователя для разблокировки",
+        "contentType": "json",
+        "schema": [
+          { "name": "UserId", "type": "integer", "required": true, "description": "ID пользователя для разблокировки" }
+        ],
+        "example": {
+          "UserId": 5
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Пользователь успешно разблокирован"
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "not-found"]
+    },
+    {
+      "id": "get-blocked-users",
+      "method": "GET",
+      "path": "/api/v2/friends/blocked",
+      "summary": "Список заблокированных пользователей",
+      "description": "Возвращает список профилей заблокированных пользователей с пагинацией. Требуется авторизация.",
+      "tags": ["Блокировки"],
+      "auth": true,
+      "pagination": "page",
+      "parameters": [],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список заблокированных профилей с пагинацией",
+          "schemaRef": "profile",
+          "example": {
+            "items": [
+              { "userId": 5, "username": "blocked_user", "avatar": "", "isPrivate": false }
+            ],
+            "page": 1,
+            "pageSize": 10,
+            "totalPages": 1,
+            "total": 1,
+            "hasNext": false,
+            "hasPrev": false
+          }
+        }
+      ],
+      "errors": ["unauthorized"]
     }
   ]
 }
