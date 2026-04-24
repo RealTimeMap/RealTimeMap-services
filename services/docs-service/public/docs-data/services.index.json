@@ -10,6 +10,16 @@
     "repository": "https://github.com/example/auth-service"
   },
   {
+    "id": "mark-service",
+    "name": "mark-service",
+    "description": "Сервис геолокационного функционала приложения",
+    "protocols": ["http", "socketio"],
+    "availableEnvs": ["dev", "staging", "prod"],
+    "healthPath": "/mark/health",
+    "team": "Backend",
+    "repository": "https://github.com/example/auth-service"
+  },
+  {
     "id": "social-service",
     "name": "social-service",
     "description": "Социальный сервис: профили пользователей, друзья, блокировки.",
