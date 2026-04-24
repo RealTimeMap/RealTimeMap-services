@@ -65,6 +65,8 @@ export interface HttpResponse {
   example?: unknown
 }
 
+export type ContentType = 'json' | 'form-data' | 'x-www-form-urlencoded' | 'text' | 'binary'
+
 export interface HttpEndpoint {
   id: string
   method: HttpMethod
@@ -72,9 +74,11 @@ export interface HttpEndpoint {
   summary: string
   description?: string
   tags: string[]
+  auth?: boolean
   parameters?: Parameter[]
   requestBody?: {
     description?: string
+    contentType?: ContentType
     schema: SchemaField[]
     example?: unknown
   }

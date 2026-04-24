@@ -10,7 +10,8 @@ RUN npm ci
 # Копируем исходный код
 COPY services/docs-service/ ./
 
-# Сборка продакшн билда
+# Сборка продакшн билда с base path для traefik
+ENV VITE_BASE=/docs-ui/
 RUN npm run build
 
 

@@ -63,6 +63,10 @@ function scrollToEndpoint(id: string) {
               <button v-for="ep in endpoints" :key="ep.id" class="sidebar-item" @click="scrollToEndpoint(ep.id)">
                 <HttpMethodBadge :method="ep.method" />
                 <span class="sidebar-path truncate">{{ ep.path }}</span>
+                <svg v-if="ep.auth" class="sidebar-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Требуется авторизация">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
               </button>
             </div>
           </div>
@@ -189,6 +193,13 @@ function scrollToEndpoint(id: string) {
   font-size: 12px;
   font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
   color: var(--color-text-secondary);
+}
+.sidebar-lock {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--color-warning);
+  margin-left: auto;
 }
 .main-content {
   flex: 1;

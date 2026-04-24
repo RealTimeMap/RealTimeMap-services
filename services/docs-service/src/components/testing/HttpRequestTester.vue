@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { HttpEndpoint, Parameter } from '@/types'
+import type { HttpEndpoint, Parameter, ContentType } from '@/types'
 import { useEnvironmentStore } from '@/stores/environment'
 import { useAuthStore } from '@/stores/auth'
 import { useSharedStore } from '@/stores/shared'
@@ -15,6 +15,16 @@ const authStore = useAuthStore()
 const sharedStore = useSharedStore()
 
 const baseUrl = computed(() => getServiceUrl(props.serviceId, envStore.current))
+
+const CONTENT_TYPE_OPTIONS: { value: ContentType; label: string; mime: string }[] = [
+  { value: 'json', label: 'JSON', mime: 'application/json' },
+  { value: 'form-data', label: 'Form Data', mime: 'multipart/form-data' },
+  { value: 'x-www-form-urlencoded', label: 'URL Encoded', mime: 'application/x-www-form-urlencoded' },
+  { value: 'text', label: 'Text', mime: 'text/plain' },
+  { value: 'binary', label: 'Binary', mime: 'application/octet-stream' },
+]
+
+const contentType = ref<ContentType>(props.endpoint.requestBody?.contentType ?? 'json')
 
 const allParams = computed<Parameter[]>(() => {
   const params = [...(props.endpoint.parameters ?? [])]
@@ -35,6 +45,25 @@ const headerParams = ref<Record<string, string>>({})
 const bodyText = ref(props.endpoint.requestBody?.example ? JSON.stringify(props.endpoint.requestBody.example, null, 2) : '')
 const extraHeaders = ref('')
 
+// Form-data поля
+const formFields = ref<{ key: string; value: string; type: 'text' | 'file' }[]>(
+  initFormFields(),
+)
+const fileInputs = ref<Record<number, File | null>>({})
+
+function initFormFields(): { key: string; value: string; type: 'text' | 'file' }[] {
+  const schema = props.endpoint.requestBody?.schema
+  if (!schema?.length) return [{ key: '', value: '', type: 'text' }]
+  return schema.map(f => ({
+    key: f.name,
+    value: f.example != null ? String(f.example) : '',
+    type: (f.type === 'file' || f.type === 'File') ? 'file' as const : 'text' as const,
+  }))
+}
+
+// Binary file
+const binaryFile = ref<File | null>(null)
+
 const sending = ref(false)
 const responseStatus = ref<number | null>(null)
 const responseBody = ref<string | null>(null)
@@ -49,6 +78,25 @@ function initParams(params: Parameter[]) {
   }
 }
 initParams(allParams.value)
+
+function addFormField() {
+  formFields.value.push({ key: '', value: '', type: 'text' })
+}
+
+function removeFormField(index: number) {
+  formFields.value.splice(index, 1)
+  delete fileInputs.value[index]
+}
+
+function onFileSelect(index: number, event: Event) {
+  const input = event.target as HTMLInputElement
+  fileInputs.value[index] = input.files?.[0] ?? null
+}
+
+function onBinaryFileSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  binaryFile.value = input.files?.[0] ?? null
+}
 
 function buildUrl(): string {
   let path = props.endpoint.path
@@ -66,6 +114,10 @@ function buildUrl(): string {
   return `${base}${path}${qs ? '?' + qs : ''}`
 }
 
+function getMimeType(): string {
+  return CONTENT_TYPE_OPTIONS.find(o => o.value === contentType.value)?.mime ?? 'application/json'
+}
+
 function buildHeaders(): Record<string, string> {
   const h: Record<string, string> = {}
   for (const [key, val] of Object.entries(headerParams.value)) {
@@ -73,7 +125,14 @@ function buildHeaders(): Record<string, string> {
   }
   const token = authStore.getToken(envStore.current)
   if (token && !h['Authorization']) h['Authorization'] = `Bearer ${token}`
-  if (props.endpoint.requestBody && props.endpoint.method !== 'GET') h['Content-Type'] = 'application/json'
+
+  if (props.endpoint.requestBody && props.endpoint.method !== 'GET') {
+    // Для form-data браузер сам выставит Content-Type с boundary
+    if (contentType.value !== 'form-data' && contentType.value !== 'binary') {
+      h['Content-Type'] = getMimeType()
+    }
+  }
+
   if (extraHeaders.value.trim()) {
     for (const line of extraHeaders.value.split('\n')) {
       const idx = line.indexOf(':')
@@ -83,12 +142,71 @@ function buildHeaders(): Record<string, string> {
   return h
 }
 
+function buildBody(): BodyInit | undefined {
+  if (props.endpoint.method === 'GET' || !props.endpoint.requestBody) return undefined
+
+  switch (contentType.value) {
+    case 'json':
+    case 'text':
+      return bodyText.value || undefined
+
+    case 'form-data': {
+      const fd = new FormData()
+      for (let i = 0; i < formFields.value.length; i++) {
+        const f = formFields.value[i]
+        if (!f.key) continue
+        if (f.type === 'file') {
+          const file = fileInputs.value[i]
+          if (file) fd.append(f.key, file)
+        } else {
+          fd.append(f.key, f.value)
+        }
+      }
+      return fd
+    }
+
+    case 'x-www-form-urlencoded': {
+      const params = new URLSearchParams()
+      for (const f of formFields.value) {
+        if (f.key) params.set(f.key, f.value)
+      }
+      return params.toString()
+    }
+
+    case 'binary':
+      return binaryFile.value ?? undefined
+  }
+}
+
 function toCurl(): string {
   const url = buildUrl()
   const headers = buildHeaders()
   let cmd = `curl -X ${props.endpoint.method} '${url}'`
   for (const [k, v] of Object.entries(headers)) cmd += ` \\\n  -H '${k}: ${v}'`
-  if (bodyText.value && props.endpoint.method !== 'GET') cmd += ` \\\n  -d '${bodyText.value.replace(/\n/g, '')}'`
+
+  if (props.endpoint.method !== 'GET' && props.endpoint.requestBody) {
+    switch (contentType.value) {
+      case 'json':
+      case 'text':
+        if (bodyText.value) cmd += ` \\\n  -d '${bodyText.value.replace(/\n/g, '')}'`
+        break
+      case 'form-data':
+        for (const f of formFields.value) {
+          if (!f.key) continue
+          if (f.type === 'file') cmd += ` \\\n  -F '${f.key}=@<file>'`
+          else cmd += ` \\\n  -F '${f.key}=${f.value}'`
+        }
+        break
+      case 'x-www-form-urlencoded':
+        for (const f of formFields.value) {
+          if (f.key) cmd += ` \\\n  --data-urlencode '${f.key}=${f.value}'`
+        }
+        break
+      case 'binary':
+        cmd += ` \\\n  --data-binary @<file>`
+        break
+    }
+  }
   return cmd
 }
 
@@ -102,13 +220,14 @@ async function send() {
 
   const url = buildUrl()
   const headers = buildHeaders()
+  const body = buildBody()
   const start = performance.now()
 
   try {
     const res = await fetch(url, {
       method: props.endpoint.method,
       headers,
-      body: props.endpoint.method !== 'GET' && bodyText.value ? bodyText.value : undefined,
+      body,
       signal: AbortSignal.timeout(15000),
     })
     responseTime.value = Math.round(performance.now() - start)
@@ -128,6 +247,8 @@ async function send() {
 }
 
 const showCurl = ref(false)
+
+const hasBody = computed(() => props.endpoint.requestBody && props.endpoint.method !== 'GET')
 </script>
 
 <template>
@@ -157,10 +278,71 @@ const showCurl = ref(false)
       </div>
     </div>
 
-    <!-- Request Body -->
-    <div v-if="endpoint.requestBody && endpoint.method !== 'GET'" class="param-group">
-      <label class="param-label">Тело запроса</label>
-      <textarea v-model="bodyText" class="body-textarea" rows="6" />
+    <!-- Content Type + Request Body -->
+    <div v-if="hasBody" class="param-group">
+      <div class="body-header">
+        <label class="param-label">Тело запроса</label>
+        <div class="content-type-selector">
+          <button
+            v-for="opt in CONTENT_TYPE_OPTIONS"
+            :key="opt.value"
+            class="ct-chip"
+            :class="{ active: contentType === opt.value }"
+            @click="contentType = opt.value"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- JSON / Text -->
+      <textarea
+        v-if="contentType === 'json' || contentType === 'text'"
+        v-model="bodyText"
+        class="body-textarea"
+        rows="6"
+        :placeholder="contentType === 'json' ? '{ }' : 'Текст...'"
+      />
+
+      <!-- Form Data / URL Encoded -->
+      <div v-if="contentType === 'form-data' || contentType === 'x-www-form-urlencoded'" class="form-fields">
+        <div v-for="(field, i) in formFields" :key="i" class="form-field-row">
+          <input v-model="field.key" class="param-input form-key" placeholder="Ключ" />
+
+          <template v-if="contentType === 'form-data'">
+            <select v-model="field.type" class="field-type-select">
+              <option value="text">Text</option>
+              <option value="file">File</option>
+            </select>
+          </template>
+
+          <input
+            v-if="field.type === 'text'"
+            v-model="field.value"
+            class="param-input form-value"
+            placeholder="Значение"
+          />
+          <input
+            v-else
+            type="file"
+            class="file-input"
+            @change="onFileSelect(i, $event)"
+          />
+
+          <button class="btn-remove" @click="removeFormField(i)" title="Удалить поле">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <button class="btn-add-field" @click="addFormField">+ Добавить поле</button>
+      </div>
+
+      <!-- Binary -->
+      <div v-if="contentType === 'binary'" class="binary-upload">
+        <input type="file" class="file-input" @change="onBinaryFileSelect" />
+        <span v-if="binaryFile" class="file-name">{{ binaryFile.name }} ({{ (binaryFile.size / 1024).toFixed(1) }} KB)</span>
+      </div>
     </div>
 
     <!-- Доп. заголовки -->
@@ -263,6 +445,40 @@ const showCurl = ref(false)
 .param-input:focus {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
+
+/* Body header с content-type selector */
+.body-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.content-type-selector {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.ct-chip {
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ct-chip:hover {
+  border-color: var(--color-border-hover);
+}
+.ct-chip.active {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-accent);
+}
+
 .body-textarea {
   width: 100%;
   border-radius: var(--radius-sm);
@@ -278,6 +494,92 @@ const showCurl = ref(false)
 .body-textarea:focus {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
+
+/* Form fields */
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.form-key {
+  flex: 0 0 140px;
+}
+.form-value {
+  flex: 1;
+}
+.field-type-select {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--color-text);
+  outline: none;
+  cursor: pointer;
+}
+.file-input {
+  flex: 1;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.file-input::file-selector-button {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--color-text);
+  cursor: pointer;
+  margin-right: 8px;
+}
+.btn-remove {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.btn-remove:hover {
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+}
+.btn-add-field {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.btn-add-field:hover {
+  text-decoration: underline;
+}
+
+/* Binary upload */
+.binary-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.file-name {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
 .extra-headers {
   font-size: 12px;
 }
