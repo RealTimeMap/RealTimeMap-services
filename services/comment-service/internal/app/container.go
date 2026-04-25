@@ -16,6 +16,7 @@ type Container struct {
 	EventPublisher service.EventPublisher
 
 	Logger *zap.Logger
+	DB     *gorm.DB
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Container {
@@ -49,8 +50,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	return &Container{
 		CommentService: commentService,
 		EventPublisher: publisher,
-
-		Logger: logger,
+		DB:             db,
+		Logger:         logger,
 	}
 }
 

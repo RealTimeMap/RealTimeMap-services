@@ -1,36 +1,417 @@
 {
   "endpoints": [
     {
-      "id": "create-data",
-      "method": "GET",
-      "path": "/api/v2/marks/create-data",
-      "summary": "Получение актуальных данных для создания метки.",
-      "description": "Отдает актуальные данные для полноценного создания метки. Доступные категории и разрешенная длительность метки.",
-      "tags": ["Auth"],
+      "id": "get-marks",
+      "method": "POST",
+      "path": "/api/v2/marks/",
+      "summary": "Получение меток в области карты",
+      "description": "Возвращает метки или кластеры меток в заданной видимой области карты. При zoomLevel < 12 возвращает кластеры, при >= 12 — отдельные метки. Фильтрация по времени начала событий.",
+      "tags": ["Метки"],
+      "requestBody": {
+        "description": "Параметры области и фильтрации",
+        "contentType": "json",
+        "schema": [
+          { "name": "screen", "type": "object", "required": true, "description": "Видимая область карты (leftTop, center, rightBottom — каждый с полями lon и lat)" },
+          { "name": "zoomLevel", "type": "integer", "required": false, "description": "Уровень зума карты. По умолчанию 15. При < 12 возвращаются кластеры" },
+          { "name": "startAt", "type": "string", "required": true, "description": "Начало временного диапазона (ISO 8601)" }
+        ],
+        "example": {
+          "screen": {
+            "leftTop": { "lon": 37.5, "lat": 55.8 },
+            "center": { "lon": 37.6, "lat": 55.75 },
+            "rightBottom": { "lon": 37.7, "lat": 55.7 }
+          },
+          "zoomLevel": 15,
+          "startAt": "2026-04-25T00:00:00Z"
+        }
+      },
       "responses": [
         {
           "statusCode": 200,
-          "description": "Актуальные данные",
+          "description": "Список меток (при zoomLevel >= 12)",
           "schema": [
-            { "name": "id", "type": "array", "required": true, "description": "ID пользователя" }
+            { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
+            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+            { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
+            { "name": "category", "type": "object", "required": false, "description": "Категория (id, categoryName, color, icon)" },
+            { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates)" },
+            { "name": "owner", "type": "object", "required": true, "description": "Владелец (id, username, avatar)" },
+            { "name": "photos", "type": "string[]", "required": true, "description": "URL фотографий" }
+          ],
+          "example": [
+            {
+              "id": 42,
+              "markName": "Концерт в парке",
+              "additionalInfo": "Бесплатный вход",
+              "category": {
+                "id": 1,
+                "categoryName": "Мероприятия",
+                "color": "#ff5722",
+                "icon": "https://realtimemap.ru/store/photos/categories/2026/01/event-icon.png"
+              },
+              "geom": {
+                "type": "Point",
+                "coordinates": [37.6176, 55.7558]
+              },
+              "owner": {
+                "id": 5,
+                "username": "john_doe"
+              },
+              "photos": [
+                "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"
+              ]
+            }
+          ]
+        },
+        {
+          "statusCode": 200,
+          "description": "Список кластеров (при zoomLevel < 12)",
+          "schema": [
+            { "name": "center", "type": "object", "required": true, "description": "GeoJSON Point — центр кластера (type, coordinates)" },
+            { "name": "count", "type": "integer", "required": true, "description": "Количество меток в кластере" }
+          ],
+          "example": [
+            {
+              "center": {
+                "type": "Point",
+                "coordinates": [37.62, 55.75]
+              },
+              "count": 15
+            }
+          ]
+        }
+      ],
+      "errors": ["validation-error"]
+    },
+    {
+      "id": "detail-mark",
+      "method": "GET",
+      "path": "/api/v2/marks/{markID}",
+      "summary": "Детальная информация о метке",
+      "description": "Возвращает полную информацию о конкретной метке по её ID.",
+      "tags": ["Метки"],
+      "parameters": [
+        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Детальная информация о метке",
+          "schema": [
+            { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
+            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+            { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
+            { "name": "category", "type": "object", "required": false, "description": "Категория (id, categoryName, color, icon)" },
+            { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates)" },
+            { "name": "owner", "type": "object", "required": true, "description": "Владелец (id, username, avatar)" },
+            { "name": "photos", "type": "string[]", "required": true, "description": "URL фотографий" }
           ],
           "example": {
-            "allowedCategories": [
-              {
-                "id": 123,
-                "categoryName": "asd",
-                "color": "#ffffff",
-                "icon": "https://realtimemap.ru/store/photos/categories/2026/01/b3b0884e-8740-4b28-a358-30db1c594d35.png"
-              }
-            ],
-            "allowedDuration": [
-              12,
-              24
+            "id": 42,
+            "markName": "Концерт в парке",
+            "additionalInfo": "Бесплатный вход",
+            "category": {
+              "id": 1,
+              "categoryName": "Мероприятия",
+              "color": "#ff5722",
+              "icon": "https://realtimemap.ru/store/photos/categories/2026/01/event-icon.png"
+            },
+            "geom": {
+              "type": "Point",
+              "coordinates": [37.6176, 55.7558]
+            },
+            "owner": {
+              "id": 5,
+              "username": "john_doe"
+            },
+            "photos": [
+              "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"
             ]
           }
         }
       ],
-      "errors": ["validation-error", "conflict"]
+      "errors": ["not-found"]
+    },
+    {
+      "id": "create-data",
+      "method": "GET",
+      "path": "/api/v2/marks/create-data",
+      "summary": "Данные для создания метки",
+      "description": "Возвращает актуальные данные, необходимые для создания метки: доступные категории и разрешённые значения длительности.",
+      "tags": ["Утилиты"],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Доступные категории и длительности",
+          "schema": [
+            { "name": "allowedCategories", "type": "object[]", "required": true, "description": "Список категорий (id, categoryName, color, icon)" },
+            { "name": "allowedDuration", "type": "integer[]", "required": true, "description": "Допустимые значения длительности в часах" }
+          ],
+          "example": {
+            "allowedCategories": [
+              {
+                "id": 1,
+                "categoryName": "Мероприятия",
+                "color": "#ff5722",
+                "icon": "https://realtimemap.ru/store/photos/categories/2026/01/event-icon.png"
+              }
+            ],
+            "allowedDuration": [12, 24]
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "create-mark",
+      "method": "POST",
+      "path": "/api/v2/marks/create",
+      "summary": "Создание метки",
+      "description": "Создает новую метку на карте. Требуется авторизация. После успешного создания автоматически оповещает сокет о новой метке.",
+      "tags": ["Метки"],
+      "auth": true,
+      "requestBody": {
+        "description": "Данные для создания метки",
+        "contentType": "form-data",
+        "schema": [
+          { "name": "markName", "type": "string", "required": true, "description": "Название метки (события)" },
+          { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
+          { "name": "categoryId", "type": "integer", "required": true, "description": "ID категории метки" },
+          { "name": "startAt", "type": "string", "required": false, "description": "Время начала события (ISO 8601). По умолчанию — текущее время" },
+          { "name": "duration", "type": "integer", "required": true, "description": "Длительность метки в часах" },
+          { "name": "longitude", "type": "number", "required": true, "description": "Долгота (longitude)" },
+          { "name": "latitude", "type": "number", "required": true, "description": "Широта (latitude)" },
+          { "name": "photos", "type": "file[]", "required": false, "description": "Фотографии (multipart файлы)" }
+        ],
+        "example": {
+          "markName": "Концерт в парке",
+          "additionalInfo": "Бесплатный вход",
+          "categoryId": 1,
+          "startAt": "2026-04-25T18:00:00Z",
+          "duration": 12,
+          "longitude": 37.6176,
+          "latitude": 55.7558,
+          "photos": "[файлы]"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 201,
+          "description": "Метка успешно создана",
+          "schema": [
+            { "name": "id", "type": "integer", "required": true, "description": "ID созданной метки" },
+            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+            { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
+            { "name": "category", "type": "object", "required": false, "description": "Категория метки (id, categoryName, color, icon)" },
+            { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates [lon, lat])" },
+            { "name": "owner", "type": "object", "required": true, "description": "Владелец метки (id, username, avatar)" },
+            { "name": "photos", "type": "string[]", "required": true, "description": "Массив URL загруженных фотографий" }
+          ],
+          "example": {
+            "id": 42,
+            "markName": "Концерт в парке",
+            "additionalInfo": "Бесплатный вход",
+            "category": {
+              "id": 1,
+              "categoryName": "Мероприятия",
+              "color": "#ff5722",
+              "icon": "https://realtimemap.ru/store/photos/categories/2026/01/event-icon.png"
+            },
+            "geom": {
+              "type": "Point",
+              "coordinates": [37.6176, 55.7558]
+            },
+            "owner": {
+              "id": 5,
+              "username": "john_doe"
+            },
+            "photos": [
+              "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg",
+              "https://realtimemap.ru/store/photos/marks/2026/04/photo2.jpg"
+            ]
+          }
+        }
+      ],
+      "errors": ["validation-error"]
+    },
+    {
+      "id": "update-mark",
+      "method": "PATCH",
+      "path": "/api/v2/marks/{markID}",
+      "summary": "Обновление метки",
+      "description": "Обновляет поля существующей метки. Все поля необязательные — отправляются только те, которые нужно изменить. Можно добавить новые фото и удалить существующие. Требуется авторизация, обновлять может только владелец.",
+      "tags": ["Метки"],
+      "auth": true,
+      "parameters": [
+        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+      ],
+      "requestBody": {
+        "description": "Поля для обновления (все необязательные)",
+        "contentType": "form-data",
+        "schema": [
+          { "name": "markName", "type": "string", "required": false, "description": "Новое название метки" },
+          { "name": "additionalInfo", "type": "string", "required": false, "description": "Новое описание" },
+          { "name": "categoryId", "type": "integer", "required": false, "description": "Новый ID категории" },
+          { "name": "duration", "type": "integer", "required": false, "description": "Новая длительность в часах" },
+          { "name": "photos", "type": "file[]", "required": false, "description": "Новые фотографии для добавления" },
+          { "name": "photosToDelete", "type": "string[]", "required": false, "description": "URL фотографий для удаления" }
+        ],
+        "example": {
+          "markName": "Обновлённое название",
+          "categoryId": 2,
+          "photosToDelete": ["https://realtimemap.ru/store/photos/marks/2026/04/old-photo.jpg"]
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Метка обновлена",
+          "schema": [
+            { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
+            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+            { "name": "additionalInfo", "type": "string", "required": false, "description": "Описание" },
+            { "name": "category", "type": "object", "required": false, "description": "Категория (id, categoryName, color, icon)" },
+            { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates)" },
+            { "name": "owner", "type": "object", "required": true, "description": "Владелец (id, username, avatar)" },
+            { "name": "photos", "type": "string[]", "required": true, "description": "Актуальные URL фотографий" }
+          ],
+          "example": {
+            "id": 42,
+            "markName": "Обновлённое название",
+            "additionalInfo": "Бесплатный вход",
+            "category": {
+              "id": 2,
+              "categoryName": "Спорт",
+              "color": "#4caf50",
+              "icon": "https://realtimemap.ru/store/photos/categories/2026/01/sport-icon.png"
+            },
+            "geom": {
+              "type": "Point",
+              "coordinates": [37.6176, 55.7558]
+            },
+            "owner": {
+              "id": 5,
+              "username": "john_doe"
+            },
+            "photos": [
+              "https://realtimemap.ru/store/photos/marks/2026/04/photo2.jpg"
+            ]
+          }
+        }
+      ],
+      "errors": ["validation-error", "not-found", "unauthorized"]
+    },
+    {
+      "id": "delete-mark",
+      "method": "DELETE",
+      "path": "/api/v2/marks/{markID}",
+      "summary": "Удаление метки",
+      "description": "Удаляет метку по ID. Требуется авторизация, удалять может только владелец метки.",
+      "tags": ["Метки"],
+      "auth": true,
+      "parameters": [
+        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Метка успешно удалена"
+        }
+      ],
+      "errors": ["not-found", "unauthorized"]
+    },
+    {
+      "id": "admin-get-all-marks",
+      "method": "GET",
+      "path": "/api/v2/admin/mark/",
+      "summary": "Все метки (админ)",
+      "description": "Возвращает все метки с пагинацией. Доступно только администраторам.",
+      "tags": ["Админ"],
+      "auth": true,
+      "pagination": "page",
+      "parameters": [
+        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы (по умолчанию 1)", "location": "query", "example": "1" },
+        { "name": "pageSize", "type": "integer", "required": false, "description": "Размер страницы", "location": "query", "example": "10" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список всех меток с пагинацией",
+          "example": {
+            "items": [
+              {
+                "id": 42,
+                "markName": "Концерт в парке",
+                "additionalInfo": "Бесплатный вход",
+                "category": {
+                  "id": 1,
+                  "categoryName": "Мероприятия",
+                  "color": "#ff5722",
+                  "icon": "https://realtimemap.ru/store/photos/categories/2026/01/event-icon.png"
+                },
+                "geom": {
+                  "type": "Point",
+                  "coordinates": [37.6176, 55.7558]
+                },
+                "owner": {
+                  "id": 5,
+                  "username": "john_doe"
+                },
+                "photos": []
+              }
+            ],
+            "page": 1,
+            "pageSize": 10,
+            "totalPages": 5,
+            "total": 48,
+            "hasNext": true,
+            "hasPrev": false
+          }
+        }
+      ],
+      "errors": ["unauthorized"]
+    },
+    {
+      "id": "create-category",
+      "method": "POST",
+      "path": "/api/v2/category",
+      "summary": "Создание категории",
+      "description": "Создает новую категорию меток. Доступно только администраторам. Иконка — изображение до 5 МБ (jpeg, png, webp, svg).",
+      "tags": ["Категории"],
+      "auth": true,
+      "requestBody": {
+        "description": "Данные категории",
+        "contentType": "form-data",
+        "schema": [
+          { "name": "category_name", "type": "string", "required": true, "description": "Название категории (макс. 64 символа)" },
+          { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории (макс. 7 символов, например #ff5722)" },
+          { "name": "icon", "type": "file", "required": true, "description": "Иконка категории (jpeg, png, webp, svg; макс. 5 МБ)" }
+        ],
+        "example": {
+          "category_name": "Мероприятия",
+          "color": "#ff5722",
+          "icon": "[файл изображения]"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 201,
+          "description": "Категория создана",
+          "schema": [
+            { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
+            { "name": "categoryName", "type": "string", "required": true, "description": "Название" },
+            { "name": "color", "type": "string", "required": true, "description": "HEX-цвет" },
+            { "name": "icon", "type": "string", "required": true, "description": "URL иконки" }
+          ],
+          "example": {
+            "id": 3,
+            "categoryName": "Мероприятия",
+            "color": "#ff5722",
+            "icon": "https://realtimemap.ru/store/photos/categories/2026/04/abc123.png"
+          }
+        }
+      ],
+      "errors": ["validation-error", "unauthorized"]
     }
   ]
 }
