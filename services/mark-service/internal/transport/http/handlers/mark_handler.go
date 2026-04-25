@@ -41,7 +41,6 @@ func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logge
 
 func (h *MarkHandler) CreateMark(c *gin.Context) {
 	var request dto.RequestMark
-	request.StartAt = time.Now()
 
 	userInfo, err := helper.GetUserInfo(c)
 	if err != nil {
@@ -67,11 +66,6 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		return
 	}
 
-	duration, err := valueobject.NewDuration(request.Duration)
-	if err != nil {
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
 	// Маппинг в чистые данные для Service Layer (Clean Architecture)
 	validData := input.MarkInput{
 		MarkName:       markName,
@@ -80,7 +74,7 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		Geohash:        geohash.EncodeWithPrecision(request.Latitude, request.Longitude, 5),
 		CategoryId:     request.CategoryId,
 		StartAt:        request.StartAt,
-		Duration:       duration,
+		EndAt:          request.EndAt,
 		Photos:         photos, // Чистые данные []PhotoInput
 		UserInput:      userInfo,
 	}
@@ -92,15 +86,6 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 	c.JSON(201, dto.NewResponseMark(res))
 }
 
-// GetMarks godoc
-// @Summary      Получение актуальных меток через HTTP
-// @Tags         mark
-// @Accept       json
-// @Produce      json
-// @Param        body dto.FilterParams true "фильтры"
-// @Success      200 {array} dto.ResponseMark "Список меток"
-// @Success      200 {array} dto.ResponseCluster "Список кластеров"
-// @Router       /mark [post]
 func (h *MarkHandler) GetMarks(c *gin.Context) {
 	var params subdto.FilterParams
 	params.ZoomLevel = 15

@@ -68,19 +68,25 @@ func (s *UserMarkService) CreateMark(ctx context.Context, input input.MarkInput)
 		photos = uploadedPhotos
 	}
 
-	// 3. Создание метки
-	mark, err := s.markRepo.Create(ctx, &model.Mark{
+	payload := &model.Mark{
 		MarkName:       input.MarkName.String(),
 		AdditionalInfo: input.AdditionalInfo,
 		StartAt:        input.StartAt,
-		Duration:       input.Duration.Int(),
 		Geohash:        input.Geohash,
 		Geom:           input.Geom,
 		CategoryID:     input.CategoryId,
 		Photos:         photos,
 		UserID:         input.UserID,
 		UserName:       input.UserName,
-	})
+	}
+	if input.EndAt != nil {
+		payload.EndAt = *input.EndAt
+	} else {
+		payload.DefaultEndAt()
+	}
+
+	// 3. Создание метки
+	mark, err := s.markRepo.Create(ctx, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -226,9 +232,6 @@ func (s *UserMarkService) applyUpdates(mark *model.Mark, input input.MarkUpdateI
 	}
 	if input.AdditionalInfo != nil {
 		mark.AdditionalInfo = input.AdditionalInfo
-	}
-	if input.Duration != nil {
-		mark.Duration = input.Duration.Int()
 	}
 }
 

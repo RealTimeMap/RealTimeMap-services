@@ -15,7 +15,7 @@ type MarkInput struct {
 	AdditionalInfo *string
 	CategoryId     int
 	StartAt        time.Time
-	Duration       valueobject.Duration
+	EndAt          *time.Time
 	Geom           types.Point
 	Geohash        string
 	Photos         []mediavalidator.PhotoInput // Чистые данные: []byte + filename
