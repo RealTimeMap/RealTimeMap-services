@@ -5,7 +5,7 @@
   "fullDescription": "Сервис управляет метками, перемещением пользователей на карте и тд",
   "protocols": ["http", "socketio"],
   "availableEnvs": ["dev", "staging", "prod"],
-  "healthPath": "/mark/health",
+  "healthPath": "/api/v2/mark/health",
   "team": "Backend",
-  "repository": "https://github.com/example/auth-service"
+  "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/mark-service"
 }

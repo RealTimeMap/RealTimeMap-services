@@ -58,7 +58,7 @@
       "tags": ["Auth"],
       "requestBody": {
         "description": "Данные для входа",
-        "contentType": "json",
+        "contentType": "x-www-form-urlencoded",
         "schema": [
           { "name": "username", "type": "string", "required": true, "description": "username пользователя" },
           { "name": "password", "type": "string", "required": true, "description": "Пароль" }

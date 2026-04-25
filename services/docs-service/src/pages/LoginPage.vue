@@ -9,27 +9,31 @@ const router = useRouter()
 const authStore = useAuthStore()
 const envStore = useEnvironmentStore()
 
-const token = ref(authStore.currentToken())
+const username = ref('')
+const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
 async function handleLogin() {
-  if (!token.value.trim()) {
-    error.value = 'Введите токен'
+  if (!username.value.trim()) {
+    error.value = 'Введите имя пользователя'
+    return
+  }
+  if (!password.value) {
+    error.value = 'Введите пароль'
     return
   }
 
   loading.value = true
   error.value = ''
 
-  authStore.setToken(envStore.current, token.value.trim())
-  const ok = await authStore.validate()
+  const result = await authStore.login(username.value.trim(), password.value)
 
-  if (ok) {
+  if (result.ok) {
     const redirect = (router.currentRoute.value.query.redirect as string) || '/'
     router.push(redirect)
   } else {
-    error.value = 'Невалидный токен или сервис авторизации недоступен'
+    error.value = result.error ?? 'Ошибка авторизации'
   }
 
   loading.value = false
@@ -45,7 +49,7 @@ async function handleLogin() {
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
         <h1 class="login-title">Авторизация</h1>
-        <p class="login-subtitle">Для доступа к документации введите Bearer токен</p>
+        <p class="login-subtitle">Войдите для доступа к документации</p>
       </div>
 
       <div class="login-env">
@@ -54,21 +58,34 @@ async function handleLogin() {
       </div>
 
       <form class="login-form" @submit.prevent="handleLogin">
-        <label class="field-label" for="token-input">Bearer Token</label>
-        <textarea
-          id="token-input"
-          v-model="token"
-          class="token-input"
-          rows="3"
-          placeholder="eyJhbGciOiJIUzI1NiIs..."
-          autocomplete="off"
-          spellcheck="false"
-        />
+        <div class="field">
+          <label class="field-label" for="username-input">Имя пользователя</label>
+          <input
+            id="username-input"
+            v-model="username"
+            class="field-input"
+            type="text"
+            placeholder="username"
+            autocomplete="username"
+          />
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="password-input">Пароль</label>
+          <input
+            id="password-input"
+            v-model="password"
+            class="field-input"
+            type="password"
+            placeholder="Введите пароль"
+            autocomplete="current-password"
+          />
+        </div>
 
         <div v-if="error" class="login-error">{{ error }}</div>
 
         <button class="btn-login" type="submit" :disabled="loading">
-          {{ loading ? 'Проверка...' : 'Войти' }}
+          {{ loading ? 'Вход...' : 'Войти' }}
         </button>
       </form>
     </div>
@@ -129,7 +146,12 @@ async function handleLogin() {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .field-label {
   font-size: 11px;
@@ -138,19 +160,17 @@ async function handleLogin() {
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
 }
-.token-input {
+.field-input {
   width: 100%;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   background: var(--color-bg);
   padding: 10px 12px;
-  font-size: 12px;
-  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  font-size: 14px;
   color: var(--color-text);
   outline: none;
-  resize: vertical;
 }
-.token-input:focus {
+.field-input:focus {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 .login-error {
@@ -171,6 +191,7 @@ async function handleLogin() {
   border: none;
   cursor: pointer;
   transition: background-color 0.15s;
+  margin-top: 4px;
 }
 .btn-login:hover {
   background: var(--color-accent-hover);

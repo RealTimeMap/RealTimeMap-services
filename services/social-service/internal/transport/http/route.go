@@ -18,7 +18,6 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 		Logger:  container.Logger,
 	})
 	healthHandler := func(c *gin.Context) {
-		// Проверка подключения к БД
 		sqlDB, err := container.DB.DB()
 		if err != nil || sqlDB.Ping() != nil {
 			c.JSON(503, gin.H{
@@ -33,5 +32,5 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 			"service": "social-service",
 		})
 	}
-	api.GET("/health", healthHandler)
+	api.GET("/social/health", healthHandler)
 }

@@ -25,6 +25,51 @@ export const useAuthStore = defineStore('auth', () => {
     return getToken(envStore.current)
   }
 
+  async function login(username: string, password: string): Promise<{ ok: boolean; error?: string }> {
+    const baseUrl = getServiceUrl('auth-service', envStore.current)
+    if (!baseUrl) {
+      return { ok: false, error: 'URL сервиса авторизации не настроен для текущего окружения' }
+    }
+
+    checking.value = true
+    try {
+      const body = new URLSearchParams({ username, password })
+      const res = await fetch(`${baseUrl}/api/v2/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+        signal: AbortSignal.timeout(10000),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const token = data.accessToken ?? data.access_token ?? ''
+        if (!token) {
+          return { ok: false, error: 'Сервер не вернул токен' }
+        }
+        tokens.value[envStore.current] = token
+        // Валидируем токен, чтобы получить информацию о пользователе
+        const valid = await validate()
+        if (!valid) {
+          // Токен получен, но валидация не прошла — всё равно считаем успехом,
+          // заполним userInfo из username
+          userInfo.value = { userId: '', userName: username }
+        }
+        return { ok: true }
+      }
+
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false, error: 'Неверный логин или пароль' }
+      }
+
+      return { ok: false, error: `Ошибка сервера (${res.status})` }
+    } catch {
+      return { ok: false, error: 'Сервис авторизации недоступен' }
+    } finally {
+      checking.value = false
+    }
+  }
+
   async function validate(): Promise<boolean> {
     const token = currentToken()
     if (!token) {
@@ -71,5 +116,5 @@ export const useAuthStore = defineStore('auth', () => {
     userInfo.value = null
   }
 
-  return { tokens, userInfo, checking, isAuthenticated, setToken, getToken, currentToken, validate, logout }
+  return { tokens, userInfo, checking, isAuthenticated, setToken, getToken, currentToken, login, validate, logout }
 })
