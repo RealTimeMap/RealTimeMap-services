@@ -36,7 +36,9 @@
             { "name": "category", "type": "object", "required": false, "description": "Категория (id, categoryName, color, icon)" },
             { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates)" },
             { "name": "owner", "type": "object", "required": true, "description": "Владелец (id, username, avatar)" },
-            { "name": "photos", "type": "string[]", "required": true, "description": "URL фотографий" }
+            { "name": "photos", "type": "string[]", "required": true, "description": "URL фотографий" },
+            { "name": "startAt", "type": "string", "required": true, "description": "Время начала" },
+            { "name": "endAt", "type": "string", "required": true, "description": "Время окончания" }
           ],
           "example": [
             {
@@ -59,7 +61,9 @@
               },
               "photos": [
                 "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"
-              ]
+              ],
+              "startAt": "2026-04-25T15:32:19.015453Z",
+              "endAt": "2026-10-25T15:32:19.015453Z"
             }
           ]
         },
@@ -104,7 +108,9 @@
             { "name": "category", "type": "object", "required": false, "description": "Категория (id, categoryName, color, icon)" },
             { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates)" },
             { "name": "owner", "type": "object", "required": true, "description": "Владелец (id, username, avatar)" },
-            { "name": "photos", "type": "string[]", "required": true, "description": "URL фотографий" }
+            { "name": "photos", "type": "string[]", "required": true, "description": "URL фотографий" },
+            { "name": "startAt", "type": "string", "required": true, "description": "Время начала" },
+            { "name": "endAt", "type": "string", "required": true, "description": "Время окончания" }
           ],
           "example": {
             "id": 42,
@@ -126,7 +132,9 @@
             },
             "photos": [
               "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"
-            ]
+            ],
+            "startAt": "2026-04-25T15:32:19.015453Z",
+            "endAt": "2026-10-25T15:32:19.015453Z"
           }
         }
       ],
@@ -144,8 +152,7 @@
           "statusCode": 200,
           "description": "Доступные категории и длительности",
           "schema": [
-            { "name": "allowedCategories", "type": "object[]", "required": true, "description": "Список категорий (id, categoryName, color, icon)" },
-            { "name": "allowedDuration", "type": "integer[]", "required": true, "description": "Допустимые значения длительности в часах" }
+            { "name": "allowedCategories", "type": "object[]", "required": true, "description": "Список категорий (id, categoryName, color, icon)" }
           ],
           "example": {
             "allowedCategories": [
@@ -155,8 +162,7 @@
                 "color": "#ff5722",
                 "icon": "https://realtimemap.ru/store/photos/categories/2026/01/event-icon.png"
               }
-            ],
-            "allowedDuration": [12, 24]
+            ]
           }
         }
       ],
@@ -177,8 +183,8 @@
           { "name": "markName", "type": "string", "required": true, "description": "Название метки (события)" },
           { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
           { "name": "categoryId", "type": "integer", "required": true, "description": "ID категории метки" },
-          { "name": "startAt", "type": "string", "required": false, "description": "Время начала события (ISO 8601). По умолчанию — текущее время" },
-          { "name": "duration", "type": "integer", "required": true, "description": "Длительность метки в часах" },
+          { "name": "startAt", "type": "string", "required": true, "description": "Время начала события (ISO 8601). По умолчанию — текущее время" },
+          { "name": "endAt", "type": "string", "required": false, "description": "Время окончания события (ISO 8601). Если не указано, то высчитывается по формуле: (startAt + 1 час)." },
           { "name": "longitude", "type": "number", "required": true, "description": "Долгота (longitude)" },
           { "name": "latitude", "type": "number", "required": true, "description": "Широта (latitude)" },
           { "name": "photos", "type": "file[]", "required": false, "description": "Фотографии (multipart файлы)" }
@@ -188,7 +194,7 @@
           "additionalInfo": "Бесплатный вход",
           "categoryId": 1,
           "startAt": "2026-04-25T18:00:00Z",
-          "duration": 12,
+          "endAt": "2026-11-25T18:00:00Z",
           "longitude": 37.6176,
           "latitude": 55.7558,
           "photos": "[файлы]"
@@ -205,7 +211,9 @@
             { "name": "category", "type": "object", "required": false, "description": "Категория метки (id, categoryName, color, icon)" },
             { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates [lon, lat])" },
             { "name": "owner", "type": "object", "required": true, "description": "Владелец метки (id, username, avatar)" },
-            { "name": "photos", "type": "string[]", "required": true, "description": "Массив URL загруженных фотографий" }
+            { "name": "photos", "type": "string[]", "required": true, "description": "Массив URL загруженных фотографий" },
+            { "name": "startAt", "type": "string", "required": true, "description": "Время начала" },
+            { "name": "endAt", "type": "string", "required": true, "description": "Время окончания" }
           ],
           "example": {
             "id": 42,
@@ -228,7 +236,9 @@
             "photos": [
               "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg",
               "https://realtimemap.ru/store/photos/marks/2026/04/photo2.jpg"
-            ]
+            ],
+            "startAt": "2026-04-25T15:32:19.015453Z",
+            "endAt": "2026-10-25T15:32:19.015453Z"
           }
         }
       ],

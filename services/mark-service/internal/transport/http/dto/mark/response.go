@@ -1,6 +1,8 @@
 package mark
 
 import (
+	"time"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/dto"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
@@ -33,6 +35,8 @@ type ResponseMark struct {
 	Geom           *Coordinates               `json:"geom"`
 	User           *dto.UserResponse          `json:"owner"`
 	Photos         []string                   `json:"photos"`
+	StartAt        time.Time                  `json:"startAt"`
+	EndAt          time.Time                  `json:"endAt"`
 }
 
 func NewResponseMark(data *model.Mark) *ResponseMark {
@@ -42,6 +46,8 @@ func NewResponseMark(data *model.Mark) *ResponseMark {
 		AdditionalInfo: data.AdditionalInfo,
 		Geom:           NewFromPoint(data.Geom),
 		User:           dto.NewUserResponse(data.UserID, data.UserName, nil),
+		StartAt:        data.StartAt,
+		EndAt:          data.EndAt,
 	}
 	if data.Category.ID != 0 {
 		response.Category = category.NewResponseCategory(&data.Category)

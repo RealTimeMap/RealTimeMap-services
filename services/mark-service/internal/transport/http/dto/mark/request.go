@@ -9,8 +9,8 @@ type RequestMark struct {
 	MarkName       string                  `form:"markName" binding:"required"`
 	AdditionalInfo *string                 `form:"additionalInfo" binding:"-"`
 	CategoryId     int                     `form:"categoryId" binding:"required"`
-	StartAt        time.Time               `form:"startAt"`
-	Duration       int                     `form:"duration" binding:"required"`
+	StartAt        time.Time               `form:"startAt" binding:"required"`
+	EndAt          *time.Time              `form:"endAt" binding:"-"`
 	Longitude      float64                 `form:"longitude" binding:"required,longitude"`
 	Latitude       float64                 `form:"latitude" binding:"required,latitude"`
 	Photos         []*multipart.FileHeader `form:"photos"`

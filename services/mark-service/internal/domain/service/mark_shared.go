@@ -124,7 +124,5 @@ func applyUpdates(mark *model.Mark, input input.MarkUpdateInput) {
 	if input.AdditionalInfo != nil {
 		mark.AdditionalInfo = input.AdditionalInfo
 	}
-	if input.Duration != nil {
-		mark.Duration = input.Duration.Int()
-	}
+
 }
