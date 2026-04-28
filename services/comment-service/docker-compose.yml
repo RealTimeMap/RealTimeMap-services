@@ -1,0 +1,103 @@
+services:
+  comment-postgres:
+    image: postgres:16-alpine
+    container_name: comment-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - comment_postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal-comment
+
+  comment-service:
+    build:
+      context: ../..
+      dockerfile: services/comment-service/Dockerfile
+    container_name: comment-service
+    restart: always
+    depends_on:
+      - comment-postgres
+    labels:
+      - "traefik.enable=true"
+
+      # CORS preflight OPTIONS для /api/v2/comments/* и /api/v2/*/comments
+      - "traefik.http.routers.comment-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/`) && PathRegexp(`/api/v2/(comments|[^/]+/comments)`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.comment-options.entrypoints=websecure"
+      - "traefik.http.routers.comment-options.priority=200"
+      - "traefik.http.routers.comment-options.service=comment"
+      - "traefik.http.routers.comment-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.comment-options.tls=true"
+
+      # GET /api/v2/comment/health - health check (публичный)
+      - "traefik.http.routers.comment-health.rule=Host(`realtimemap.ru`) && Path(`/api/v2/comment/health`) && Method(`GET`)"
+      - "traefik.http.routers.comment-health.entrypoints=websecure"
+      - "traefik.http.routers.comment-health.priority=100"
+      - "traefik.http.routers.comment-health.service=comment"
+      - "traefik.http.routers.comment-health.middlewares=cors-headers@file"
+      - "traefik.http.routers.comment-health.tls=true"
+
+      # GET /api/v2/:id/comments - список комментариев (публичный)
+      - "traefik.http.routers.comment-list.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/[^/]+/comments/?$`) && Method(`GET`)"
+      - "traefik.http.routers.comment-list.entrypoints=websecure"
+      - "traefik.http.routers.comment-list.priority=90"
+      - "traefik.http.routers.comment-list.service=comment"
+      - "traefik.http.routers.comment-list.middlewares=cors-headers@file"
+      - "traefik.http.routers.comment-list.tls=true"
+
+      # GET /api/v2/:id/comments/:parentID/replies - ответы на комментарий (публичный)
+      - "traefik.http.routers.comment-replies.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/[^/]+/comments/[^/]+/replies/?$`) && Method(`GET`)"
+      - "traefik.http.routers.comment-replies.entrypoints=websecure"
+      - "traefik.http.routers.comment-replies.priority=95"
+      - "traefik.http.routers.comment-replies.service=comment"
+      - "traefik.http.routers.comment-replies.middlewares=cors-headers@file"
+      - "traefik.http.routers.comment-replies.tls=true"
+
+      # POST /api/v2/comments - создание комментария (с auth)
+      - "traefik.http.routers.comment-create.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/comments/?$`) && Method(`POST`)"
+      - "traefik.http.routers.comment-create.entrypoints=websecure"
+      - "traefik.http.routers.comment-create.priority=100"
+      - "traefik.http.routers.comment-create.service=comment"
+      - "traefik.http.routers.comment-create.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.comment-create.tls=true"
+
+      # POST /api/v2/:id/comments/reaction - реакция на комментарий (с auth)
+      - "traefik.http.routers.comment-reaction.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/[^/]+/comments/reaction/?$`) && Method(`POST`)"
+      - "traefik.http.routers.comment-reaction.entrypoints=websecure"
+      - "traefik.http.routers.comment-reaction.priority=100"
+      - "traefik.http.routers.comment-reaction.service=comment"
+      - "traefik.http.routers.comment-reaction.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.comment-reaction.tls=true"
+
+      # PATCH /api/v2/:id/comments - обновление комментария (с auth)
+      - "traefik.http.routers.comment-update.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/[^/]+/comments/?$`) && Method(`PATCH`)"
+      - "traefik.http.routers.comment-update.entrypoints=websecure"
+      - "traefik.http.routers.comment-update.priority=90"
+      - "traefik.http.routers.comment-update.service=comment"
+      - "traefik.http.routers.comment-update.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.comment-update.tls=true"
+
+      # DELETE /api/v2/:id/comments - удаление комментария (с auth)
+      - "traefik.http.routers.comment-delete.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/[^/]+/comments/?$`) && Method(`DELETE`)"
+      - "traefik.http.routers.comment-delete.entrypoints=websecure"
+      - "traefik.http.routers.comment-delete.priority=90"
+      - "traefik.http.routers.comment-delete.service=comment"
+      - "traefik.http.routers.comment-delete.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.comment-delete.tls=true"
+
+      # Service configuration
+      - "traefik.http.services.comment.loadbalancer.server.port=8080"
+
+    networks:
+      - web
+      - internal-comment
+
+volumes:
+  comment_postgres_data:
+
+networks:
+  web:
+    external: true
+  internal-comment:

@@ -1,6 +1,10 @@
 package config
 
-import pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+import (
+	"time"
+
+	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+)
 
 type Database struct {
 	Host     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
@@ -21,11 +25,17 @@ type Kafka struct {
 	ProducerTopic string   `yaml:"producerTopic" env:"KAFKA_PRODUCER_TOPIC" env-default:"comment-service.events"`
 }
 
+type ProfileGRPC struct {
+	Address string        `yaml:"address" env:"PROFILE_GRPC_ADDRESS" env-default:"profile-service:9090"`
+	Timeout time.Duration `yaml:"timeout" env:"PROFILE_GRPC_TIMEOUT" env-default:"3s"`
+}
+
 type Config struct {
-	Env      string   `yaml:"env" env:"APP_ENV"`
-	Database Database `yaml:"database"`
-	HTTP     HTTP     `yaml:"http"`
-	Kafka    Kafka    `yaml:"kafka"`
+	Env      string      `yaml:"env" env:"APP_ENV"`
+	Database Database    `yaml:"database"`
+	HTTP     HTTP        `yaml:"http"`
+	Kafka    Kafka       `yaml:"kafka"`
+	Profile  ProfileGRPC `yaml:"profile"`
 }
 
 func MustLoad() *Config {

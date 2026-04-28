@@ -83,18 +83,39 @@ func NewMeta(c *model.Comment) Meta {
 
 }
 
-type CommentResponse struct {
+type AuthorResponse struct {
 	ID       uint   `json:"id"`
-	Content  string `json:"content"`
-	Likes    uint   `json:"likes"`
-	Dislikes uint   `json:"dislikes"`
-	Meta     Meta   `json:"meta"`
+	Username string `json:"username"`
+	Tag      string `json:"tag"`
+	Avatar   string `json:"avatar"`
+}
+
+func NewAuthorResponse(p *model.UserProfile) AuthorResponse {
+	if p == nil {
+		return AuthorResponse{}
+	}
+	return AuthorResponse{
+		ID:       p.ID,
+		Username: p.Username,
+		Tag:      p.Tag,
+		Avatar:   p.Avatar,
+	}
+}
+
+type CommentResponse struct {
+	ID       uint           `json:"id"`
+	Content  string         `json:"content"`
+	Author   AuthorResponse `json:"author"`
+	Likes    uint           `json:"likes"`
+	Dislikes uint           `json:"dislikes"`
+	Meta     Meta           `json:"meta"`
 }
 
 func NewCommentResponse(comment *model.Comment) CommentResponse {
 	return CommentResponse{
 		ID:       comment.ID,
 		Content:  comment.Content,
+		Author:   NewAuthorResponse(comment.Author),
 		Likes:    comment.LikesCount,
 		Dislikes: comment.DislikesCount,
 		Meta:     NewMeta(comment),
