@@ -72,6 +72,14 @@ func (s *Service) GetProfile(ctx context.Context, userId uint) (*model.Profile, 
 	return profile, nil
 }
 
+func (s *Service) GetProfilesByIDs(ctx context.Context, ids []uint) ([]*model.Profile, error) {
+	s.logger.Info("ProfileService.GetProfilesByIDs", zap.Int("ids_count", len(ids)))
+	if len(ids) == 0 {
+		return []*model.Profile{}, nil
+	}
+	return s.profileRepo.GetProfilesByIDs(ctx, ids)
+}
+
 func (s *Service) SearchProfiles(ctx context.Context, input *SearchProfilesInput) ([]*model.Profile, int64, error) {
 	s.logger.Info("ProfileService.SearchProfiles", zap.String("username", input.Username))
 
