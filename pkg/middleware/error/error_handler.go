@@ -36,6 +36,17 @@ func HandleError(c *gin.Context, err error, logger *zap.Logger) {
 			return
 		}
 
+		if status == http.StatusServiceUnavailable {
+			logger.Warn("upstream service unavailable",
+				zap.Error(err),
+				zap.String("path", c.Request.URL.Path),
+				zap.String("method", c.Request.Method),
+				zap.String("TraceID", traceID),
+			)
+			c.AbortWithStatusJSON(status, gin.H{"error": "service unavailable"})
+			return
+		}
+
 		// Для клиентских ошибок возвращаем детали
 		validationErrors := domainErr.ToValidation()
 		if len(validationErrors) > 0 {

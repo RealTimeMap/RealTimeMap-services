@@ -93,6 +93,15 @@ func NewMultipleErrors(errors ...DomainError) *MultipleValidationErrors {
 	return &MultipleValidationErrors{Errors: errors}
 }
 
+// Service unavailable constructor
+
+func NewServiceUnavailableError(service string, cause error) *ServiceUnavailableError {
+	return &ServiceUnavailableError{
+		Service: service,
+		Cause:   cause,
+	}
+}
+
 // Internal domainerrors
 
 func NewInternalError(message string, cause error) *InternalError {
