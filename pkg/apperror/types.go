@@ -121,6 +121,31 @@ func (e *ForbiddenError) ToValidation() []validation.ValidationError {
 	return nil
 }
 
+// ServiceUnavailableError - внешний сервис недоступен (503)
+type ServiceUnavailableError struct {
+	Service string
+	Cause   error
+}
+
+func (e *ServiceUnavailableError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("%s unavailable: %v", e.Service, e.Cause)
+	}
+	return fmt.Sprintf("%s unavailable", e.Service)
+}
+
+func (e *ServiceUnavailableError) HTTPStatus() int {
+	return 503
+}
+
+func (e *ServiceUnavailableError) ToValidation() []validation.ValidationError {
+	return nil
+}
+
+func (e *ServiceUnavailableError) Unwrap() error {
+	return e.Cause
+}
+
 // InternalError - внутренняя ошибка (500)
 type InternalError struct {
 	Message string

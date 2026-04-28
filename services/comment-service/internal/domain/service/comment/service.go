@@ -4,10 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/service"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/infrastructure/grpc/profile"
 	"go.uber.org/zap"
 )
 
@@ -17,7 +19,8 @@ type Service struct {
 	producer     service.EventPublisher
 	txManager    service.TxManager
 
-	logger *zap.Logger
+	profileAdapter *profile.Adapter
+	logger         *zap.Logger
 }
 
 func NewCommentService(
@@ -25,26 +28,29 @@ func NewCommentService(
 	reactionRepo repository.ReactionRepository,
 	producer service.EventPublisher,
 	txManager service.TxManager,
+	profileAdapter *profile.Adapter,
 	logger *zap.Logger,
 ) *Service {
 	return &Service{
-		commentRepo:  commentRepo,
-		reactionRepo: reactionRepo,
-		producer:     producer,
-		txManager:    txManager,
-		logger:       logger,
+		commentRepo:    commentRepo,
+		reactionRepo:   reactionRepo,
+		producer:       producer,
+		txManager:      txManager,
+		profileAdapter: profileAdapter,
+		logger:         logger,
 	}
 }
 
 // TODO В будущем добавить проверку существавание записи выбранной модели через gRPC
 
-func (s *Service) Create(ctx context.Context, input CreateInput, userID uint) (*model.Comment, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, userID uint, username string) (*model.Comment, error) {
 	if err := s.validateCreateInput(input); err != nil {
 		return nil, err
 	}
 
 	comment := &model.Comment{
 		UserID:     userID,
+		Username:   username,
 		Content:    input.Content,
 		EntityType: model.EntityType(input.EntityType),
 		EntityID:   input.EntityID,
@@ -77,6 +83,8 @@ func (s *Service) Create(ctx context.Context, input CreateInput, userID uint) (*
 			s.logger.Warn("Failed to publish comment created event", zap.Error(err))
 		}
 	}()
+
+	s.attachAuthors(ctx, []*model.Comment{newComment})
 	return newComment, nil
 }
 
@@ -88,6 +96,7 @@ func (s *Service) GetComments(ctx context.Context, filters model.CommentFilter) 
 		return nil, false, err
 	}
 
+	s.attachAuthors(ctx, comments)
 	return comments, hasMore, nil
 }
 
@@ -135,6 +144,8 @@ func (s *Service) UpdateComment(ctx context.Context, input UpdateInput, userID, 
 	if err != nil {
 		return nil, err
 	}
+
+	s.attachAuthors(ctx, []*model.Comment{newComment})
 	return newComment, nil
 }
 
@@ -239,4 +250,45 @@ func counterColumn(t model.ReactionType) string {
 		return "likes_count"
 	}
 	return "dislikes_count"
+}
+
+func (s *Service) getUsersIDs(comments []*model.Comment) []uint {
+	usersIDs := make([]uint, len(comments))
+	for i, comment := range comments {
+		usersIDs[i] = comment.UserID
+	}
+	return utils.UniqueValues(usersIDs)
+}
+
+func (s *Service) attachAuthors(ctx context.Context, comments []*model.Comment) {
+	if len(comments) == 0 {
+		return
+	}
+
+	ids := s.getUsersIDs(comments)
+	profiles, err := s.profileAdapter.GetUserProfileByIDs(ctx, ids)
+
+	byID := make(map[uint]*model.UserProfile, len(profiles))
+	if err != nil {
+		s.logger.Warn("profile-service degraded, using local author fallback", zap.Error(err))
+	} else {
+		for _, p := range profiles {
+			byID[p.ID] = p
+		}
+	}
+
+	for _, c := range comments {
+		if p, ok := byID[c.UserID]; ok {
+			c.Author = p
+		} else {
+			c.Author = localFallback(c)
+		}
+	}
+}
+
+func localFallback(c *model.Comment) *model.UserProfile {
+	return &model.UserProfile{
+		ID:       c.UserID,
+		Username: c.Username,
+	}
 }

@@ -14,10 +14,16 @@ type Database struct {
 type HttpServer struct {
 	Port int `yaml:"port" env:"HTTP_PORT" env-default:"8080"`
 }
+
+type GRPC struct {
+	Port int `yaml:"port" env:"GRPC_PORT" env-default:"9090"`
+}
+
 type Config struct {
 	Env      string     `env:"ENV" env-default:"local"`
 	Database Database   `yaml:"database"`
 	Http     HttpServer `yaml:"http_server"`
+	GRPC     GRPC       `yaml:"grpc"`
 }
 
 func MustLoad() *Config {

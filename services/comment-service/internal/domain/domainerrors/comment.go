@@ -26,4 +26,8 @@ var (
 	NotCommentOwner = func() error {
 		return apperror.NewForbiddenError("you are not the owner")
 	}
+
+	ProfileUnavailable = func(cause error) error {
+		return apperror.NewServiceUnavailableError("profile-service", cause)
+	}
 )

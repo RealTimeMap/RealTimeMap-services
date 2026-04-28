@@ -12,6 +12,7 @@ type Profile struct {
 	UserID          uint            `gorm:"primaryKey;autoIncrement:false"`
 	Username        string          `gorm:"index"`
 	Avatar          types.Photo     `gorm:"type:jsonb"`
+	Tag             string          `gorm:"index:idx_tag,unique"`
 	IsPrivate       bool            `gorm:"default:false"`
 	PrivacySettings PrivacySettings `gorm:"type:jsonb"`
 }

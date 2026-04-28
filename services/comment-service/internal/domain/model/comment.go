@@ -24,8 +24,9 @@ const MaxDepth uint = 2 // Константа для обозначения ма
 
 type Comment struct {
 	gorm.Model
-	UserID  uint // ID Юзера
-	Content string
+	UserID   uint // ID Юзера
+	Username string
+	Content  string
 
 	ParentID     *uint     `gorm:"index"`
 	Parent       *Comment  `gorm:"foreignKey:ParentID"`
@@ -40,6 +41,8 @@ type Comment struct {
 	DislikesCount uint          `gorm:"default:0"`
 
 	Depth uint `gorm:"not null; default:0"`
+
+	Author *UserProfile `gorm:"-" json:"-"`
 }
 
 func (c *Comment) IsDeleted() bool {

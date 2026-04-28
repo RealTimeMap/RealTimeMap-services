@@ -11,6 +11,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
+	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/grpc"
 	httptransport "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -40,6 +41,11 @@ func main() {
 	httpServer := httptransport.NewServer(cfg.Http.Port, log)
 	httptransport.RegisterRoutes(httpServer.Router(), container)
 
+	grpcServer, err := grpctransport.NewServer(container.ProfileGRPCHandler, cfg.GRPC.Port, log)
+	if err != nil {
+		log.Fatal("failed to init gRPC server", zap.Error(err))
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -60,6 +66,16 @@ func main() {
 	g.Go(func() error {
 		<-gCtx.Done()
 		return httpServer.Shutdown(context.Background())
+	})
+
+	// gRPC server
+	g.Go(func() error {
+		return grpcServer.Run()
+	})
+	g.Go(func() error {
+		<-gCtx.Done()
+		grpcServer.Stop()
+		return nil
 	})
 
 	if err := g.Wait(); err != nil {

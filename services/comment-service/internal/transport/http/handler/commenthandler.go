@@ -49,7 +49,7 @@ func NewCommentRoute(g *gin.RouterGroup, service *comment.Service, logger *zap.L
 func (h *Handler) CreateComment(c *gin.Context) {
 	var req dto.CommentRequest
 
-	userID, err := context.GetUserID(c)
+	userData, err := context.GetUserInfo(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -60,7 +60,7 @@ func (h *Handler) CreateComment(c *gin.Context) {
 		return
 	}
 
-	newComment, err := h.service.Create(c.Request.Context(), comment.CreateInput{Content: req.Content, ParentID: req.ParentID, EntityID: req.EntityID, EntityType: req.Entity}, uint(userID))
+	newComment, err := h.service.Create(c.Request.Context(), comment.CreateInput{Content: req.Content, ParentID: req.ParentID, EntityID: req.EntityID, EntityType: req.Entity}, uint(userData.UserID), userData.UserName)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return

@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+
+package profileservice;
+
+option go_package = "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/profile";
+
+
+
+service ProfileService{
+  rpc GetUserProfileByID(ProfileRequest) returns (ProfileResponse) {}
+  rpc GetUserProfileByIDs(MultipleProfileRequest) returns (MultipleProfileResponse) {}
+}
+
+
+message ProfileRequest {
+  uint64 id = 1;
+}
+
+message MultipleProfileRequest {
+  repeated ProfileRequest ids = 1;
+}
+
+
+message ProfileResponse {
+  uint64 id = 1;
+  string username = 2;
+  string tag = 3;
+  string avatar = 4;
+}
+
+message MultipleProfileResponse {
+  repeated ProfileResponse profiles = 1;
+}
