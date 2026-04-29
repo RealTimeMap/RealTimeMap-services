@@ -68,9 +68,10 @@ type CommentUpdateRequest struct {
 }
 
 type Meta struct {
-	CanReply     bool  `json:"canReply"`
-	HaveReplies  bool  `json:"haveReplies"`
-	RepliesCount int64 `json:"repliesCount"`
+	CanReply     bool                `json:"canReply"`
+	HaveReplies  bool                `json:"haveReplies"`
+	RepliesCount int64               `json:"repliesCount"`
+	Status       model.CommentStatus `json:"status"`
 }
 
 func NewMeta(c *model.Comment) Meta {
@@ -79,6 +80,7 @@ func NewMeta(c *model.Comment) Meta {
 		CanReply:     c.Depth <= model.MaxDepth,
 		HaveReplies:  c.RepliesCount > 0,
 		RepliesCount: c.RepliesCount,
+		Status:       c.Status,
 	}
 
 }
