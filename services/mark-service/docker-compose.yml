@@ -113,10 +113,10 @@ services:
       # - "traefik.http.routers.mark-swagger.middlewares=cors-headers@file"
       # - "traefik.http.routers.mark-swagger.tls=true"
 
-      # Static files (store)
-      - "traefik.http.routers.mark-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store`)"
+      # Static files (store) — только фотографии mark-service
+      - "traefik.http.routers.mark-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store/photos/marks`) || PathPrefix(`/store/photos/categories`)"
       - "traefik.http.routers.mark-store.entrypoints=websecure"
-      - "traefik.http.routers.mark-store.priority=5"
+      - "traefik.http.routers.mark-store.priority=10"
       - "traefik.http.routers.mark-store.service=mark"
       - "traefik.http.routers.mark-store.middlewares=cors-headers@file"
       - "traefik.http.routers.mark-store.tls=true"

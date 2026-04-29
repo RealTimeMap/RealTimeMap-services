@@ -1,6 +1,9 @@
 package app
 
 import (
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/blockeduser"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
@@ -18,13 +21,21 @@ type Container struct {
 	BlockedUserRepo    repository.BlockedUserRepository
 	BlockedUserService *blockeduser.Service
 
+	Storage storage.Storage
+
 	Logger *zap.Logger
 	DB     *gorm.DB
 }
 
-func NewContainer(db *gorm.DB, logger *zap.Logger) *Container {
+func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Container {
+	store, err := storage.NewLocalStorage(cfg.Storage.BasePath, cfg.Storage.BaseURL, logger)
+	if err != nil {
+		panic(err)
+	}
+	photoValidator := mediavalidator.NewPhotoValidator()
+
 	profileRepo := postgres.NewPgProfileRepository(db, logger)
-	profileService := profile.NewProfileService(profileRepo, logger)
+	profileService := profile.NewProfileService(profileRepo, store, photoValidator, logger)
 	profileHandler := profilegrpc.NewHandler(profileService, logger)
 
 	blockedUserRepo := postgres.NewPgBlockedUserRepository(db, logger)
@@ -37,6 +48,8 @@ func NewContainer(db *gorm.DB, logger *zap.Logger) *Container {
 
 		BlockedUserRepo:    blockedUserRepo,
 		BlockedUserService: blockedUserService,
+
+		Storage: store,
 
 		Logger: logger,
 		DB:     db,

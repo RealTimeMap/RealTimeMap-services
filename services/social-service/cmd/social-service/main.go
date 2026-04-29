@@ -36,9 +36,10 @@ func main() {
 
 	db.AutoMigrate(&model.Profile{}, &model.Friendship{}, &model.BlockedUser{})
 
-	container := app.NewContainer(db, log)
+	container := app.NewContainer(cfg, db, log)
 
 	httpServer := httptransport.NewServer(cfg.Http.Port, log)
+	httpServer.Router().Static("/store/avatar", cfg.Storage.BasePath)
 	httptransport.RegisterRoutes(httpServer.Router(), container)
 
 	grpcServer, err := grpctransport.NewServer(container.ProfileGRPCHandler, cfg.GRPC.Port, log)
