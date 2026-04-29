@@ -1,6 +1,9 @@
 package config
 
-import pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+import (
+	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+)
 
 type Database struct {
 	Host     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
@@ -20,10 +23,11 @@ type GRPC struct {
 }
 
 type Config struct {
-	Env      string     `env:"ENV" env-default:"local"`
-	Database Database   `yaml:"database"`
-	Http     HttpServer `yaml:"http_server"`
-	GRPC     GRPC       `yaml:"grpc"`
+	Env      string                `env:"ENV" env-default:"local"`
+	Database Database              `yaml:"database"`
+	Http     HttpServer            `yaml:"http_server"`
+	GRPC     GRPC                  `yaml:"grpc"`
+	Storage  storage.StorageConfig `yaml:"storage"`
 }
 
 func MustLoad() *Config {

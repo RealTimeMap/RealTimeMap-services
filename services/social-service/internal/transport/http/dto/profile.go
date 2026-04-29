@@ -66,3 +66,10 @@ func NewSearchProfileItems(profiles []*model.Profile) []SearchProfileItem {
 	}
 	return items
 }
+
+// Обновление профиля
+
+type ProfileUpdateRequest struct {
+	Username *string `form:"username" binding:"omitempty,min=2,max=32"`
+	Tag      *string `form:"tag" binding:"omitempty"`
+}

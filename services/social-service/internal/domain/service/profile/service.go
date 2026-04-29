@@ -1,26 +1,40 @@
 package profile
 
 import (
+	"bytes"
 	"context"
 	"errors"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"go.uber.org/zap"
 )
 
+const avatarMaxSize = 5 * 1024 * 1024 // 5MB
+
 type Service struct {
-	profileRepo repository.ProfileRepository
+	profileRepo    repository.ProfileRepository
+	store          storage.Storage
+	photoValidator *mediavalidator.PhotoValidator
 
 	logger *zap.Logger
 }
 
-func NewProfileService(profileRepo repository.ProfileRepository, logger *zap.Logger) *Service {
+func NewProfileService(
+	profileRepo repository.ProfileRepository,
+	store storage.Storage,
+	photoValidator *mediavalidator.PhotoValidator,
+	logger *zap.Logger,
+) *Service {
 	return &Service{
-		profileRepo: profileRepo,
-		logger:      logger,
+		profileRepo:    profileRepo,
+		store:          store,
+		photoValidator: photoValidator,
+		logger:         logger,
 	}
 }
 
@@ -61,6 +75,79 @@ func (s *Service) checkProfileExists(ctx context.Context, userId uint) error {
 		return domainerrors.ProfileAlreadyExists(userId)
 	}
 	return nil
+}
+
+func (s *Service) UpdateProfile(ctx context.Context, in UpdateProfileInput) (*model.Profile, error) {
+	s.logger.Info("ProfileService.UpdateProfile", zap.Uint("user_id", in.UserID))
+
+	current, err := s.profileRepo.GetProfile(ctx, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := map[string]any{}
+	if in.Username != nil {
+		fields["username"] = *in.Username
+	}
+	if in.Tag != nil {
+		fields["tag"] = *in.Tag
+	}
+
+	var (
+		uploadedAvatarKey string
+		oldAvatarKey      string
+	)
+	if in.Avatar != nil {
+		if err := s.photoValidator.ValidateSinglePhoto(mediavalidator.PhotoInput{
+			Data:     in.Avatar.Data,
+			FileName: in.Avatar.FileName,
+		}); err != nil {
+			return nil, err
+		}
+
+		photo, err := s.store.Upload(ctx, bytes.NewReader(in.Avatar.Data), storage.UploadOptions{
+			FileName:      in.Avatar.FileName,
+			Category:      storage.CategoryProfileAvatar,
+			MaxSize:       avatarMaxSize,
+			Optimize:      true,
+			GenerateThumb: true,
+			ThumbWidth:    200,
+			ThumbHeight:   200,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		fields["avatar"] = *photo
+		uploadedAvatarKey = photo.StorageKey
+		oldAvatarKey = current.Avatar.StorageKey
+	}
+
+	if len(fields) == 0 {
+		return current, nil
+	}
+
+	updated, err := s.profileRepo.Update(ctx, in.UserID, fields)
+	if err != nil {
+		if uploadedAvatarKey != "" {
+			if delErr := s.store.Delete(ctx, uploadedAvatarKey); delErr != nil {
+				s.logger.Warn("failed to rollback uploaded avatar",
+					zap.String("storage_key", uploadedAvatarKey), zap.Error(delErr))
+			}
+		}
+		return nil, err
+	}
+
+	if oldAvatarKey != "" {
+		go func(key string) {
+			if err := s.store.Delete(context.Background(), key); err != nil {
+				s.logger.Warn("failed to delete old avatar",
+					zap.String("storage_key", key), zap.Error(err))
+			}
+		}(oldAvatarKey)
+	}
+
+	return updated, nil
 }
 
 func (s *Service) GetProfile(ctx context.Context, userId uint) (*model.Profile, error) {

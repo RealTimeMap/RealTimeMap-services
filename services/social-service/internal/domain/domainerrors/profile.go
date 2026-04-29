@@ -9,4 +9,7 @@ var (
 	ProfileAlreadyExists = func(id uint) error {
 		return apperror.NewConflictError("profile", "user_id", id)
 	}
+	TagAlreadyTaken = func(tag string) error {
+		return apperror.NewConflictError("profile", "tag", tag)
+	}
 )

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -35,6 +37,7 @@ func RegisterProfileHandler(g *gin.RouterGroup, deps ProfileDeps) {
 	profileGroup := g.Group("/profile")
 	{
 		profileGroup.GET("/me", auth.AuthRequired(), handler.GetMyProfile)
+		profileGroup.PATCH("/me", auth.AuthRequired(), handler.UpdateMyProfile)
 		profileGroup.GET("/search", handler.SearchProfile)
 		profileGroup.GET("/:profileID", handler.GetDetailProfile)
 	}
@@ -93,4 +96,55 @@ func (h *ProfileHandler) GetDetailProfile(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.NewBaseProfileResponse(profile))
+}
+
+func (h *ProfileHandler) UpdateMyProfile(c *gin.Context) {
+	userData, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	var req dto.ProfileUpdateRequest
+	if err := c.ShouldBind(&req); err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	var avatar *profileservice.AvatarUpload
+	fileHeader, err := c.FormFile("avatar")
+	if err != nil && !errors.Is(err, http.ErrMissingFile) {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	if fileHeader != nil {
+		f, err := fileHeader.Open()
+		if err != nil {
+			errorhandler.HandleError(c, err, h.logger)
+			return
+		}
+		data, err := io.ReadAll(f)
+		f.Close()
+		if err != nil {
+			errorhandler.HandleError(c, err, h.logger)
+			return
+		}
+		avatar = &profileservice.AvatarUpload{
+			Data:     data,
+			FileName: fileHeader.Filename,
+		}
+	}
+
+	updated, err := h.service.UpdateProfile(c.Request.Context(), profileservice.UpdateProfileInput{
+		UserID:   uint(userData.UserID),
+		Username: req.Username,
+		Tag:      req.Tag,
+		Avatar:   avatar,
+	})
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.NewPersonalProfileResponse(updated))
 }
