@@ -1,0 +1,11 @@
+{
+  "id": "comment-service",
+  "name": "comment-service",
+  "description": "Сервис комментариев к сущностям приложения (метки и др.) с поддержкой ответов и реакций.",
+  "fullDescription": "Управляет созданием, чтением, редактированием и удалением комментариев. Поддерживает вложенные ответы (до 2 уровней), реакции (like/dislike) и курсорную пагинацию. Авторская информация подгружается из profile-service по gRPC.",
+  "protocols": ["http"],
+  "availableEnvs": ["dev", "staging", "prod"],
+  "healthPath": "/comment/health",
+  "team": "Backend",
+  "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/comment-service"
+}

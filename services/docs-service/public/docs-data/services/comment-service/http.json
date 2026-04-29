@@ -1,0 +1,417 @@
+{
+  "endpoints": [
+    {
+      "id": "create-comment",
+      "method": "POST",
+      "path": "/api/v2/comments",
+      "summary": "Создать комментарий",
+      "description": "Создаёт новый комментарий к сущности (например, к метке) либо ответ на существующий комментарий. Максимальная глубина вложенности — 2. Требуется авторизация.",
+      "tags": ["Комментарии"],
+      "auth": true,
+      "requestBody": {
+        "description": "Данные нового комментария",
+        "contentType": "json",
+        "schema": [
+          { "name": "content", "type": "string", "required": true, "description": "Текст комментария" },
+          { "name": "entityId", "type": "integer", "required": true, "description": "ID сущности, к которой оставляется комментарий" },
+          { "name": "entity", "type": "string", "required": true, "description": "Тип сущности (на текущий момент поддерживается только 'mark')", "enum": ["mark"] },
+          { "name": "parentId", "type": "integer", "required": false, "description": "ID родительского комментария (если это ответ)" }
+        ],
+        "example": {
+          "content": "Отличное место, был там вчера!",
+          "entityId": 42,
+          "entity": "mark",
+          "parentId": null
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 201,
+          "description": "Комментарий успешно создан",
+          "schema": [
+            { "name": "id", "type": "integer", "required": true, "description": "ID комментария" },
+            { "name": "content", "type": "string", "required": true, "description": "Текст комментария" },
+            {
+              "name": "author",
+              "type": "object",
+              "required": true,
+              "description": "Автор комментария",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+                { "name": "tag", "type": "string", "required": true, "description": "Тег профиля" },
+                { "name": "avatar", "type": "string", "required": true, "description": "URL аватара" }
+              ]
+            },
+            { "name": "likes", "type": "integer", "required": true, "description": "Количество лайков" },
+            { "name": "dislikes", "type": "integer", "required": true, "description": "Количество дизлайков" },
+            {
+              "name": "meta",
+              "type": "object",
+              "required": true,
+              "description": "Метаданные комментария",
+              "children": [
+                { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать на этот комментарий (зависит от глубины вложенности)" },
+                { "name": "haveReplies", "type": "boolean", "required": true, "description": "Есть ли ответы на этот комментарий" },
+                { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" }
+              ]
+            }
+          ],
+          "example": {
+            "id": 101,
+            "content": "Отличное место, был там вчера!",
+            "author": {
+              "id": 5,
+              "username": "john_doe",
+              "tag": "john",
+              "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
+            },
+            "likes": 0,
+            "dislikes": 0,
+            "meta": {
+              "canReply": true,
+              "haveReplies": false,
+              "repliesCount": 0
+            }
+          }
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "conflict", "not-found"]
+    },
+    {
+      "id": "get-comments",
+      "method": "GET",
+      "path": "/api/v2/{id}/comments",
+      "summary": "Получить комментарии сущности",
+      "description": "Возвращает список корневых комментариев для указанной сущности с курсорной пагинацией. Тип сущности передаётся через query-параметр entity.",
+      "tags": ["Комментарии"],
+      "pagination": "cursor",
+      "parameters": [
+        { "name": "id", "type": "integer", "required": true, "description": "ID сущности (например, ID метки)", "location": "path", "example": "42" },
+        { "name": "entity", "type": "string", "required": true, "description": "Тип сущности (например, 'mark')", "location": "query", "example": "mark" },
+        { "name": "sort", "type": "string", "required": false, "description": "Порядок сортировки: 'newest' (по умолчанию) или 'oldest'", "location": "query", "example": "newest" },
+        { "name": "limit", "type": "integer", "required": false, "description": "Максимальное число элементов (1–50, по умолчанию 20)", "location": "query", "example": "20" },
+        { "name": "cursor", "type": "integer", "required": false, "description": "ID последнего полученного комментария для следующей страницы", "location": "query", "example": "100" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список комментариев с признаком наличия следующей страницы",
+          "schema": [
+            {
+              "name": "items",
+              "type": "object[]",
+              "required": true,
+              "description": "Массив комментариев",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID комментария" },
+                { "name": "content", "type": "string", "required": true, "description": "Текст комментария" },
+                {
+                  "name": "author",
+                  "type": "object",
+                  "required": true,
+                  "description": "Автор комментария",
+                  "children": [
+                    { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+                    { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+                    { "name": "tag", "type": "string", "required": true, "description": "Тег профиля" },
+                    { "name": "avatar", "type": "string", "required": true, "description": "URL аватара" }
+                  ]
+                },
+                { "name": "likes", "type": "integer", "required": true, "description": "Количество лайков" },
+                { "name": "dislikes", "type": "integer", "required": true, "description": "Количество дизлайков" },
+                {
+                  "name": "meta",
+                  "type": "object",
+                  "required": true,
+                  "description": "Метаданные комментария",
+                  "children": [
+                    { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать на этот комментарий" },
+                    { "name": "haveReplies", "type": "boolean", "required": true, "description": "Есть ли ответы" },
+                    { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" }
+                  ]
+                }
+              ]
+            },
+            { "name": "hasMore", "type": "boolean", "required": true, "description": "Есть ли ещё комментарии для пагинации" }
+          ],
+          "example": {
+            "items": [
+              {
+                "id": 101,
+                "content": "Отличное место, был там вчера!",
+                "author": {
+                  "id": 5,
+                  "username": "john_doe",
+                  "tag": "john",
+                  "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
+                },
+                "likes": 3,
+                "dislikes": 0,
+                "meta": {
+                  "canReply": true,
+                  "haveReplies": true,
+                  "repliesCount": 2
+                }
+              }
+            ],
+            "hasMore": false
+          }
+        }
+      ],
+      "errors": ["validation-error"]
+    },
+    {
+      "id": "get-replies",
+      "method": "GET",
+      "path": "/api/v2/{id}/comments/{parentID}/replies",
+      "summary": "Получить ответы на комментарий",
+      "description": "Возвращает список ответов (вложенных комментариев) для указанного родительского комментария с курсорной пагинацией.",
+      "tags": ["Комментарии"],
+      "pagination": "cursor",
+      "parameters": [
+        { "name": "id", "type": "integer", "required": true, "description": "ID сущности", "location": "path", "example": "42" },
+        { "name": "parentID", "type": "integer", "required": true, "description": "ID родительского комментария", "location": "path", "example": "101" },
+        { "name": "entity", "type": "string", "required": true, "description": "Тип сущности (например, 'mark')", "location": "query", "example": "mark" },
+        { "name": "sort", "type": "string", "required": false, "description": "Порядок сортировки: 'newest' (по умолчанию) или 'oldest'", "location": "query", "example": "oldest" },
+        { "name": "limit", "type": "integer", "required": false, "description": "Максимальное число элементов (1–50, по умолчанию 20)", "location": "query", "example": "20" },
+        { "name": "cursor", "type": "integer", "required": false, "description": "ID последнего полученного ответа для следующей страницы", "location": "query", "example": "150" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список ответов с признаком наличия следующей страницы",
+          "schema": [
+            {
+              "name": "items",
+              "type": "object[]",
+              "required": true,
+              "description": "Массив ответов",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID ответа" },
+                { "name": "content", "type": "string", "required": true, "description": "Текст ответа" },
+                {
+                  "name": "author",
+                  "type": "object",
+                  "required": true,
+                  "description": "Автор ответа",
+                  "children": [
+                    { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+                    { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+                    { "name": "tag", "type": "string", "required": true, "description": "Тег профиля" },
+                    { "name": "avatar", "type": "string", "required": true, "description": "URL аватара" }
+                  ]
+                },
+                { "name": "likes", "type": "integer", "required": true, "description": "Количество лайков" },
+                { "name": "dislikes", "type": "integer", "required": true, "description": "Количество дизлайков" },
+                {
+                  "name": "meta",
+                  "type": "object",
+                  "required": true,
+                  "description": "Метаданные ответа",
+                  "children": [
+                    { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать (false для ответов на максимальной глубине)" },
+                    { "name": "haveReplies", "type": "boolean", "required": true, "description": "Есть ли вложенные ответы" },
+                    { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество вложенных ответов" }
+                  ]
+                }
+              ]
+            },
+            { "name": "hasMore", "type": "boolean", "required": true, "description": "Есть ли ещё ответы для пагинации" }
+          ],
+          "example": {
+            "items": [
+              {
+                "id": 152,
+                "content": "Согласен, тоже понравилось!",
+                "author": {
+                  "id": 7,
+                  "username": "alice",
+                  "tag": "alice",
+                  "avatar": ""
+                },
+                "likes": 1,
+                "dislikes": 0,
+                "meta": {
+                  "canReply": false,
+                  "haveReplies": false,
+                  "repliesCount": 0
+                }
+              }
+            ],
+            "hasMore": false
+          }
+        }
+      ],
+      "errors": ["validation-error", "not-found"]
+    },
+    {
+      "id": "update-comment",
+      "method": "PATCH",
+      "path": "/api/v2/{id}/comments",
+      "summary": "Редактировать комментарий",
+      "description": "Обновляет содержимое комментария. Редактировать может только автор комментария. Требуется авторизация.",
+      "tags": ["Комментарии"],
+      "auth": true,
+      "parameters": [
+        { "name": "id", "type": "integer", "required": true, "description": "ID комментария", "location": "path", "example": "101" }
+      ],
+      "requestBody": {
+        "description": "Новое содержимое комментария",
+        "contentType": "json",
+        "schema": [
+          { "name": "content", "type": "string", "required": true, "description": "Новый текст комментария" }
+        ],
+        "example": {
+          "content": "Отличное место, был там на прошлой неделе!"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Комментарий успешно обновлён",
+          "schema": [
+            { "name": "id", "type": "integer", "required": true, "description": "ID комментария" },
+            { "name": "content", "type": "string", "required": true, "description": "Обновлённый текст" },
+            {
+              "name": "author",
+              "type": "object",
+              "required": true,
+              "description": "Автор комментария",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+                { "name": "tag", "type": "string", "required": true, "description": "Тег профиля" },
+                { "name": "avatar", "type": "string", "required": true, "description": "URL аватара" }
+              ]
+            },
+            { "name": "likes", "type": "integer", "required": true, "description": "Количество лайков" },
+            { "name": "dislikes", "type": "integer", "required": true, "description": "Количество дизлайков" },
+            {
+              "name": "meta",
+              "type": "object",
+              "required": true,
+              "description": "Метаданные комментария",
+              "children": [
+                { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать" },
+                { "name": "haveReplies", "type": "boolean", "required": true, "description": "Есть ли ответы" },
+                { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" }
+              ]
+            }
+          ],
+          "example": {
+            "id": 101,
+            "content": "Отличное место, был там на прошлой неделе!",
+            "author": {
+              "id": 5,
+              "username": "john_doe",
+              "tag": "john",
+              "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
+            },
+            "likes": 3,
+            "dislikes": 0,
+            "meta": {
+              "canReply": true,
+              "haveReplies": true,
+              "repliesCount": 2
+            }
+          }
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "forbidden", "not-found"]
+    },
+    {
+      "id": "delete-comment",
+      "method": "DELETE",
+      "path": "/api/v2/{id}/comments",
+      "summary": "Удалить комментарий",
+      "description": "Мягкое удаление комментария: контент заменяется на сообщение об удалении, статус переводится в 'deleted'. Удалять может только автор. Требуется авторизация.",
+      "tags": ["Комментарии"],
+      "auth": true,
+      "parameters": [
+        { "name": "id", "type": "integer", "required": true, "description": "ID комментария", "location": "path", "example": "101" }
+      ],
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Комментарий успешно удалён"
+        }
+      ],
+      "errors": ["unauthorized", "forbidden", "not-found", "conflict"]
+    },
+    {
+      "id": "toggle-reaction",
+      "method": "POST",
+      "path": "/api/v2/{id}/comments/reaction",
+      "summary": "Поставить/снять реакцию",
+      "description": "Переключает реакцию пользователя (like/dislike) для комментария. Повторная отправка той же реакции снимает её, отправка другой — заменяет существующую. Требуется авторизация.",
+      "tags": ["Реакции"],
+      "auth": true,
+      "parameters": [
+        { "name": "id", "type": "integer", "required": true, "description": "ID комментария", "location": "path", "example": "101" }
+      ],
+      "requestBody": {
+        "description": "Тип реакции",
+        "contentType": "json",
+        "schema": [
+          { "name": "type", "type": "string", "required": true, "description": "Тип реакции", "enum": ["like", "dislike"] }
+        ],
+        "example": {
+          "type": "like"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Актуальное состояние реакций для комментария",
+          "schema": [
+            { "name": "userReaction", "type": "string", "required": false, "description": "Текущая реакция пользователя или null, если реакция снята", "enum": ["like", "dislike"] },
+            { "name": "likesCount", "type": "integer", "required": true, "description": "Общее количество лайков" },
+            { "name": "dislikesCount", "type": "integer", "required": true, "description": "Общее количество дизлайков" }
+          ],
+          "example": {
+            "userReaction": "like",
+            "likesCount": 4,
+            "dislikesCount": 0
+          }
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "not-found"]
+    },
+    {
+      "id": "health",
+      "method": "GET",
+      "path": "/api/v2/comment/health",
+      "summary": "Health-check",
+      "description": "Проверка доступности сервиса и подключения к базе данных. Возвращает 200 если БД доступна, иначе 503.",
+      "tags": ["Служебные"],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Сервис и БД работают",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["healthy"] },
+            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+          ],
+          "example": {
+            "status": "healthy",
+            "service": "comment-service"
+          }
+        },
+        {
+          "statusCode": 503,
+          "description": "БД недоступна",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["unhealthy"] },
+            { "name": "database", "type": "string", "required": true, "description": "Состояние БД", "enum": ["down"] }
+          ],
+          "example": {
+            "status": "unhealthy",
+            "database": "down"
+          }
+        }
+      ],
+      "errors": []
+    }
+  ]
+}
