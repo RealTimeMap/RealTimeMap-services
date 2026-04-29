@@ -28,5 +28,15 @@
     "healthPath": "/social/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/social-service"
+  },
+  {
+    "id": "comment-service",
+    "name": "comment-service",
+    "description": "Сервис комментариев к сущностям приложения с поддержкой ответов и реакций.",
+    "protocols": ["http"],
+    "availableEnvs": ["dev", "staging", "prod"],
+    "healthPath": "/api/v2/comment/health",
+    "team": "Backend",
+    "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/comment-service"
   }
 ]
