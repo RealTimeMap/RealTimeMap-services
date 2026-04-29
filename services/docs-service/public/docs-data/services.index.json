@@ -35,7 +35,7 @@
     "description": "Сервис комментариев к сущностям приложения с поддержкой ответов и реакций.",
     "protocols": ["http"],
     "availableEnvs": ["dev", "staging", "prod"],
-    "healthPath": "/api/v2/comment/health",
+    "healthPath": "/comment/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/comment-service"
   }

@@ -11,7 +11,44 @@
         "description": "Параметры области и фильтрации",
         "contentType": "json",
         "schema": [
-          { "name": "screen", "type": "object", "required": true, "description": "Видимая область карты (leftTop, center, rightBottom — каждый с полями lon и lat)" },
+          {
+            "name": "screen",
+            "type": "object",
+            "required": true,
+            "description": "Видимая область карты",
+            "children": [
+              {
+                "name": "leftTop",
+                "type": "object",
+                "required": true,
+                "description": "Левый верхний угол области",
+                "children": [
+                  { "name": "lon", "type": "number", "required": true, "description": "Долгота" },
+                  { "name": "lat", "type": "number", "required": true, "description": "Широта" }
+                ]
+              },
+              {
+                "name": "center",
+                "type": "object",
+                "required": true,
+                "description": "Центр области",
+                "children": [
+                  { "name": "lon", "type": "number", "required": true, "description": "Долгота" },
+                  { "name": "lat", "type": "number", "required": true, "description": "Широта" }
+                ]
+              },
+              {
+                "name": "rightBottom",
+                "type": "object",
+                "required": true,
+                "description": "Правый нижний угол области",
+                "children": [
+                  { "name": "lon", "type": "number", "required": true, "description": "Долгота" },
+                  { "name": "lat", "type": "number", "required": true, "description": "Широта" }
+                ]
+              }
+            ]
+          },
           { "name": "zoomLevel", "type": "integer", "required": false, "description": "Уровень зума карты. По умолчанию 15. При < 12 возвращаются кластеры" },
           { "name": "startAt", "type": "string", "required": true, "description": "Начало временного диапазона (ISO 8601)" }
         ],
@@ -33,9 +70,39 @@
             { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
             { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
             { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
-            { "name": "category", "type": "object", "required": false, "description": "Категория (id, categoryName, color, icon)" },
-            { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates)" },
-            { "name": "owner", "type": "object", "required": true, "description": "Владелец (id, username, avatar)" },
+            {
+              "name": "category",
+              "type": "object",
+              "required": false,
+              "description": "Категория метки",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
+                { "name": "categoryName", "type": "string", "required": true, "description": "Название категории" },
+                { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории" },
+                { "name": "icon", "type": "string", "required": true, "description": "URL иконки категории" }
+              ]
+            },
+            {
+              "name": "geom",
+              "type": "object",
+              "required": true,
+              "description": "Геометрия метки (GeoJSON Point)",
+              "children": [
+                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
+                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+              ]
+            },
+            {
+              "name": "owner",
+              "type": "object",
+              "required": true,
+              "description": "Владелец метки",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+                { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" }
+              ]
+            },
             { "name": "photos", "type": "string[]", "required": true, "description": "URL фотографий" },
             { "name": "startAt", "type": "string", "required": true, "description": "Время начала" },
             { "name": "endAt", "type": "string", "required": true, "description": "Время окончания" }
@@ -71,7 +138,16 @@
           "statusCode": 200,
           "description": "Список кластеров (при zoomLevel < 12)",
           "schema": [
-            { "name": "center", "type": "object", "required": true, "description": "GeoJSON Point — центр кластера (type, coordinates)" },
+            {
+              "name": "center",
+              "type": "object",
+              "required": true,
+              "description": "Центр кластера (GeoJSON Point)",
+              "children": [
+                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
+                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+              ]
+            },
             { "name": "count", "type": "integer", "required": true, "description": "Количество меток в кластере" }
           ],
           "example": [
@@ -105,9 +181,39 @@
             { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
             { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
             { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
-            { "name": "category", "type": "object", "required": false, "description": "Категория (id, categoryName, color, icon)" },
-            { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates)" },
-            { "name": "owner", "type": "object", "required": true, "description": "Владелец (id, username, avatar)" },
+            {
+              "name": "category",
+              "type": "object",
+              "required": false,
+              "description": "Категория метки",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
+                { "name": "categoryName", "type": "string", "required": true, "description": "Название категории" },
+                { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории" },
+                { "name": "icon", "type": "string", "required": true, "description": "URL иконки категории" }
+              ]
+            },
+            {
+              "name": "geom",
+              "type": "object",
+              "required": true,
+              "description": "Геометрия метки (GeoJSON Point)",
+              "children": [
+                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
+                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+              ]
+            },
+            {
+              "name": "owner",
+              "type": "object",
+              "required": true,
+              "description": "Владелец метки",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+                { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" }
+              ]
+            },
             { "name": "photos", "type": "string[]", "required": true, "description": "URL фотографий" },
             { "name": "startAt", "type": "string", "required": true, "description": "Время начала" },
             { "name": "endAt", "type": "string", "required": true, "description": "Время окончания" }
@@ -152,7 +258,18 @@
           "statusCode": 200,
           "description": "Доступные категории и длительности",
           "schema": [
-            { "name": "allowedCategories", "type": "object[]", "required": true, "description": "Список категорий (id, categoryName, color, icon)" }
+            {
+              "name": "allowedCategories",
+              "type": "object[]",
+              "required": true,
+              "description": "Список доступных категорий",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
+                { "name": "categoryName", "type": "string", "required": true, "description": "Название категории" },
+                { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории" },
+                { "name": "icon", "type": "string", "required": true, "description": "URL иконки категории" }
+              ]
+            }
           ],
           "example": {
             "allowedCategories": [
@@ -208,9 +325,39 @@
             { "name": "id", "type": "integer", "required": true, "description": "ID созданной метки" },
             { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
             { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
-            { "name": "category", "type": "object", "required": false, "description": "Категория метки (id, categoryName, color, icon)" },
-            { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates [lon, lat])" },
-            { "name": "owner", "type": "object", "required": true, "description": "Владелец метки (id, username, avatar)" },
+            {
+              "name": "category",
+              "type": "object",
+              "required": false,
+              "description": "Категория метки",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
+                { "name": "categoryName", "type": "string", "required": true, "description": "Название категории" },
+                { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории" },
+                { "name": "icon", "type": "string", "required": true, "description": "URL иконки категории" }
+              ]
+            },
+            {
+              "name": "geom",
+              "type": "object",
+              "required": true,
+              "description": "Геометрия метки (GeoJSON Point)",
+              "children": [
+                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
+                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+              ]
+            },
+            {
+              "name": "owner",
+              "type": "object",
+              "required": true,
+              "description": "Владелец метки",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+                { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" }
+              ]
+            },
             { "name": "photos", "type": "string[]", "required": true, "description": "Массив URL загруженных фотографий" },
             { "name": "startAt", "type": "string", "required": true, "description": "Время начала" },
             { "name": "endAt", "type": "string", "required": true, "description": "Время окончания" }
@@ -280,9 +427,39 @@
             { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
             { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
             { "name": "additionalInfo", "type": "string", "required": false, "description": "Описание" },
-            { "name": "category", "type": "object", "required": false, "description": "Категория (id, categoryName, color, icon)" },
-            { "name": "geom", "type": "object", "required": true, "description": "GeoJSON Point (type, coordinates)" },
-            { "name": "owner", "type": "object", "required": true, "description": "Владелец (id, username, avatar)" },
+            {
+              "name": "category",
+              "type": "object",
+              "required": false,
+              "description": "Категория метки",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
+                { "name": "categoryName", "type": "string", "required": true, "description": "Название категории" },
+                { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории" },
+                { "name": "icon", "type": "string", "required": true, "description": "URL иконки категории" }
+              ]
+            },
+            {
+              "name": "geom",
+              "type": "object",
+              "required": true,
+              "description": "Геометрия метки (GeoJSON Point)",
+              "children": [
+                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
+                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+              ]
+            },
+            {
+              "name": "owner",
+              "type": "object",
+              "required": true,
+              "description": "Владелец метки",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+                { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" }
+              ]
+            },
             { "name": "photos", "type": "string[]", "required": true, "description": "Актуальные URL фотографий" }
           ],
           "example": {
