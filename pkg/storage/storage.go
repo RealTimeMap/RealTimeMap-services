@@ -33,10 +33,11 @@ type Storage interface {
 type CategoryStorage string
 
 const (
-	CategoryMarkPhoto    CategoryStorage = "marks"
-	CategoryCommentPhoto CategoryStorage = "comments"
-	CategoryTemp         CategoryStorage = "temp"
-	CategoryCategories   CategoryStorage = "categories"
+	CategoryMarkPhoto     CategoryStorage = "marks"
+	CategoryCommentPhoto  CategoryStorage = "comments"
+	CategoryTemp          CategoryStorage = "temp"
+	CategoryCategories    CategoryStorage = "categories"
+	CategoryProfileAvatar CategoryStorage = "avatars"
 )
 
 // String строковое представление
@@ -47,7 +48,7 @@ func (c CategoryStorage) String() string {
 // Validate проверяет валидность категории, если вашей нет, добавить выше
 func (c CategoryStorage) Validate() error {
 	switch c {
-	case CategoryMarkPhoto, CategoryCommentPhoto, CategoryTemp, CategoryCategories:
+	case CategoryMarkPhoto, CategoryCommentPhoto, CategoryTemp, CategoryCategories, CategoryProfileAvatar:
 		return nil
 	default:
 		return ErrInvalidCategory

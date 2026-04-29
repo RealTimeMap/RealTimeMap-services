@@ -38,6 +38,7 @@ func NewLocalStorage(basePath, baseURL string, logger *zap.Logger) (Storage, err
 		CategoryMarkPhoto,
 		CategoryCommentPhoto,
 		CategoryTemp,
+		CategoryProfileAvatar,
 	}
 
 	for _, cat := range categories {
