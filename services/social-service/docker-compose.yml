@@ -62,7 +62,7 @@ services:
       - "traefik.http.routers.social-store.service=mark"
       - "traefik.http.routers.social-store.middlewares=cors-headers@file"
       - "traefik.http.routers.social-store.tls=true"
-      - 
+
       # Service configuration
       - "traefik.http.services.social.loadbalancer.server.port=8080"
 

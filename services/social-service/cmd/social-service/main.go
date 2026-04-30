@@ -1,20 +1,18 @@
 package main
 
 import (
-	"context"
-	"os"
-	"os/signal"
-	"syscall"
-
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
+	profilepb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/profile"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/runner"
+	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/grpc"
+	httpserver "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
-	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/grpc"
 	httptransport "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -24,7 +22,6 @@ func main() {
 
 	log.Info("Starting social service", zap.String("env", cfg.Env))
 
-	// Database
 	db := database.MustNew(database.Config{
 		Host:     cfg.Database.Host,
 		Port:     cfg.Database.Port,
@@ -38,51 +35,20 @@ func main() {
 
 	container := app.NewContainer(cfg, db, log)
 
-	httpServer := httptransport.NewServer(cfg.Http.Port, log)
+	httpServer := httpserver.NewServer(cfg.Http, log)
 	httpServer.Router().Static("/store/avatar", cfg.Storage.BasePath)
 	httptransport.RegisterRoutes(httpServer.Router(), container)
 
-	grpcServer, err := grpctransport.NewServer(container.ProfileGRPCHandler, cfg.GRPC.Port, log)
+	grpcServer, err := grpctransport.NewServer(cfg.GRPC, log, func(s *grpc.Server) {
+		profilepb.RegisterProfileServiceServer(s, container.ProfileGRPCHandler)
+	})
 	if err != nil {
 		log.Fatal("failed to init gRPC server", zap.Error(err))
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-		<-sigCh
-		log.Info("Shutdown signal received")
-		cancel()
-	}()
-
-	g, gCtx := errgroup.WithContext(ctx)
-
-	// HTTP server
-	g.Go(func() error {
-		return httpServer.Run()
-	})
-	g.Go(func() error {
-		<-gCtx.Done()
-		return httpServer.Shutdown(context.Background())
-	})
-
-	// gRPC server
-	g.Go(func() error {
-		return grpcServer.Run()
-	})
-	g.Go(func() error {
-		<-gCtx.Done()
-		grpcServer.Stop()
-		return nil
-	})
-
-	if err := g.Wait(); err != nil {
+	if err := runner.Run(log, httpServer, grpcServer); err != nil {
 		log.Error("Server error", zap.Error(err))
 	}
 
 	log.Info("Social Service stopped")
-
 }
