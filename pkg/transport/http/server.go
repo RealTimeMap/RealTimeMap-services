@@ -55,6 +55,23 @@ func NewServer(cfg Config, logger *zap.Logger) *Server {
 		MaxAge:           cfg.MaxAge,
 	}))
 
+	// Handle OPTIONS for all routes (including non-existent ones)
+	router.NoRoute(func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.JSON(404, gin.H{"error": "Not found"})
+	})
+
+	router.NoMethod(func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.JSON(405, gin.H{"error": "Method not allowed"})
+	})
+
 	return &Server{
 		httpServer: &http.Server{
 			Addr:    fmt.Sprintf(":%d", cfg.Port),
