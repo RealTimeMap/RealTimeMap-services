@@ -3,7 +3,6 @@ package mark
 import (
 	"time"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/dto"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/category"
@@ -25,6 +24,25 @@ func NewFromPoint(data types.Point) *Coordinates {
 	}
 }
 
+type OwnerResponse struct {
+	ID       uint   `json:"id"`
+	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
+	Tag      string `json:"tag"`
+}
+
+func NewOwnerResponse(u *model.UserProfile) OwnerResponse {
+	if u == nil {
+		return OwnerResponse{}
+	}
+	return OwnerResponse{
+		ID:       u.ID,
+		Username: u.Username,
+		Tag:      u.Tag,
+		Avatar:   u.Avatar,
+	}
+}
+
 // ResponseMark represents mark response
 // @name MarkResponse
 type ResponseMark struct {
@@ -33,7 +51,7 @@ type ResponseMark struct {
 	AdditionalInfo *string                    `json:"additionalInfo,omitempty"`
 	Category       *category.ResponseCategory `json:"category"`
 	Geom           *Coordinates               `json:"geom"`
-	User           *dto.UserResponse          `json:"owner"`
+	User           OwnerResponse              `json:"owner"`
 	Photos         []string                   `json:"photos"`
 	StartAt        time.Time                  `json:"startAt"`
 	EndAt          time.Time                  `json:"endAt"`
@@ -45,7 +63,7 @@ func NewResponseMark(data *model.Mark) *ResponseMark {
 		MarKName:       data.MarkName,
 		AdditionalInfo: data.AdditionalInfo,
 		Geom:           NewFromPoint(data.Geom),
-		User:           dto.NewUserResponse(data.UserID, data.UserName, nil),
+		User:           NewOwnerResponse(data.Owner),
 		StartAt:        data.StartAt,
 		EndAt:          data.EndAt,
 	}

@@ -25,6 +25,8 @@ type Mark struct {
 	Geom    types.Point  `gorm:"type:geometry(POINT,4326);not null"`
 	Geohash string       `gorm:"not null"`
 	Photos  types.Photos `gorm:"type:jsonb"`
+
+	Owner *UserProfile `gorm:"-" json:"-"`
 }
 
 func (m *Mark) BeforeCreate(_ *gorm.DB) (err error) {

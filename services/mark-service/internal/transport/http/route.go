@@ -38,8 +38,7 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 
 	// SOCKET
 
-	socketApi := api.Group("/")
-	socketApi.GET("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
-	socketApi.POST("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
+	g.GET("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
+	g.POST("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
 
 }
