@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"math"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger/sl"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
@@ -14,6 +15,8 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
+
+const clusterPixelThreshold = 60.0
 
 type MarkRepository struct {
 	db    *gorm.DB
@@ -108,7 +111,7 @@ func (r *MarkRepository) GetMarksInArea(ctx context.Context, filter repository.F
 	err := r.db.WithContext(ctx).Model(&model.Mark{}).
 		Joins("Category").
 		Where("geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)", bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat).
-		Where("start_at <= ? AND end_at >= ?", filter.StartAt, filter.StartAt).
+		Where("start_at <= ? AND end_at >= ?", filter.EndAt, filter.StartAt).
 		Where("deleted_at IS NULL").
 		Find(&marks).Error
 	if err != nil {
@@ -153,7 +156,9 @@ func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repositor
         GROUP BY cluster_id
     `
 
-	err := r.db.WithContext(ctx).Raw(query, 0.01, 1, bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat, filter.StartAt, filter.StartAt).Scan(&results).Error
+	eps := clusterPixelThreshold * 360.0 / (256.0 * math.Pow(2, float64(filter.ZoomLevel)))
+
+	err := r.db.WithContext(ctx).Raw(query, eps, 1, bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat, filter.EndAt, filter.StartAt).Scan(&results).Error
 	if err != nil {
 		r.log.Error("failed to get marks in cluster", zap.Error(err))
 		return nil, err

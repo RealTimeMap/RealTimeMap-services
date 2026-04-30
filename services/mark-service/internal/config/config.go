@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
@@ -27,6 +29,11 @@ type Kafka struct {
 	ProducerTopic string   `yaml:"producerTopic" env:"KAFKA_PRODUCER_TOPIC" env-default:"mark-service.events"`
 }
 
+type Profile struct {
+	Address string        `yaml:"address" env:"PROBE_ADDRESS"`
+	Timeout time.Duration `yaml:"timeout" env:"PROBE_TIMEOUT" env-default:"3s"`
+}
+
 type Config struct {
 	Env      string                `env:"ENV" env-default:"local"`
 	Database Database              `yaml:"database"`
@@ -34,6 +41,7 @@ type Config struct {
 	Storage  storage.StorageConfig `yaml:"storage"`
 	Kafka    Kafka                 `yaml:"kafka"`
 	Http     http.Config           `yaml:"http"`
+	Profile  Profile               `yaml:"profile"`
 }
 
 func MustLoad() *Config {

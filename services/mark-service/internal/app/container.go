@@ -1,12 +1,14 @@
 package app
 
 import (
+	pkgprofile "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/grpc/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/socket"
 	"go.uber.org/zap"
@@ -59,9 +61,18 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		log.Info("Kafka producer disabled")
 	}
 
+	profileGrpcHandler, err := pkgprofile.NewClient(&pkgprofile.Config{
+		Address: cfg.Profile.Address,
+		Timeout: cfg.Profile.Timeout,
+	})
+	if err != nil {
+		log.Fatal("Profile client initialization failed", zap.Error(err))
+	}
+
+	profileAdapter := profile.NewAdapter(profileGrpcHandler)
 	// Создание сервисов
 	categoryService := service.NewCategoryService(categoryRepo, store)
-	markService := service.NewUserMarkService(markRepo, categoryRepo, store, p, imageValidator)
+	markService := service.NewUserMarkService(markRepo, categoryRepo, store, p, imageValidator, profileAdapter)
 
 	// админские сервисы
 	adminMarkService := service.NewAdminMarkService(markRepo, categoryRepo, store, p, imageValidator)

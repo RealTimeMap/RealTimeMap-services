@@ -10,7 +10,10 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/input"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/grpc/profile"
+
 	_ "golang.org/x/image/webp"
 
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
@@ -34,18 +37,21 @@ type UserMarkService struct {
 	categoryRepo   repository.CategoryRepository
 	mediaValidator *mediavalidator.PhotoValidator
 	shared         *markShared
+	profileAdapter *profile.Adapter
 }
 
 func NewUserMarkService(markRepo repository.MarkRepository,
 	categoryRepo repository.CategoryRepository,
 	store storage.Storage,
 	producer *producer.Producer,
-	validator *mediavalidator.PhotoValidator) *UserMarkService {
+	validator *mediavalidator.PhotoValidator,
+	profileAdapter *profile.Adapter) *UserMarkService {
 	return &UserMarkService{
 		markRepo:       markRepo,
 		categoryRepo:   categoryRepo,
 		mediaValidator: validator,
 		shared:         newMarkShared(store, producer),
+		profileAdapter: profileAdapter,
 	}
 }
 
@@ -103,6 +109,7 @@ func (s *UserMarkService) GetMarksInArea(ctx context.Context, filter repository.
 	if err != nil {
 		return nil, err
 	}
+	s.attachOwners(ctx, marks)
 	return marks, nil
 
 }
@@ -242,4 +249,45 @@ func (s *UserMarkService) GetDataForCreate(ctx context.Context) ([]*model.Catego
 	}
 	return categories, model.AllowedDuration, nil
 
+}
+
+func (s *UserMarkService) getUsersIDs(marks []*model.Mark) []uint {
+	usersIDs := make([]uint, len(marks))
+	for i, mark := range marks {
+		usersIDs[i] = uint(mark.UserID)
+	}
+	return utils.UniqueValues(usersIDs)
+}
+
+func (s *UserMarkService) attachOwners(ctx context.Context, marks []*model.Mark) {
+	if len(marks) == 0 {
+		return
+	}
+
+	ids := s.getUsersIDs(marks)
+	profiles, err := s.profileAdapter.GetUserProfileByIDs(ctx, ids)
+
+	byID := make(map[uint]*model.UserProfile, len(profiles))
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for _, p := range profiles {
+			byID[p.ID] = p
+		}
+	}
+
+	for _, m := range marks {
+		if p, ok := byID[uint(m.UserID)]; ok {
+			m.Owner = p
+		} else {
+			m.Owner = localFallback(m)
+		}
+	}
+}
+
+func localFallback(mark *model.Mark) *model.UserProfile {
+	return &model.UserProfile{
+		ID:       uint(mark.UserID),
+		Username: mark.UserName,
+	}
 }

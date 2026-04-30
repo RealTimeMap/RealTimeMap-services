@@ -6,4 +6,7 @@ var (
 	ErrPermissionDenied = func() error {
 		return apperror.NewForbiddenError("forbidden")
 	}
+	ProfileUnavailable = func(cause error) error {
+		return apperror.NewServiceUnavailableError("profile-service", cause)
+	}
 )
