@@ -108,8 +108,8 @@ func (r *MarkRepository) GetMarksInArea(ctx context.Context, filter repository.F
 	err := r.db.WithContext(ctx).Model(&model.Mark{}).
 		Joins("Category").
 		Where("geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)", bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat).
-		Where("start_at >= ?", filter.StartAt).
-		Where("end_at >= ?", filter.EndAt).
+		Where("start_at <= ? AND end_at >= ?", filter.StartAt, filter.StartAt).
+		Where("deleted_at IS NULL").
 		Find(&marks).Error
 	if err != nil {
 		r.log.Error("error MarkRepository.GetMarksInArea", zap.Error(err))
@@ -139,7 +139,7 @@ func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repositor
                 ) AS cluster_id
             FROM marks
             WHERE geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)
-              AND start_at >= ?
+              AND start_at <= ?
               AND end_at >= ?
               AND deleted_at IS NULL
         )
@@ -153,7 +153,7 @@ func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repositor
         GROUP BY cluster_id
     `
 
-	err := r.db.WithContext(ctx).Raw(query, 0.01, 1, bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat, filter.StartAt, filter.EndAt).Scan(&results).Error
+	err := r.db.WithContext(ctx).Raw(query, 0.01, 1, bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat, filter.StartAt, filter.StartAt).Scan(&results).Error
 	if err != nil {
 		r.log.Error("failed to get marks in cluster", zap.Error(err))
 		return nil, err

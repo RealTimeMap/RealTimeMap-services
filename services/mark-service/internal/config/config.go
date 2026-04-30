@@ -3,6 +3,7 @@ package config
 import (
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 )
 
 // Grpc Конфиг для gRPC указывается НазваниеСервиса-Адресс смотреть example.config.yaml
@@ -32,6 +33,7 @@ type Config struct {
 	Grpc     Grpc                  `yaml:"grpc"`
 	Storage  storage.StorageConfig `yaml:"storage"`
 	Kafka    Kafka                 `yaml:"kafka"`
+	Http     http.Config           `yaml:"http"`
 }
 
 func MustLoad() *Config {
