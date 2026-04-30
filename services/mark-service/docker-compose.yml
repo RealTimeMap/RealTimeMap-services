@@ -105,14 +105,6 @@ services:
       # Middleware для удаления /marks из пути
       - "traefik.http.middlewares.strip-marks.stripprefix.prefixes=/marks"
 
-      # # Swagger
-      # - "traefik.http.routers.mark-swagger.rule=Host(`realtimemap.ru`) && PathPrefix(`/swagger`)"
-      # - "traefik.http.routers.mark-swagger.entrypoints=websecure"
-      # - "traefik.http.routers.mark-swagger.priority=5"
-      # - "traefik.http.routers.mark-swagger.service=mark"
-      # - "traefik.http.routers.mark-swagger.middlewares=cors-headers@file"
-      # - "traefik.http.routers.mark-swagger.tls=true"
-
       # Static files (store) — только фотографии mark-service
       - "traefik.http.routers.mark-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store/photos/marks`) || PathPrefix(`/store/photos/categories`)"
       - "traefik.http.routers.mark-store.entrypoints=websecure"

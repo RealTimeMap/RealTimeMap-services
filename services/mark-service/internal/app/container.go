@@ -14,6 +14,8 @@ import (
 )
 
 type Container struct {
+	DB *gorm.DB
+
 	// Репозитории
 	CategoryRepo repository.CategoryRepository
 	MarkRepo     repository.MarkRepository
@@ -28,6 +30,8 @@ type Container struct {
 	// Сокет
 
 	Socket *socket.SocketServer
+
+	Logger *zap.Logger
 }
 
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
@@ -67,6 +71,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 
 	// добавление
 	return &Container{
+		DB: db,
 
 		CategoryRepo: categoryRepo,
 		MarkRepo:     markRepo,
@@ -77,6 +82,8 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		AdminMarkService: adminMarkService,
 
 		Socket: socketServer,
+
+		Logger: log,
 	}
 
 }
