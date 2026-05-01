@@ -28,9 +28,29 @@ func NewUserSettings(data model.PrivacySettings) UserSettings {
 	}
 }
 
+type GamificationResponse struct {
+	CurrentLevel    uint64  `json:"currentLevel"`
+	CurrentXP       uint64  `json:"currentXp"`
+	XPForNextLevel  uint64  `json:"xpForNextLevel"`
+	ProgressPercent float64 `json:"progressPercent"`
+}
+
+func NewGamificationResponse(p *model.Progress) *GamificationResponse {
+	if p == nil {
+		return nil
+	}
+	return &GamificationResponse{
+		CurrentLevel:    p.CurrentLevel,
+		CurrentXP:       p.CurrentXP,
+		XPForNextLevel:  p.XPForNextLevel,
+		ProgressPercent: p.ProgressPercent,
+	}
+}
+
 type PersonalProfileResponse struct {
 	BaseProfileResponse
-	Settings UserSettings `json:"settings"`
+	Settings     UserSettings          `json:"settings"`
+	Gamification *GamificationResponse `json:"gamification,omitempty"`
 }
 
 func NewPersonalProfileResponse(data *model.Profile) *PersonalProfileResponse {
@@ -39,6 +59,12 @@ func NewPersonalProfileResponse(data *model.Profile) *PersonalProfileResponse {
 		Settings:            NewUserSettings(data.PrivacySettings),
 	}
 	return response
+}
+
+func NewPersonalProfileResponseWithGamification(data *model.Profile, progress *model.Progress) *PersonalProfileResponse {
+	r := NewPersonalProfileResponse(data)
+	r.Gamification = NewGamificationResponse(progress)
+	return r
 }
 
 // Поиск профилей

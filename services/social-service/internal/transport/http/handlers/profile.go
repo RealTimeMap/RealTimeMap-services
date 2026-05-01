@@ -50,12 +50,12 @@ func (h *ProfileHandler) GetMyProfile(c *gin.Context) {
 		return
 	}
 
-	uProfile, err := h.service.GetProfile(c.Request.Context(), uint(userInfo.UserID))
+	uProfile, progress, err := h.service.GetMyProfile(c.Request.Context(), uint(userInfo.UserID))
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	c.JSON(http.StatusOK, dto.NewPersonalProfileResponse(uProfile))
+	c.JSON(http.StatusOK, dto.NewPersonalProfileResponseWithGamification(uProfile, progress))
 }
 
 func (h *ProfileHandler) SearchProfile(c *gin.Context) {

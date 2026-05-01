@@ -113,3 +113,5 @@ fabric.properties
 /services/mark-service/config/config.yaml
 /.claude/
 !/services/gamification-service/config/config.yaml
+
+/services/*/config/config.yaml

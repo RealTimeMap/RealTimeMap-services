@@ -34,6 +34,7 @@ func main() {
 	db.AutoMigrate(&model.Profile{}, &model.Friendship{}, &model.BlockedUser{})
 
 	container := app.NewContainer(cfg, db, log)
+	defer container.Close()
 
 	httpServer := httpserver.NewServer(cfg.Http, log)
 	httpServer.Router().Static("/store/avatar", cfg.Storage.BasePath)

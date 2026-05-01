@@ -9,6 +9,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/levelservice"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/progressservice"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/infrastructure/persistence/postgres"
+	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/grpc"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -19,6 +20,8 @@ type Container struct {
 	LevelService        *levelservice.LevelService
 	ProgressRepo        repository.UserProgressRepository
 	ProgressService     *progressservice.ProgressService
+
+	ProgressGrpcHandler *grpctransport.Handler
 
 	CacheStrategy cache.Cache
 	Logger        *zap.Logger
@@ -39,12 +42,16 @@ func NewContainer(config *config.Config, db *gorm.DB, logger *zap.Logger) *Conta
 	levelService := levelservice.NewLevelService(levelRepo, strategy, logger)
 	gamificationService := gamificationservice.NewGamificationService(levelService, configRepo, progressRepo, userHistoryRepo, logger)
 
+	grpcHandler := grpctransport.NewHandler(progressRepo, levelService, logger)
+
 	return &Container{
 		GamificationService: gamificationService,
 		LevelService:        levelService,
 		ProgressRepo:        progressRepo,
 
 		ProgressService: progressService,
+
+		ProgressGrpcHandler: grpcHandler,
 
 		CacheStrategy: cacheStrategy,
 		Logger:        logger,
