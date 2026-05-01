@@ -12,7 +12,13 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
+
+// ProgressGetter интерфейс для получения геймификационного прогресса
+type ProgressGetter interface {
+	GetUserProgress(ctx context.Context, userID uint) (*model.Progress, error)
+}
 
 const avatarMaxSize = 5 * 1024 * 1024 // 5MB
 
@@ -20,6 +26,7 @@ type Service struct {
 	profileRepo    repository.ProfileRepository
 	store          storage.Storage
 	photoValidator *mediavalidator.PhotoValidator
+	progress       ProgressGetter
 
 	logger *zap.Logger
 }
@@ -28,12 +35,14 @@ func NewProfileService(
 	profileRepo repository.ProfileRepository,
 	store storage.Storage,
 	photoValidator *mediavalidator.PhotoValidator,
+	progress ProgressGetter,
 	logger *zap.Logger,
 ) *Service {
 	return &Service{
 		profileRepo:    profileRepo,
 		store:          store,
 		photoValidator: photoValidator,
+		progress:       progress,
 		logger:         logger,
 	}
 }
@@ -157,6 +166,47 @@ func (s *Service) GetProfile(ctx context.Context, userId uint) (*model.Profile, 
 		return nil, err
 	}
 	return profile, nil
+}
+
+// GetMyProfile возвращает профиль текущего пользователя вместе с прогрессом
+// Прогресс необязателен — если gamification-service недоступен, поле остаётся nil.
+func (s *Service) GetMyProfile(ctx context.Context, userID uint) (*model.Profile, *model.Progress, error) {
+	s.logger.Info("ProfileService.GetMyProfile", zap.Uint("user_id", userID))
+
+	var (
+		profile  *model.Profile
+		progress *model.Progress
+	)
+
+	g, gCtx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		p, err := s.profileRepo.GetProfile(gCtx, userID)
+		if err != nil {
+			return err
+		}
+		profile = p
+		return nil
+	})
+
+	g.Go(func() error {
+		if s.progress == nil {
+			return nil
+		}
+		p, err := s.progress.GetUserProgress(gCtx, userID)
+		if err != nil {
+			s.logger.Warn("gamification fetch failed",
+				zap.Uint("user_id", userID), zap.Error(err))
+			return nil
+		}
+		progress = p
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, nil, err
+	}
+	return profile, progress, nil
 }
 
 func (s *Service) GetProfilesByIDs(ctx context.Context, ids []uint) ([]*model.Profile, error) {

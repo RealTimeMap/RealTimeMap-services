@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/progress"
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	servergrpc "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/grpc"
@@ -17,11 +18,12 @@ type Database struct {
 }
 
 type Config struct {
-	Env      string                `env:"ENV" env-default:"local"`
-	Database Database              `yaml:"database"`
-	Http     http.Config           `yaml:"http_server"`
-	GRPC     servergrpc.Config     `yaml:"grpc"`
-	Storage  storage.StorageConfig `yaml:"storage"`
+	Env          string                `env:"ENV" env-default:"local"`
+	Database     Database              `yaml:"database"`
+	Http         http.Config           `yaml:"http_server"`
+	GRPC         servergrpc.Config     `yaml:"grpc"`
+	Storage      storage.StorageConfig `yaml:"storage"`
+	Gamification progress.Config       `yaml:"gamification"`
 }
 
 func MustLoad() *Config {

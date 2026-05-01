@@ -32,7 +32,7 @@ services:
       - "traefik.http.routers.social-options.tls=true"
 
       # GET /api/v2/profile/me - мой профиль (с auth)
-      - "traefik.http.routers.social-me.rule=Host(`realtimemap.ru`) && Path(`/api/v2/profile/me`) && Method(`GET`)"
+      - "traefik.http.routers.social-me.rule=Host(`realtimemap.ru`) && Path(`/api/v2/profile/me`) && Method(`GET`) || Method(`PATCH`)"
       - "traefik.http.routers.social-me.entrypoints=websecure"
       - "traefik.http.routers.social-me.priority=100"
       - "traefik.http.routers.social-me.service=social"
@@ -55,11 +55,11 @@ services:
       - "traefik.http.routers.social-detail.middlewares=cors-headers@file"
       - "traefik.http.routers.social-detail.tls=true"
 
-      # Static files (store) — только фотографии mark-service
+      # Static files (store) — только фотографии social-service
       - "traefik.http.routers.social-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store/photos/avatars`)"
       - "traefik.http.routers.social-store.entrypoints=websecure"
       - "traefik.http.routers.social-store.priority=10"
-      - "traefik.http.routers.social-store.service=mark"
+      - "traefik.http.routers.social-store.service=social"
       - "traefik.http.routers.social-store.middlewares=cors-headers@file"
       - "traefik.http.routers.social-store.tls=true"
 
@@ -69,9 +69,12 @@ services:
     networks:
       - web
       - internal-social
+    volumes:
+      - social_store_data:/app/store
 
 volumes:
   social_postgres_data:
+  social_store_data:
 
 networks:
   web:

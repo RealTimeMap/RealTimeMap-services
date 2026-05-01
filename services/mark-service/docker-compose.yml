@@ -119,12 +119,16 @@ services:
       - "traefik.http.services.mark.loadbalancer.sticky.cookie.name=mark_session"
       - "traefik.http.services.mark.loadbalancer.sticky.cookie.secure=true"
 
+    volumes:
+      - mark_store_data:/app/store
+
     networks:
       - web
       - internal-mark
 
 volumes:
   mark_postgres_data:
+  mark_store_data:
 
 networks:
   web:

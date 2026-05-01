@@ -15,6 +15,7 @@ type Profile struct {
 	Tag             string          `gorm:"index:idx_tag,unique"`
 	IsPrivate       bool            `gorm:"default:false"`
 	PrivacySettings PrivacySettings `gorm:"type:jsonb"`
+	Gamification    Progress        `gorm:"-" json:"-"`
 }
 
 type PrivacySettings struct {

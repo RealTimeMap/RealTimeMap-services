@@ -12,4 +12,7 @@ var (
 	TagAlreadyTaken = func(tag string) error {
 		return apperror.NewConflictError("profile", "tag", tag)
 	}
+	ProgressServiceUnavailable = func(err error) error {
+		return apperror.NewServiceUnavailableError("gamification-service", err)
+	}
 )
