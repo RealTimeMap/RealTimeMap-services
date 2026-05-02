@@ -1,11 +1,11 @@
 {
   "id": "mark-service",
   "name": "mark-service",
-  "description": "Сервис геолокационного функционала приложения",
-  "fullDescription": "Сервис управляет метками, перемещением пользователей на карте и тд",
+  "description": "Сервис геолокационных меток на карте: создание, поиск, кластеризация, real-time обновления.",
+  "fullDescription": "Управляет жизненным циклом меток (events) на карте: создание с фотографиями, фильтрация по области экрана и временному диапазону, кластеризация при отдалении камеры, CRUD-операции для владельцев и администраторов. Поддерживает категории меток с иконками и цветами. Раздаёт обновления подписчикам через socket.io.",
   "protocols": ["http", "socketio"],
   "availableEnvs": ["dev", "staging", "prod"],
-  "healthPath": "/api/v2/mark/health",
+  "healthPath": "/mark/health",
   "team": "Backend",
   "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/mark-service"
 }

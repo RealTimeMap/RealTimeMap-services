@@ -12,17 +12,17 @@
   {
     "id": "mark-service",
     "name": "mark-service",
-    "description": "Сервис геолокационного функционала приложения",
+    "description": "Сервис геолокационных меток на карте: создание, поиск, кластеризация, real-time обновления.",
     "protocols": ["http", "socketio"],
     "availableEnvs": ["dev", "staging", "prod"],
-    "healthPath": "/api/v2/mark/health",
+    "healthPath": "/mark/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/mark-service"
   },
   {
     "id": "social-service",
     "name": "social-service",
-    "description": "Социальный сервис: профили пользователей, друзья, блокировки.",
+    "description": "Социальный сервис: профили пользователей, блокировки, поиск.",
     "protocols": ["http", "kafka"],
     "availableEnvs": ["dev", "staging", "prod"],
     "healthPath": "/social/health",
@@ -38,5 +38,15 @@
     "healthPath": "/comment/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/comment-service"
+  },
+  {
+    "id": "gamification-service",
+    "name": "gamification-service",
+    "description": "Сервис геймификации: уровни, опыт, достижения пользователей.",
+    "protocols": ["http", "kafka"],
+    "availableEnvs": ["dev", "staging", "prod"],
+    "healthPath": "/gamification/health",
+    "team": "Backend",
+    "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/gamification-service"
   }
 ]
