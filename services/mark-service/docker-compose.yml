@@ -113,6 +113,15 @@ services:
       - "traefik.http.routers.mark-store.middlewares=cors-headers@file"
       - "traefik.http.routers.mark-store.tls=true"
 
+
+      # GET /mark/health
+      - "traefik.http.routers.mark-health.rule=Host(`realtimemap.ru`) && Path(`/mark/health`) && Method(`GET`)"
+      - "traefik.http.routers.mark-health.entrypoints=websecure"
+      - "traefik.http.routers.mark-health.priority=10"
+      - "traefik.http.routers.mark-health.service=social"
+      - "traefik.http.routers.mark-health.middlewares=cors-headers@file"
+      - "traefik.http.routers.mark-health.tls=true"
+      -
       # Service configuration
       - "traefik.http.services.mark.loadbalancer.server.port=8080"
       - "traefik.http.services.mark.loadbalancer.sticky.cookie=true"
