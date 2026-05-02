@@ -168,10 +168,10 @@ func (s *Service) GetProfile(ctx context.Context, userId uint) (*model.Profile, 
 	return profile, nil
 }
 
-// GetMyProfile возвращает профиль текущего пользователя вместе с прогрессом
+// GetProfileWithProgress возвращает профиль текущего пользователя вместе с прогрессом
 // Прогресс необязателен — если gamification-service недоступен, поле остаётся nil.
-func (s *Service) GetMyProfile(ctx context.Context, userID uint) (*model.Profile, *model.Progress, error) {
-	s.logger.Info("ProfileService.GetMyProfile", zap.Uint("user_id", userID))
+func (s *Service) GetProfileWithProgress(ctx context.Context, userID uint) (*model.Profile, *model.Progress, error) {
+	s.logger.Info("ProfileService.GetProfileWithProgress", zap.Uint("user_id", userID))
 
 	var (
 		profile  *model.Profile

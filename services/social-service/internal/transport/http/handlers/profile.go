@@ -50,7 +50,7 @@ func (h *ProfileHandler) GetMyProfile(c *gin.Context) {
 		return
 	}
 
-	uProfile, progress, err := h.service.GetMyProfile(c.Request.Context(), uint(userInfo.UserID))
+	uProfile, progress, err := h.service.GetProfileWithProgress(c.Request.Context(), uint(userInfo.UserID))
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -90,12 +90,12 @@ func (h *ProfileHandler) GetDetailProfile(c *gin.Context) {
 		errorhandler.HandleError(c, err, h.logger)
 	}
 
-	profile, err := h.service.GetProfile(c.Request.Context(), uint(pID))
+	profile, progress, err := h.service.GetProfileWithProgress(c.Request.Context(), uint(pID))
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	c.JSON(http.StatusOK, dto.NewBaseProfileResponse(profile))
+	c.JSON(http.StatusOK, dto.NewPersonalProfileResponseWithGamification(profile, progress))
 }
 
 func (h *ProfileHandler) UpdateMyProfile(c *gin.Context) {
