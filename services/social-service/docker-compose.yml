@@ -71,7 +71,7 @@ services:
       - "traefik.http.routers.social-health.service=social"
       - "traefik.http.routers.social-health.middlewares=cors-headers@file"
       - "traefik.http.routers.social-health.tls=true"
-      -
+
       # Service configuration
       - "traefik.http.services.social.loadbalancer.server.port=8080"
 

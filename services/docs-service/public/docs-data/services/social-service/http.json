@@ -5,7 +5,7 @@
       "method": "GET",
       "path": "/api/v2/profile/me",
       "summary": "Получить свой профиль",
-      "description": "Возвращает профиль текущего авторизованного пользователя с настройками приватности. Требуется авторизация.",
+      "description": "Возвращает профиль текущего авторизованного пользователя с настройками приватности и данными геймификации (если gamification-service доступен). Требуется авторизация.",
       "tags": ["Профили"],
       "auth": true,
       "parameters": [],
@@ -13,11 +13,96 @@
         {
           "statusCode": 200,
           "description": "Персональный профиль пользователя",
-          "schemaRef": "personal-profile",
+          "schema": [
+            { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя" },
+            { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+            { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" },
+            { "name": "isPrivate", "type": "boolean", "required": true, "description": "Приватный ли профиль" },
+            {
+              "name": "settings",
+              "type": "object",
+              "required": true,
+              "description": "Настройки приватности",
+              "children": [
+                { "name": "showInSearch", "type": "boolean", "required": true, "description": "Показывать профиль в поиске" }
+              ]
+            },
+            {
+              "name": "gamification",
+              "type": "object",
+              "required": false,
+              "description": "Данные геймификации. Может отсутствовать, если gamification-service недоступен",
+              "children": [
+                { "name": "currentLevel", "type": "integer", "required": true, "description": "Текущий уровень пользователя" },
+                { "name": "currentXp", "type": "integer", "required": true, "description": "Текущее количество накопленного опыта" },
+                { "name": "xpForNextLevel", "type": "integer", "required": true, "description": "Опыт, необходимый для перехода на следующий уровень" },
+                { "name": "progressPercent", "type": "number", "required": true, "description": "Процент прогресса до следующего уровня" }
+              ]
+            }
+          ],
           "example": {
             "userId": 1,
             "username": "john_doe",
-            "avatar": "https://example.com/avatar.jpg",
+            "avatar": "https://realtimemap.ru/store/profile-avatars/2026/04/avatar.jpg",
+            "isPrivate": false,
+            "settings": {
+              "showInSearch": true
+            },
+            "gamification": {
+              "currentLevel": 5,
+              "currentXp": 1500,
+              "xpForNextLevel": 2000,
+              "progressPercent": 75.0
+            }
+          }
+        }
+      ],
+      "errors": ["unauthorized", "not-found"]
+    },
+    {
+      "id": "update-my-profile",
+      "method": "PATCH",
+      "path": "/api/v2/profile/me",
+      "summary": "Обновить свой профиль",
+      "description": "Обновляет профиль текущего пользователя: имя пользователя, тег и аватар. Все поля необязательные. Требуется авторизация.",
+      "tags": ["Профили"],
+      "auth": true,
+      "requestBody": {
+        "description": "Поля профиля для обновления (все необязательные)",
+        "contentType": "form-data",
+        "schema": [
+          { "name": "username", "type": "string", "required": false, "description": "Новое имя пользователя (2–32 символа)" },
+          { "name": "tag", "type": "string", "required": false, "description": "Новый тег профиля" },
+          { "name": "avatar", "type": "file", "required": false, "description": "Файл нового аватара (изображение, до 5 МБ)" }
+        ],
+        "example": {
+          "username": "john_doe_updated",
+          "tag": "johndoe"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Обновлённый профиль (без секции gamification)",
+          "schema": [
+            { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя" },
+            { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+            { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" },
+            { "name": "isPrivate", "type": "boolean", "required": true, "description": "Приватный ли профиль" },
+            {
+              "name": "settings",
+              "type": "object",
+              "required": true,
+              "description": "Настройки приватности",
+              "children": [
+                { "name": "showInSearch", "type": "boolean", "required": true, "description": "Показывать профиль в поиске" }
+              ]
+            }
+          ],
+          "example": {
+            "userId": 1,
+            "username": "john_doe_updated",
+            "avatar": "https://realtimemap.ru/store/profile-avatars/2026/05/new-avatar.jpg",
             "isPrivate": false,
             "settings": {
               "showInSearch": true
@@ -25,18 +110,20 @@
           }
         }
       ],
-      "errors": ["unauthorized"]
+      "errors": ["unauthorized", "validation-error", "conflict", "not-found"]
     },
     {
       "id": "search-profile",
       "method": "GET",
       "path": "/api/v2/profile/search",
       "summary": "Поиск профилей",
-      "description": "Поиск профилей пользователей по username. Публичный endpoint, авторизация не требуется.",
+      "description": "Поиск профилей пользователей по username (поиск по подстроке). Возвращаются только профили с включённой настройкой showInSearch. Если параметр q не задан, возвращаются случайные публичные профили. Авторизация не требуется.",
       "tags": ["Профили"],
       "pagination": "page",
       "parameters": [
-        { "name": "q", "type": "string", "required": false, "description": "Поисковый запрос по username", "location": "query", "example": "admin" }
+        { "name": "q", "type": "string", "required": false, "description": "Поисковый запрос по username (подстрока)", "location": "query", "example": "admin" },
+        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы (по умолчанию 1)", "location": "query", "example": "1" },
+        { "name": "pageSize", "type": "integer", "required": false, "description": "Размер страницы (1–100, по умолчанию 10)", "location": "query", "example": "10" }
       ],
       "responses": [
         {
@@ -64,7 +151,7 @@
       "method": "GET",
       "path": "/api/v2/profile/{profileID}",
       "summary": "Получить профиль по ID",
-      "description": "Возвращает базовую информацию о профиле пользователя. Публичный endpoint.",
+      "description": "Возвращает полный профиль пользователя с данными геймификации (если доступны). Публичный endpoint.",
       "tags": ["Профили"],
       "parameters": [
         { "name": "profileID", "type": "integer", "required": true, "description": "ID пользователя", "location": "path", "example": "1" }
@@ -73,12 +160,47 @@
         {
           "statusCode": 200,
           "description": "Профиль пользователя",
-          "schemaRef": "profile",
+          "schema": [
+            { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя" },
+            { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
+            { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" },
+            { "name": "isPrivate", "type": "boolean", "required": true, "description": "Приватный ли профиль" },
+            {
+              "name": "settings",
+              "type": "object",
+              "required": true,
+              "description": "Настройки приватности",
+              "children": [
+                { "name": "showInSearch", "type": "boolean", "required": true, "description": "Показывать профиль в поиске" }
+              ]
+            },
+            {
+              "name": "gamification",
+              "type": "object",
+              "required": false,
+              "description": "Данные геймификации (могут отсутствовать)",
+              "children": [
+                { "name": "currentLevel", "type": "integer", "required": true, "description": "Текущий уровень пользователя" },
+                { "name": "currentXp", "type": "integer", "required": true, "description": "Текущий накопленный опыт" },
+                { "name": "xpForNextLevel", "type": "integer", "required": true, "description": "Опыт для следующего уровня" },
+                { "name": "progressPercent", "type": "number", "required": true, "description": "Процент прогресса" }
+              ]
+            }
+          ],
           "example": {
             "userId": 1,
             "username": "john_doe",
-            "avatar": "https://example.com/avatar.jpg",
-            "isPrivate": false
+            "avatar": "https://realtimemap.ru/store/profile-avatars/2026/04/avatar.jpg",
+            "isPrivate": false,
+            "settings": {
+              "showInSearch": true
+            },
+            "gamification": {
+              "currentLevel": 5,
+              "currentXp": 1500,
+              "xpForNextLevel": 2000,
+              "progressPercent": 75.0
+            }
           }
         }
       ],
@@ -89,7 +211,7 @@
       "method": "POST",
       "path": "/api/v2/friends/block",
       "summary": "Заблокировать пользователя",
-      "description": "Блокирует указанного пользователя. Нельзя заблокировать самого себя. Требуется авторизация.",
+      "description": "Блокирует указанного пользователя. Нельзя заблокировать самого себя или уже заблокированного пользователя. Требуется авторизация.",
       "tags": ["Блокировки"],
       "auth": true,
       "parameters": [],
@@ -147,7 +269,11 @@
       "tags": ["Блокировки"],
       "auth": true,
       "pagination": "page",
-      "parameters": [],
+      "parameters": [
+        { "name": "q", "type": "string", "required": false, "description": "Поисковый запрос (зарезервирован)", "location": "query" },
+        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы (по умолчанию 1)", "location": "query", "example": "1" },
+        { "name": "pageSize", "type": "integer", "required": false, "description": "Размер страницы (1–100, по умолчанию 10)", "location": "query", "example": "10" }
+      ],
       "responses": [
         {
           "statusCode": 200,
@@ -166,7 +292,42 @@
           }
         }
       ],
-      "errors": ["unauthorized"]
+      "errors": ["unauthorized", "validation-error"]
+    },
+    {
+      "id": "health",
+      "method": "GET",
+      "path": "/social/health",
+      "summary": "Health-check",
+      "description": "Проверка доступности сервиса и подключения к базе данных.",
+      "tags": ["Служебные"],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Сервис и БД работают",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["healthy"] },
+            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+          ],
+          "example": {
+            "status": "healthy",
+            "service": "social-service"
+          }
+        },
+        {
+          "statusCode": 503,
+          "description": "БД недоступна",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["unhealthy"] },
+            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+          ],
+          "example": {
+            "status": "unhealthy",
+            "service": "social-service"
+          }
+        }
+      ],
+      "errors": []
     }
   ]
 }

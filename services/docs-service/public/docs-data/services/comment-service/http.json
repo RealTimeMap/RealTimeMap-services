@@ -51,9 +51,10 @@
               "required": true,
               "description": "Метаданные комментария",
               "children": [
-                { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать на этот комментарий (зависит от глубины вложенности)" },
+                { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать на этот комментарий (зависит от глубины вложенности, max depth = 2)" },
                 { "name": "haveReplies", "type": "boolean", "required": true, "description": "Есть ли ответы на этот комментарий" },
-                { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" }
+                { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" },
+                { "name": "status", "type": "string", "required": true, "description": "Статус комментария", "enum": ["active", "deleted"] }
               ]
             }
           ],
@@ -71,7 +72,8 @@
             "meta": {
               "canReply": true,
               "haveReplies": false,
-              "repliesCount": 0
+              "repliesCount": 0,
+              "status": "active"
             }
           }
         }
@@ -128,7 +130,8 @@
                   "children": [
                     { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать на этот комментарий" },
                     { "name": "haveReplies", "type": "boolean", "required": true, "description": "Есть ли ответы" },
-                    { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" }
+                    { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" },
+                    { "name": "status", "type": "string", "required": true, "description": "Статус комментария", "enum": ["active", "deleted"] }
                   ]
                 }
               ]
@@ -151,7 +154,8 @@
                 "meta": {
                   "canReply": true,
                   "haveReplies": true,
-                  "repliesCount": 2
+                  "repliesCount": 2,
+                  "status": "active"
                 }
               }
             ],
@@ -212,7 +216,8 @@
                   "children": [
                     { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать (false для ответов на максимальной глубине)" },
                     { "name": "haveReplies", "type": "boolean", "required": true, "description": "Есть ли вложенные ответы" },
-                    { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество вложенных ответов" }
+                    { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество вложенных ответов" },
+                    { "name": "status", "type": "string", "required": true, "description": "Статус ответа", "enum": ["active", "deleted"] }
                   ]
                 }
               ]
@@ -235,7 +240,8 @@
                 "meta": {
                   "canReply": false,
                   "haveReplies": false,
-                  "repliesCount": 0
+                  "repliesCount": 0,
+                  "status": "active"
                 }
               }
             ],
@@ -295,7 +301,8 @@
               "children": [
                 { "name": "canReply", "type": "boolean", "required": true, "description": "Можно ли отвечать" },
                 { "name": "haveReplies", "type": "boolean", "required": true, "description": "Есть ли ответы" },
-                { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" }
+                { "name": "repliesCount", "type": "integer", "required": true, "description": "Количество ответов" },
+                { "name": "status", "type": "string", "required": true, "description": "Статус комментария", "enum": ["active", "deleted"] }
               ]
             }
           ],
@@ -313,12 +320,13 @@
             "meta": {
               "canReply": true,
               "haveReplies": true,
-              "repliesCount": 2
+              "repliesCount": 2,
+              "status": "active"
             }
           }
         }
       ],
-      "errors": ["unauthorized", "validation-error", "forbidden", "not-found"]
+      "errors": ["unauthorized", "forbidden", "validation-error", "not-found", "conflict"]
     },
     {
       "id": "delete-comment",
@@ -381,7 +389,7 @@
     {
       "id": "health",
       "method": "GET",
-      "path": "/api/v2/comment/health",
+      "path": "/comment/health",
       "summary": "Health-check",
       "description": "Проверка доступности сервиса и подключения к базе данных. Возвращает 200 если БД доступна, иначе 503.",
       "tags": ["Служебные"],
