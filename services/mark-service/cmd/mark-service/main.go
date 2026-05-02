@@ -32,7 +32,7 @@ func main() {
 	container := app.MustContainer(cfg, db, log)
 
 	httpServer := httpserver.NewServer(cfg.Http, log)
-	httpServer.Router().Static("./store", "./store")
+	httpServer.Router().Static("/store", "./store")
 	http.RegisterRoutes(httpServer.Router(), container)
 
 	if err := runner.Run(log, httpServer); err != nil {
