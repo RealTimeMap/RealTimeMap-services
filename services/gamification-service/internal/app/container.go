@@ -24,6 +24,7 @@ type Container struct {
 	ProgressGrpcHandler *grpctransport.Handler
 
 	CacheStrategy cache.Cache
+	DB            *gorm.DB
 	Logger        *zap.Logger
 }
 
@@ -54,6 +55,7 @@ func NewContainer(config *config.Config, db *gorm.DB, logger *zap.Logger) *Conta
 		ProgressGrpcHandler: grpcHandler,
 
 		CacheStrategy: cacheStrategy,
+		DB:            db,
 		Logger:        logger,
 	}
 }
