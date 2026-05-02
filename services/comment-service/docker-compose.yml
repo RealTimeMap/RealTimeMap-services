@@ -31,8 +31,8 @@ services:
       - "traefik.http.routers.comment-options.middlewares=cors-headers@file"
       - "traefik.http.routers.comment-options.tls=true"
 
-      # GET /api/v2/comment/health - health check (публичный)
-      - "traefik.http.routers.comment-health.rule=Host(`realtimemap.ru`) && Path(`/api/v2/comment/health`) && Method(`GET`)"
+      # GET /comment/health - health check (публичный)
+      - "traefik.http.routers.comment-health.rule=Host(`realtimemap.ru`) && Path(`/comment/health`) && Method(`GET`)"
       - "traefik.http.routers.comment-health.entrypoints=websecure"
       - "traefik.http.routers.comment-health.priority=100"
       - "traefik.http.routers.comment-health.service=comment"
