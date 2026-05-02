@@ -63,6 +63,15 @@ services:
       - "traefik.http.routers.social-store.middlewares=cors-headers@file"
       - "traefik.http.routers.social-store.tls=true"
 
+
+      # GET /social/health
+      - "traefik.http.routers.social-health.rule=Host(`realtimemap.ru`) && Path(`/social/health`) && Method(`GET`)"
+      - "traefik.http.routers.social-health.entrypoints=websecure"
+      - "traefik.http.routers.social-health.priority=10"
+      - "traefik.http.routers.social-health.service=social"
+      - "traefik.http.routers.social-health.middlewares=cors-headers@file"
+      - "traefik.http.routers.social-health.tls=true"
+      -
       # Service configuration
       - "traefik.http.services.social.loadbalancer.server.port=8080"
 

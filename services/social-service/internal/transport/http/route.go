@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http/handlers"
 	"github.com/gin-gonic/gin"
@@ -17,20 +18,7 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 		Service: container.BlockedUserService,
 		Logger:  container.Logger,
 	})
-	healthHandler := func(c *gin.Context) {
-		sqlDB, err := container.DB.DB()
-		if err != nil || sqlDB.Ping() != nil {
-			c.JSON(503, gin.H{
-				"status":   "unhealthy",
-				"database": "down",
-			})
-			return
-		}
 
-		c.JSON(200, gin.H{
-			"status":  "healthy",
-			"service": "social-service",
-		})
-	}
-	api.GET("/social/health", healthHandler)
+	health := http.HealthHandler("social-service", container.DB)
+	g.GET("/social/health", health)
 }
