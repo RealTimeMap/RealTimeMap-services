@@ -10,6 +10,7 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/input"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/grpc/profile"
@@ -174,7 +175,19 @@ func (s *UserMarkService) DetailMark(ctx context.Context, id int) (*model.Mark, 
 	if err != nil {
 		return nil, err
 	}
+	s.attachOwners(ctx, []*model.Mark{mark})
 	return mark, nil
+}
+
+// GetUserMarks получение меток пользователя: Новые -> Старые
+func (s *UserMarkService) GetUserMarks(ctx context.Context, userID uint, paginationParams pagination.Params) ([]*model.Mark, int64, error) {
+	paginationParams.Defaults()
+	marks, count, err := s.markRepo.GetUserMarks(ctx, userID, paginationParams)
+	if err != nil {
+		return nil, 0, err
+	}
+	s.attachOwners(ctx, marks)
+	return marks, count, nil
 }
 
 // Валидация

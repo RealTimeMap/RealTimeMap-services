@@ -22,6 +22,7 @@ type MarkRepository interface {
 	Create(ctx context.Context, data *model.Mark) (*model.Mark, error)
 	TodayCreated(ctx context.Context, userID int) (int64, error)
 	GetMarksInArea(ctx context.Context, filter Filter) ([]*model.Mark, error) // TODO перенести фильтры куда то...
+	GetUserMarks(ctx context.Context, userID uint, params pagination.Params) ([]*model.Mark, int64, error)
 	GetMarksInCluster(ctx context.Context, filter Filter) ([]*model.Cluster, error)
 	Exist(ctx context.Context, id int) (bool, error)
 	Delete(ctx context.Context, id int) error
