@@ -175,6 +175,20 @@ func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repositor
 	return clusters, nil
 }
 
+func (r *MarkRepository) GetUserMarks(ctx context.Context, userID uint, params pagination.Params) ([]*model.Mark, int64, error) {
+	r.log.Info("GetUserMarks", zap.Uint("user_id", userID))
+	var marks []*model.Mark
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.Mark{}).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Limit(params.Limit()).
+		Offset(params.Offset()).
+		Find(&marks).
+		Count(&count).Error
+	return marks, count, err
+}
+
 func (r *MarkRepository) Exist(ctx context.Context, id int) (bool, error) {
 	r.log.Info("check_exist_mark_by_id", sl.String("layer", r.layer))
 	var exists bool

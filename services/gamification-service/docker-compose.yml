@@ -49,6 +49,14 @@ services:
       - "traefik.http.routers.gamification-levels.middlewares=cors-headers@file,strip-gamification"
       - "traefik.http.routers.gamification-levels.tls=true"
 
+      # GET /gamification/health
+      - "traefik.http.routers.gamification-health.rule=Host(`realtimemap.ru`) && Path(`/gamification/health`) && Method(`GET`)"
+      - "traefik.http.routers.gamification-health.entrypoints=websecure"
+      - "traefik.http.routers.gamification-health.priority=10"
+      - "traefik.http.routers.gamification-health.service=social"
+      - "traefik.http.routers.gamification-health.middlewares=cors-headers@file"
+      - "traefik.http.routers.gamification-health.tls=true"
+
       # Service configuration
       - "traefik.http.services.gamification.loadbalancer.server.port=8081"
 

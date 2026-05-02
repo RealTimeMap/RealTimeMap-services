@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/handlers"
 	"github.com/gin-gonic/gin"
@@ -15,26 +16,9 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 	handlers.InitMarkHandler(api, container.MarkService, container.Logger)
 	handlers.InitAdminMarkHandler(api, container.AdminMarkService, container.Logger)
 
-	healthHandler := func(c *gin.Context) {
-		// Проверка подключения к БД
-		sqlDB, err := container.DB.DB()
-		if err != nil || sqlDB.Ping() != nil {
-			c.JSON(503, gin.H{
-				"status":   "unhealthy",
-				"database": "down",
-			})
-			return
-		}
-
-		c.JSON(200, gin.H{
-			"status":  "healthy",
-			"service": "mark-service",
-		})
-	}
-
-	// Support both GET and HEAD methods for health check
-	api.GET("/mark/health", healthHandler)
-	api.HEAD("/mark/health", healthHandler)
+	// Health
+	health := http.HealthHandler("mark-service", container.DB)
+	g.GET("/mark/health", health)
 
 	// SOCKET
 

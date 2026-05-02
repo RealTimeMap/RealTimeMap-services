@@ -4,6 +4,7 @@ import (
 	"time"
 
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 )
 
 type Database struct {
@@ -13,10 +14,6 @@ type Database struct {
 	Password string `yaml:"password" env:"DB_PASSWORD"`
 	DBName   string `yaml:"db_name" env:"DB_NAME" env-required:"true"`
 	SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE" env-default:"disable"`
-}
-
-type HTTP struct {
-	Port int `yaml:"port" env:"HTTP_PORT" env-default:"8080"`
 }
 
 type Kafka struct {
@@ -33,7 +30,7 @@ type ProfileGRPC struct {
 type Config struct {
 	Env      string      `yaml:"env" env:"APP_ENV"`
 	Database Database    `yaml:"database"`
-	HTTP     HTTP        `yaml:"http"`
+	HTTP     http.Config `yaml:"http"`
 	Kafka    Kafka       `yaml:"kafka"`
 	Profile  ProfileGRPC `yaml:"profile"`
 }

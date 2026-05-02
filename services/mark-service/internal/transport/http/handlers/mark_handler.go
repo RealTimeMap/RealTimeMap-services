@@ -7,6 +7,7 @@ import (
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
@@ -31,6 +32,7 @@ func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logge
 	markGroup := g.Group("/marks")
 	{
 		markGroup.POST("/", handler.GetMarks)
+		markGroup.GET("/my", auth.AuthRequired(), handler.GetUserMarks)
 		markGroup.GET("/create-data", handler.GetDataForCreate)
 		markGroup.POST("/create", auth.AuthRequired(), handler.CreateMark)
 		markGroup.GET("/:markID", handler.DetailMark)
@@ -214,4 +216,24 @@ func (h *MarkHandler) GetDataForCreate(c *gin.Context) {
 	}
 	response := subdtocat.NewResponseCreateData(categories, durations)
 	c.JSON(200, response)
+}
+
+func (h *MarkHandler) GetUserMarks(c *gin.Context) {
+	userInfo, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	var params pagination.Params
+	if err := c.ShouldBindQuery(&params); err != nil {
+		validation.AbortWithBindingError(c, err)
+	}
+
+	marks, count, err := h.service.GetUserMarks(c.Request.Context(), uint(userInfo.UserID), params)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	response := dto.NewMultipleResponseMark(marks)
+	c.JSON(200, pagination.NewResponse(response, params, count))
 }
