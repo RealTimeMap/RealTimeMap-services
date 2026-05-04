@@ -204,7 +204,7 @@ func (h *MarkHandler) DetailMark(c *gin.Context) {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	c.JSON(200, dto.NewResponseMark(mark))
+	c.JSON(200, dto.NewDetailMarkResponse(mark))
 }
 
 func (h *MarkHandler) GetDataForCreate(c *gin.Context) {
