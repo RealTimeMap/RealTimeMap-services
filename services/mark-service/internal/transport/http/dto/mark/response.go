@@ -106,3 +106,63 @@ func NewMultipleResponseCluster(data []*model.Cluster) []*ResponseCluster {
 	}
 	return response
 }
+
+type Date struct {
+	StartAt         time.Time `json:"startAt"`
+	EndAt           time.Time `json:"endAt"`
+	ProgressPercent float64   `json:"progressPercent"`
+	DaysPassed      int       `json:"daysPassed"`
+	DaysLeft        int       `json:"daysLeft"`
+}
+
+func NewDate(m *model.Mark) Date {
+	return Date{
+		StartAt:         m.StartAt,
+		EndAt:           m.EndAt,
+		ProgressPercent: m.ProgressPercent(),
+		DaysLeft:        m.DaysLeft(),
+		DaysPassed:      m.DaysSinceStart(),
+	}
+}
+
+type Meta struct {
+	Status string `json:"status"`
+}
+
+func NewMeta(m *model.Mark) Meta {
+	return Meta{
+		Status: m.Status(),
+	}
+}
+
+type DetailMarkResponse struct {
+	ID             int                        `json:"id"`
+	MarKName       string                     `json:"markName"`
+	AdditionalInfo *string                    `json:"additionalInfo,omitempty"`
+	Category       *category.ResponseCategory `json:"category"`
+	Geom           *Coordinates               `json:"geom"`
+	User           OwnerResponse              `json:"owner"`
+	Photos         []string                   `json:"photos"`
+	Date           Date                       `json:"date"`
+	Meta           Meta                       `json:"meta"`
+}
+
+func NewDetailMarkResponse(data *model.Mark) DetailMarkResponse {
+	date := NewDate(data)
+	response := DetailMarkResponse{
+		ID:             data.ID,
+		MarKName:       data.MarkName,
+		AdditionalInfo: data.AdditionalInfo,
+		Geom:           NewFromPoint(data.Geom),
+		User:           NewOwnerResponse(data.Owner),
+		Date:           date,
+		Meta:           NewMeta(data),
+	}
+	if data.Category.ID != 0 {
+		response.Category = category.NewResponseCategory(&data.Category)
+	}
+	for _, photo := range data.Photos {
+		response.Photos = append(response.Photos, photo.URL)
+	}
+	return response
+}

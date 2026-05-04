@@ -11,7 +11,7 @@ import (
 
 type Filter struct {
 	BoundingBox valueobject.BoundingBox
-	ZoomLevel   int
+	ZoomLevel   float64
 	StartAt     time.Time
 	EndAt       time.Time
 	ShowEnded   bool

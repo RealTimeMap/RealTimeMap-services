@@ -1,6 +1,7 @@
 package model
 
 import (
+	"math"
 	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
@@ -8,6 +9,11 @@ import (
 )
 
 var AllowedDuration = []int{12, 24, 36, 48}
+
+const (
+	ended  string = "Ended"
+	active string = "Active"
+)
 
 type Mark struct {
 	gorm.Model
@@ -32,6 +38,63 @@ type Mark struct {
 func (m *Mark) BeforeCreate(_ *gorm.DB) (err error) {
 	// m.EndAt = m.StartAt.Add(time.Duration(m.Duration) * time.Hour)
 	return
+}
+
+func (m *Mark) ProgressPercent() float64 {
+	now := time.Now()
+	if now.Before(m.StartAt) {
+		return 0.0
+	}
+
+	if now.After(m.EndAt) {
+		return 100.0
+	}
+
+	totalDuration := m.EndAt.Sub(m.StartAt).Seconds()
+	passedDuration := now.Sub(m.StartAt).Seconds()
+
+	if totalDuration <= 0 {
+		return 100.0
+	}
+
+	return math.Round((passedDuration/totalDuration)*10000) / 100
+
+}
+
+func (m *Mark) DaysLeft() int {
+	now := time.Now()
+	if now.Before(m.StartAt) {
+		return 0
+	}
+	if now.After(m.EndAt) {
+		return 0
+	}
+	diff := m.EndAt.Sub(m.StartAt)
+	return int(diff.Hours() / 24)
+}
+
+func (m *Mark) DaysSinceStart() int {
+	now := time.Now()
+	if now.Before(m.StartAt) {
+		return 0
+	}
+	if now.After(m.EndAt) {
+		return 0
+	}
+	diff := now.Sub(m.StartAt)
+	return int(diff.Hours() / 24)
+}
+
+func (m *Mark) Status() string {
+	now := time.Now()
+
+	if now.Before(m.StartAt) {
+		return ended
+	}
+	if now.After(m.EndAt) {
+		return ended
+	}
+	return active
 }
 
 // DefaultEndAt метод добавляет время окончания для тех меток где не указано EndAt (Быстрые метки)
