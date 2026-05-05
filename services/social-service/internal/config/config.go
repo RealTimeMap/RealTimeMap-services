@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/progress"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	servergrpc "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/grpc"
@@ -24,6 +25,7 @@ type Config struct {
 	GRPC         servergrpc.Config     `yaml:"grpc"`
 	Storage      storage.StorageConfig `yaml:"storage"`
 	Gamification progress.Config       `yaml:"gamification"`
+	MarkStat     mark.Config           `yaml:"mark_stat"`
 }
 
 func MustLoad() *Config {
