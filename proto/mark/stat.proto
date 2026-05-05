@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package markstat;
+
+option go_package = "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/markstat";
+
+
+service MarkStatsService {
+  rpc GetUserMarksCount(MarksCountRequest) returns (MarksCountResponse);
+}
+
+message MarksCountRequest {
+  uint64 user_id = 1;
+}
+
+message MarksCountResponse {
+  int64 count = 1;
+}

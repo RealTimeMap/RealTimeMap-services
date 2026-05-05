@@ -387,6 +387,34 @@
       "errors": ["unauthorized", "validation-error", "not-found"]
     },
     {
+      "id": "stats",
+      "method": "GET",
+      "path": "/api/v2/stats/",
+      "summary": "Статистика по комментариям",
+      "description": "Возвращает агрегированные счётчики комментариев пользователя за выбранный период и за предыдущий период (для сравнения). Период задаётся через query-параметры из общего набора `pkg/date.Query`.",
+      "tags": ["Статистика"],
+      "parameters": [
+        { "name": "period", "type": "string", "required": false, "description": "Шорткат периода (например, 'day', 'week', 'month', 'year'). Альтернатива явному указанию start/end", "location": "query", "example": "week" },
+        { "name": "start", "type": "string", "required": false, "description": "Начало периода (ISO 8601). Используется вместе с `end`", "location": "query", "example": "2026-04-01T00:00:00Z" },
+        { "name": "end", "type": "string", "required": false, "description": "Конец периода (ISO 8601). Используется вместе с `start`", "location": "query", "example": "2026-04-30T23:59:59Z" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Два значения: `stat1` — количество за выбранный период, `stat2` — количество за предыдущий период такой же длительности",
+          "schema": [
+            { "name": "stat1", "type": "integer", "required": true, "description": "Количество комментариев за выбранный период" },
+            { "name": "stat2", "type": "integer", "required": true, "description": "Количество комментариев за предыдущий период (для сравнения)" }
+          ],
+          "example": {
+            "stat1": 42,
+            "stat2": 35
+          }
+        }
+      ],
+      "errors": ["validation-error"]
+    },
+    {
       "id": "health",
       "method": "GET",
       "path": "/comment/health",

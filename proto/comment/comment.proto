@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package commentservice;
+
+option go_package = "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/comment";
+
+import "google/protobuf/timestamp.proto";
+
+
+service CommentStatsService {
+  rpc GetUserCommentStat(CommentCountRequest) returns (CommentStatsResponse);
+}
+
+message CommentCountRequest {
+  uint64 user_id = 1;
+  // Опциональные
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date   = 3;
+  google.protobuf.Timestamp prev_start_date = 4;
+  google.protobuf.Timestamp prev_end_date = 5;
+}
+
+message CommentStatsResponse {
+  uint64 count = 1;
+  uint64 prev_count = 2;
+  string direction = 3;
+}

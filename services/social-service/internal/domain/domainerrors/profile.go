@@ -15,4 +15,7 @@ var (
 	ProgressServiceUnavailable = func(err error) error {
 		return apperror.NewServiceUnavailableError("gamification-service", err)
 	}
+	MarkServiceUnavailable = func(err error) error {
+		return apperror.NewServiceUnavailableError("mark-service", err)
+	}
 )

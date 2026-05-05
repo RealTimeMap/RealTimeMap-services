@@ -110,7 +110,6 @@ func (s *UserMarkService) GetMarksInArea(ctx context.Context, filter repository.
 	if err != nil {
 		return nil, err
 	}
-	s.attachOwners(ctx, marks)
 	return marks, nil
 
 }

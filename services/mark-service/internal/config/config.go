@@ -5,6 +5,7 @@ import (
 
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+	servergrpc "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/grpc"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 )
 
@@ -35,13 +36,14 @@ type Profile struct {
 }
 
 type Config struct {
-	Env      string                `env:"ENV" env-default:"local"`
-	Database Database              `yaml:"database"`
-	Grpc     Grpc                  `yaml:"grpc"`
-	Storage  storage.StorageConfig `yaml:"storage"`
-	Kafka    Kafka                 `yaml:"kafka"`
-	Http     http.Config           `yaml:"http"`
-	Profile  Profile               `yaml:"profile"`
+	Env        string                `env:"ENV" env-default:"local"`
+	Database   Database              `yaml:"database"`
+	Grpc       Grpc                  `yaml:"grpc"`
+	GrpcServer servergrpc.Config     `yaml:"grpcServer"`
+	Storage    storage.StorageConfig `yaml:"storage"`
+	Kafka      Kafka                 `yaml:"kafka"`
+	Http       http.Config           `yaml:"http"`
+	Profile    Profile               `yaml:"profile"`
 }
 
 func MustLoad() *Config {

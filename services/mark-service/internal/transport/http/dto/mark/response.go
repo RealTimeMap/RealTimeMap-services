@@ -46,29 +46,17 @@ func NewOwnerResponse(u *model.UserProfile) OwnerResponse {
 // ResponseMark represents mark response
 // @name MarkResponse
 type ResponseMark struct {
-	ID             int                        `json:"id"`
-	MarKName       string                     `json:"markName"`
-	AdditionalInfo *string                    `json:"additionalInfo,omitempty"`
-	Category       *category.ResponseCategory `json:"category"`
-	Geom           *Coordinates               `json:"geom"`
-	User           OwnerResponse              `json:"owner"`
-	Photos         []string                   `json:"photos"`
-	StartAt        time.Time                  `json:"startAt"`
-	EndAt          time.Time                  `json:"endAt"`
+	ID       int          `json:"id"`
+	MarKName string       `json:"markName"`
+	Geom     *Coordinates `json:"geom"`
+	Photos   []string     `json:"photos"`
 }
 
 func NewResponseMark(data *model.Mark) *ResponseMark {
 	response := &ResponseMark{
-		ID:             data.ID,
-		MarKName:       data.MarkName,
-		AdditionalInfo: data.AdditionalInfo,
-		Geom:           NewFromPoint(data.Geom),
-		User:           NewOwnerResponse(data.Owner),
-		StartAt:        data.StartAt,
-		EndAt:          data.EndAt,
-	}
-	if data.Category.ID != 0 {
-		response.Category = category.NewResponseCategory(&data.Category)
+		ID:       data.ID,
+		MarKName: data.MarkName,
+		Geom:     NewFromPoint(data.Geom),
 	}
 	for _, photo := range data.Photos {
 		response.Photos = append(response.Photos, photo.URL)
@@ -126,12 +114,14 @@ func NewDate(m *model.Mark) Date {
 }
 
 type Meta struct {
-	Status string `json:"status"`
+	Status   string `json:"status"`
+	MarkType string `json:"markType"`
 }
 
 func NewMeta(m *model.Mark) Meta {
 	return Meta{
-		Status: m.Status(),
+		Status:   m.Status(),
+		MarkType: string(m.GetMarkType()),
 	}
 }
 

@@ -33,3 +33,7 @@ type MarkRepository interface {
 
 	GetAll(ctx context.Context, params pagination.Params) ([]*model.Mark, int64, error)
 }
+
+type MarkStatsRepository interface {
+	GetMarkCount(ctx context.Context, userID uint) (int64, error)
+}

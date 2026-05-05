@@ -8,8 +8,10 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/grpc/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
+	grpcstat "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/socket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -23,8 +25,9 @@ type Container struct {
 	MarkRepo     repository.MarkRepository
 
 	// Сервисы для пользовательский кейсов
-	MarkService     *service.UserMarkService
-	CategoryService *service.CategoryService
+	MarkService      *service.UserMarkService
+	MarkStatsService *stats.MarkStatsService
+	CategoryService  *service.CategoryService
 
 	// Сервисы для админских кейсов
 	AdminMarkService *service.AdminMarkService
@@ -33,7 +36,9 @@ type Container struct {
 
 	Socket *socket.SocketServer
 
-	Logger *zap.Logger
+	// grpc
+	MarkStatServer *grpcstat.Handler
+	Logger         *zap.Logger
 }
 
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
@@ -41,7 +46,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	// создание репозиториев
 	categoryRepo := postgres.NewCategoryRepository(db, log)
 	markRepo := postgres.NewMarkRepository(db, log)
-
+	markStatRepo := postgres.NewMarkStatRepository(db, log)
 	// Создание вспомогательных компонентов
 	imageValidator := mediavalidator.NewPhotoValidator()
 	store, err := storage.NewLocalStorage(cfg.Storage.BasePath, cfg.Storage.BaseURL, log)
@@ -73,12 +78,15 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	// Создание сервисов
 	categoryService := service.NewCategoryService(categoryRepo, store)
 	markService := service.NewUserMarkService(markRepo, categoryRepo, store, p, imageValidator, profileAdapter)
-
+	markStatService := stats.NewMarkStatsService(markStatRepo, log)
 	// админские сервисы
 	adminMarkService := service.NewAdminMarkService(markRepo, categoryRepo, store, p, imageValidator)
 
 	// Сокеты
 	socketServer := socket.New(log, markService)
+
+	// grpc
+	markStatGrpc := grpcstat.NewHandler(markStatService, log)
 
 	// добавление
 	return &Container{
@@ -87,12 +95,15 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		CategoryRepo: categoryRepo,
 		MarkRepo:     markRepo,
 
-		MarkService:     markService,
-		CategoryService: categoryService,
+		MarkService:      markService,
+		MarkStatsService: markStatService,
+		CategoryService:  categoryService,
 
 		AdminMarkService: adminMarkService,
 
 		Socket: socketServer,
+
+		MarkStatServer: markStatGrpc,
 
 		Logger: log,
 	}
