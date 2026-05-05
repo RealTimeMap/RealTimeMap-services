@@ -328,6 +328,68 @@
         }
       ],
       "errors": []
+    },
+    {
+      "id": "get-summary-stat",
+      "method": "GET",
+      "path": "/api/v2/profile/{profileID}/summary",
+      "summary": "Сводная статистика профиля",
+      "description": "Возвращает 3 численных значения статистики профиля: общее количество созданных пользователем меток, количество друзей и количество подписчиков. Авторизация не требуется.",
+      "tags": ["Профили", "Статистика"],
+      "parameters": [
+        { "name": "profileID", "type": "integer", "required": true, "description": "ID профиля", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Сводная статистика",
+          "schema": [
+            { "name": "markCount", "type": "integer", "required": true, "description": "Общее количество созданных меток" },
+            { "name": "friendsCount", "type": "integer", "required": true, "description": "Общее количество друзей" },
+            { "name": "subscribersCount", "type": "integer", "required": true, "description": "Общее количество подписчиков" }
+          ],
+          "example": {
+            "markCount": 27,
+            "friendsCount": 14,
+            "subscribersCount": 102
+          }
+        }
+      ],
+      "errors": ["validation-error", "not-found"]
+    },
+    {
+      "id": "statistic",
+      "method": "GET",
+      "path": "/api/v2/statistic/",
+      "summary": "Сводная статистика по периоду",
+      "description": "Технический endpoint, возвращающий разрешённые границы периода (текущий и предыдущий) для сводных дашбордов. Период задаётся через query-параметры из общего набора `pkg/date.Query` (например, `period=week`). На текущий момент возвращает только метаданные периода, без агрегатов — используется фронтендом для синхронизации временных диапазонов.",
+      "tags": ["Статистика"],
+      "parameters": [
+        { "name": "period", "type": "string", "required": false, "description": "Шорткат периода (например, 'day', 'week', 'month', 'year')", "location": "query", "example": "week" },
+        { "name": "start", "type": "string", "required": false, "description": "Начало периода (ISO 8601). Используется вместе с `end`", "location": "query", "example": "2026-04-01T00:00:00Z" },
+        { "name": "end", "type": "string", "required": false, "description": "Конец периода (ISO 8601). Используется вместе с `start`", "location": "query", "example": "2026-04-30T23:59:59Z" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Границы текущего и предыдущего периода",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Статус ответа", "enum": ["ok"] },
+            { "name": "currentStart", "type": "string", "required": true, "description": "Начало текущего периода (ISO 8601)" },
+            { "name": "currentEnd", "type": "string", "required": true, "description": "Конец текущего периода (ISO 8601)" },
+            { "name": "previousStart", "type": "string", "required": true, "description": "Начало предыдущего периода (ISO 8601)" },
+            { "name": "previousEnd", "type": "string", "required": true, "description": "Конец предыдущего периода (ISO 8601)" }
+          ],
+          "example": {
+            "status": "ok",
+            "currentStart": "2026-04-28T00:00:00Z",
+            "currentEnd": "2026-05-05T00:00:00Z",
+            "previousStart": "2026-04-21T00:00:00Z",
+            "previousEnd": "2026-04-28T00:00:00Z"
+          }
+        }
+      ],
+      "errors": ["validation-error"]
     }
   ]
 }
