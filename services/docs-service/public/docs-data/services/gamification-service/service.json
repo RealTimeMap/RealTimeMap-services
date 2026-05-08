@@ -1,0 +1,11 @@
+{
+  "id": "gamification-service",
+  "name": "gamification-service",
+  "description": "Сервис геймификации: уровни, опыт, достижения пользователей.",
+  "fullDescription": "Управляет прогрессом пользователей в системе геймификации. Хранит конфигурацию уровней (требуемый опыт, название), накапливает XP пользователей по событиям из других сервисов через Kafka (создание метки, комментарий и т.д.) и предоставляет API для чтения уровней и прогресса. Использует Redis для кэширования (с in-memory fallback). Прогресс пользователей запрашивается другими сервисами по gRPC.",
+  "protocols": ["http", "kafka"],
+  "availableEnvs": ["dev", "staging", "prod"],
+  "healthPath": "/gamification/health",
+  "team": "Backend",
+  "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/gamification-service"
+}

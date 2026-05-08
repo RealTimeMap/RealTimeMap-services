@@ -1,0 +1,64 @@
+{
+  "endpoints": [
+    {
+      "id": "get-levels",
+      "method": "GET",
+      "path": "/api/v2/level/",
+      "summary": "Получить список уровней",
+      "description": "Возвращает все уровни системы геймификации с информацией о необходимом опыте для достижения каждого уровня. Результат кэшируется (TTL 15 минут).",
+      "tags": ["Уровни"],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список всех уровней",
+          "schema": [
+            { "name": "level", "type": "integer", "required": true, "description": "Номер уровня" },
+            { "name": "title", "type": "string", "required": true, "description": "Название уровня" },
+            { "name": "xpRequired", "type": "integer", "required": true, "description": "Общий накопленный опыт, необходимый для достижения уровня" }
+          ],
+          "example": [
+            { "level": 1, "title": "Новичок", "xpRequired": 0 },
+            { "level": 2, "title": "Исследователь", "xpRequired": 100 },
+            { "level": 3, "title": "Путешественник", "xpRequired": 250 }
+          ]
+        }
+      ],
+      "errors": ["internal-error"]
+    },
+    {
+      "id": "health",
+      "method": "GET",
+      "path": "/gamification/health",
+      "summary": "Health-check",
+      "description": "Проверка доступности сервиса и подключения к базе данных.",
+      "tags": ["Служебные"],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Сервис и БД работают",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["healthy"] },
+            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+          ],
+          "example": {
+            "status": "healthy",
+            "service": "gamification-service"
+          }
+        },
+        {
+          "statusCode": 503,
+          "description": "БД недоступна",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["unhealthy"] },
+            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+          ],
+          "example": {
+            "status": "unhealthy",
+            "service": "gamification-service"
+          }
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

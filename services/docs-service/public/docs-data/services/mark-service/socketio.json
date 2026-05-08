@@ -1,0 +1,252 @@
+{
+  "transport": ["websocket", "polling"],
+  "namespaces": [
+    {
+      "path": "/marks",
+      "description": "Real-time работа с метками: получение меток в видимой области, уведомления об изменениях.",
+      "auth": true
+    }
+  ],
+  "events": [
+    {
+      "id": "marks-message",
+      "name": "message",
+      "direction": "client-to-server",
+      "namespace": "/marks",
+      "auth": true,
+      "summary": "Получение меток или кластеров в видимой области карты",
+      "description": "Дефолтное событие для подписки на метки в указанной области. Если zoomLevel < 12 — сервер возвращает кластеры, иначе — список меток. Используется одно соединение на сессию: клиент эмитит `message` с новой областью при каждом перемещении/зуме карты.",
+      "tags": ["Метки"],
+      "payload": {
+        "description": "Параметры фильтрации области карты и временного диапазона",
+        "schema": [
+          {
+            "name": "screen",
+            "type": "object",
+            "required": true,
+            "description": "Видимая область карты (bounding box)",
+            "children": [
+              {
+                "name": "leftTop",
+                "type": "object",
+                "required": true,
+                "description": "Левый верхний угол области",
+                "children": [
+                  { "name": "lon", "type": "number", "required": true, "description": "Долгота (-180 до 180)" },
+                  { "name": "lat", "type": "number", "required": true, "description": "Широта (-90 до 90)" }
+                ]
+              },
+              {
+                "name": "center",
+                "type": "object",
+                "required": true,
+                "description": "Центр области",
+                "children": [
+                  { "name": "lon", "type": "number", "required": true, "description": "Долгота" },
+                  { "name": "lat", "type": "number", "required": true, "description": "Широта" }
+                ]
+              },
+              {
+                "name": "rightBottom",
+                "type": "object",
+                "required": true,
+                "description": "Правый нижний угол области",
+                "children": [
+                  { "name": "lon", "type": "number", "required": true, "description": "Долгота" },
+                  { "name": "lat", "type": "number", "required": true, "description": "Широта" }
+                ]
+              }
+            ]
+          },
+          { "name": "zoomLevel", "type": "number", "required": false, "description": "Уровень зума карты. По умолчанию 12. При < 12 возвращаются кластеры, при >= 12 — метки" },
+          { "name": "startAt", "type": "string", "required": true, "description": "Начало временного диапазона (ISO 8601 / RFC3339)" },
+          { "name": "endAt", "type": "string", "required": false, "description": "Конец временного диапазона. По умолчанию — текущее время UTC" }
+        ],
+        "example": {
+          "screen": {
+            "leftTop": { "lon": 37.5, "lat": 55.8 },
+            "center": { "lon": 37.6, "lat": 55.75 },
+            "rightBottom": { "lon": 37.7, "lat": 55.7 }
+          },
+          "zoomLevel": 15,
+          "startAt": "2026-04-25T00:00:00Z"
+        }
+      },
+      "ack": {
+        "description": "Сервер отвечает через ack с признаком успеха. В зависимости от zoomLevel в ответе будет либо `marks`, либо `cluster`.",
+        "branches": [
+          {
+            "name": "Успех — метки (zoomLevel >= 12)",
+            "description": "Список меток в видимой области",
+            "schema": [
+              { "name": "success", "type": "boolean", "required": true, "description": "Признак успешного выполнения. true" },
+              {
+                "name": "marks",
+                "type": "MarkResponse[]",
+                "required": true,
+                "description": "Массив меток (краткая форма). Для деталей метки используйте HTTP `GET /api/v2/marks/{markID}`",
+                "children": [
+                  { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
+                  { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+                  {
+                    "name": "geom",
+                    "type": "object",
+                    "required": true,
+                    "description": "Геометрия (GeoJSON Point)",
+                    "children": [
+                      { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
+                      { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                    ]
+                  },
+                  { "name": "photos", "type": "string[]", "required": false, "description": "URL фотографий метки" }
+                ]
+              }
+            ],
+            "example": {
+              "success": true,
+              "marks": [
+                {
+                  "id": 42,
+                  "markName": "Концерт в парке",
+                  "geom": { "type": "Point", "coordinates": [37.6176, 55.7558] },
+                  "photos": ["https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"]
+                }
+              ]
+            }
+          },
+          {
+            "name": "Успех — кластеры (zoomLevel < 12)",
+            "description": "Список кластеров меток",
+            "schema": [
+              { "name": "success", "type": "boolean", "required": true, "description": "Признак успешного выполнения. true" },
+              {
+                "name": "cluster",
+                "type": "ResponseCluster[]",
+                "required": true,
+                "description": "Массив кластеров",
+                "children": [
+                  {
+                    "name": "center",
+                    "type": "object",
+                    "required": true,
+                    "description": "Центр кластера (GeoJSON Point)",
+                    "children": [
+                      { "name": "type", "type": "string", "required": true, "enum": ["Point"] },
+                      { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                    ]
+                  },
+                  { "name": "count", "type": "integer", "required": true, "description": "Количество меток в кластере" }
+                ]
+              }
+            ],
+            "example": {
+              "success": true,
+              "cluster": [
+                { "center": { "type": "Point", "coordinates": [37.6, 55.75] }, "count": 12 },
+                { "center": { "type": "Point", "coordinates": [37.62, 55.74] }, "count": 5 }
+              ]
+            }
+          },
+          {
+            "name": "Ошибка валидации",
+            "description": "Возвращается если payload не прошёл валидацию или сервис не смог выполнить запрос",
+            "schema": [
+              { "name": "success", "type": "boolean", "required": true, "description": "false" },
+              { "name": "error", "type": "string", "required": true, "description": "Текст ошибки валидации/обработки" }
+            ],
+            "example": {
+              "success": false,
+              "error": "Key: 'FilterParams.Screen.LeftTop.Latitude' Error:Field validation for 'Latitude' failed on the 'latitude' tag"
+            }
+          }
+        ]
+      },
+      "codeExample": "import { io } from 'socket.io-client'\n\nconst socket = io('https://your-host/marks', { auth: { token: '<JWT>' } })\n\nsocket.on('connect', () => {\n  socket.timeout(15000).emit(\n    'message',\n    {\n      screen: {\n        leftTop: { lon: 37.5, lat: 55.8 },\n        center: { lon: 37.6, lat: 55.75 },\n        rightBottom: { lon: 37.7, lat: 55.7 }\n      },\n      zoomLevel: 15,\n      startAt: '2026-04-25T00:00:00Z'\n    },\n    (err, response) => {\n      if (err) return console.error('ack timeout', err)\n      if (!response.success) return console.error(response.error)\n      console.log('marks:', response.marks ?? response.cluster)\n    }\n  )\n})"
+    },
+    {
+      "id": "marks-mark-created",
+      "name": "markCreated",
+      "direction": "server-to-client",
+      "namespace": "/marks",
+      "auth": true,
+      "summary": "Уведомление о создании новой метки в области подписки",
+      "description": "Сервер пушит это событие подписанным клиентам, в чьей области (bounding box) появилась новая метка. Текущая реализация в разработке: клиент должен подписаться на событие через `socket.on('markCreated', ...)`.",
+      "tags": ["Real-time"],
+      "payload": {
+        "description": "Краткая информация о новой метке",
+        "schema": [
+          { "name": "id", "type": "integer", "required": true, "description": "ID созданной метки" },
+          { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+          {
+            "name": "geom",
+            "type": "object",
+            "required": true,
+            "description": "Геометрия (GeoJSON Point)",
+            "children": [
+              { "name": "type", "type": "string", "required": true, "enum": ["Point"] },
+              { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+            ]
+          },
+          { "name": "photos", "type": "string[]", "required": false, "description": "URL фотографий" }
+        ],
+        "example": {
+          "id": 101,
+          "markName": "Открытие выставки",
+          "geom": { "type": "Point", "coordinates": [37.6210, 55.7610] },
+          "photos": []
+        }
+      }
+    },
+    {
+      "id": "marks-mark-updated",
+      "name": "markUpdated",
+      "direction": "server-to-client",
+      "namespace": "/marks",
+      "auth": true,
+      "summary": "Уведомление об изменении метки в области подписки",
+      "description": "Сервер пушит это событие, когда метка в видимой области клиента была обновлена (название, описание, фото и т.д.). Реализация в разработке.",
+      "tags": ["Real-time"],
+      "payload": {
+        "description": "Обновлённая краткая информация о метке",
+        "schema": [
+          { "name": "id", "type": "integer", "required": true, "description": "ID обновлённой метки" },
+          { "name": "markName", "type": "string", "required": true, "description": "Новое название метки" },
+          {
+            "name": "geom",
+            "type": "object",
+            "required": true,
+            "description": "Геометрия (GeoJSON Point)",
+            "children": [
+              { "name": "type", "type": "string", "required": true, "enum": ["Point"] },
+              { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+            ]
+          },
+          { "name": "photos", "type": "string[]", "required": false, "description": "Актуальный список URL фотографий" }
+        ],
+        "example": {
+          "id": 42,
+          "markName": "Концерт в парке (обновлено)",
+          "geom": { "type": "Point", "coordinates": [37.6176, 55.7558] },
+          "photos": ["https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"]
+        }
+      }
+    },
+    {
+      "id": "marks-mark-deleted",
+      "name": "markDeleted",
+      "direction": "server-to-client",
+      "namespace": "/marks",
+      "auth": true,
+      "summary": "Уведомление об удалении метки в области подписки",
+      "description": "Сервер пушит это событие, когда метка в видимой области клиента была удалена. Клиент должен убрать её с карты. Реализация в разработке.",
+      "tags": ["Real-time"],
+      "payload": {
+        "description": "Идентификатор удалённой метки",
+        "schema": [
+          { "name": "id", "type": "integer", "required": true, "description": "ID удалённой метки" }
+        ],
+        "example": { "id": 42 }
+      }
+    }
+  ]
+}
