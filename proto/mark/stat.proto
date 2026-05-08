@@ -7,6 +7,22 @@ option go_package = "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/markstat"
 
 service MarkStatsService {
   rpc GetUserMarksCount(MarksCountRequest) returns (MarksCountResponse);
+  rpc GetUserMarksMonthlyActivity(MarksMonthlyActivityRequest) returns (UserMarksActivityResponse);
+}
+
+message MarksMonthlyActivityRequest {
+  uint64 user_id = 1;
+  int64 year = 2;
+}
+
+
+message MarkMonthResponse {
+  string month = 1;
+  int64 count = 2;
+}
+
+message UserMarksActivityResponse {
+  repeated MarkMonthResponse activities = 1;
 }
 
 message MarksCountRequest {

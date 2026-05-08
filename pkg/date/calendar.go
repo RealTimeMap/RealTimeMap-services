@@ -25,3 +25,12 @@ func startOfYear(t time.Time, loc *time.Location) time.Time {
 	t = t.In(loc)
 	return time.Date(t.Year(), 1, 1, 0, 0, 0, 0, loc)
 }
+
+func GetMonthsName() [12]string {
+	var months [12]string
+
+	for i := 1; i <= 12; i++ {
+		months[i-1] = time.Month(i).String()
+	}
+	return months
+}

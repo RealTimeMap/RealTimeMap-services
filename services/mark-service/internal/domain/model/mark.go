@@ -128,3 +128,8 @@ type Cluster struct {
 	Center types.Point
 	Count  int
 }
+
+type MonthlyActivity struct {
+	Month string
+	Count int64
+}

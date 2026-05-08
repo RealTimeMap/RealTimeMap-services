@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
@@ -23,6 +25,7 @@ type ProgressGetter interface {
 
 type MarkStatGetter interface {
 	GetUserMarksCount(ctx context.Context, userID uint) (int64, error)
+	GetUserMarksMonthlyActivity(ctx context.Context, userID uint, year int) ([]*mark.MonthlyActivity, error)
 }
 
 const avatarMaxSize = 5 * 1024 * 1024 // 5MB
@@ -246,4 +249,14 @@ func (s *Service) GetProfileSummaryStat(ctx context.Context, userID uint) (int64
 	}
 	return marksCount, rand.Int63(), rand.Int63(), nil
 
+}
+
+func (s *Service) GetUserMonthlyActivity(ctx context.Context, userID uint) ([]*mark.MonthlyActivity, error) {
+	year := time.Now().Year()
+	activities, err := s.markStat.GetUserMarksMonthlyActivity(ctx, userID, year)
+	if err != nil {
+		s.logger.Warn("failed to get marks monthly activity")
+		return nil, err
+	}
+	return activities, nil
 }

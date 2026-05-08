@@ -91,25 +91,48 @@ export interface HttpDocs {
   endpoints: HttpEndpoint[]
 }
 
+export interface SocketIOAckBranch {
+  name: string
+  description?: string
+  schema: SchemaField[]
+  example?: unknown
+}
+
 export interface SocketIOEvent {
   id: string
   name: string
   direction: SocketIODirection
   namespace?: string
+  room?: string
+  auth?: boolean
   summary: string
   description?: string
+  tags?: string[]
   payload?: {
+    description?: string
     schema: SchemaField[]
     example?: unknown
   }
   ack?: {
-    schema: SchemaField[]
+    description?: string
+    schema?: SchemaField[]
     example?: unknown
+    branches?: SocketIOAckBranch[]
   }
+  errors?: string[]
   codeExample?: string
 }
 
+export interface SocketIONamespaceInfo {
+  path: string
+  description?: string
+  auth?: boolean
+}
+
 export interface SocketIODocs {
+  baseUrl?: string
+  transport?: ('websocket' | 'polling')[]
+  namespaces?: SocketIONamespaceInfo[]
   events: SocketIOEvent[]
 }
 

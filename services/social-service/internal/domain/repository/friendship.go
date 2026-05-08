@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
 )
 
 type FriendShipRepository interface {
@@ -15,4 +17,6 @@ type FriendShipRepository interface {
 	Remove(ctx context.Context, userID, friendID uint) error
 	// GetFriends получить всех друзей (только id)
 	GetFriends(ctx context.Context, userID uint) ([]uint, error)
+	// CountFriends число друзей
+	CountFriends(ctx context.Context, userID uint, status model.FriendshipStatus) (int64, error)
 }
