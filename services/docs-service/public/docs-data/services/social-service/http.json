@@ -390,6 +390,51 @@
         }
       ],
       "errors": ["validation-error"]
+    },
+    {
+      "id": "get-monthly-stat",
+      "method": "GET",
+      "path": "/api/v2/profile/{profileID}/stat/monthly",
+      "summary": "Статистика активности меток по месяцам",
+      "description": "Возвращает 12 объектов — по одному на каждый месяц текущего года. Для каждого месяца возвращается полное название, короткое название (первые 3 символа) и количество созданных пользователем меток. Год берётся серверным временем (текущий календарный год), параметром не задаётся. Данные подтягиваются из mark-service по gRPC. Авторизация не требуется.",
+      "tags": ["Профили", "Статистика"],
+      "parameters": [
+        { "name": "profileID", "type": "integer", "required": true, "description": "ID профиля", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Массив помесячной активности (12 элементов, январь → декабрь)",
+          "schema": [
+            {
+              "name": "[]",
+              "type": "array",
+              "required": true,
+              "description": "Список объектов помесячной активности",
+              "children": [
+                { "name": "month", "type": "string", "required": true, "description": "Полное название месяца (например, 'January')" },
+                { "name": "shortMonth", "type": "string", "required": true, "description": "Короткое название месяца (первые 3 символа, например, 'Jan')" },
+                { "name": "count", "type": "integer", "required": true, "description": "Количество меток, созданных пользователем в этом месяце" }
+              ]
+            }
+          ],
+          "example": [
+            { "month": "January", "shortMonth": "Jan", "count": 3 },
+            { "month": "February", "shortMonth": "Feb", "count": 0 },
+            { "month": "March", "shortMonth": "Mar", "count": 7 },
+            { "month": "April", "shortMonth": "Apr", "count": 12 },
+            { "month": "May", "shortMonth": "May", "count": 5 },
+            { "month": "June", "shortMonth": "Jun", "count": 0 },
+            { "month": "July", "shortMonth": "Jul", "count": 0 },
+            { "month": "August", "shortMonth": "Aug", "count": 0 },
+            { "month": "September", "shortMonth": "Sep", "count": 0 },
+            { "month": "October", "shortMonth": "Oct", "count": 0 },
+            { "month": "November", "shortMonth": "Nov", "count": 0 },
+            { "month": "December", "shortMonth": "Dec", "count": 0 }
+          ]
+        }
+      ],
+      "errors": ["validation-error", "not-found"]
     }
   ]
 }

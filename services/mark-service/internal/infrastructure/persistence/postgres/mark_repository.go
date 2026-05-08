@@ -156,7 +156,7 @@ func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repositor
         GROUP BY cluster_id
     `
 
-	eps := clusterPixelThreshold * 360.0 / (256.0 * math.Pow(2, float64(filter.ZoomLevel)))
+	eps := clusterPixelThreshold * 360.0 / (256.0 * math.Pow(2, filter.ZoomLevel))
 
 	err := r.db.WithContext(ctx).Raw(query, eps, 1, bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat, filter.EndAt, filter.StartAt).Scan(&results).Error
 	if err != nil {

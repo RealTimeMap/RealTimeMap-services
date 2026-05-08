@@ -50,6 +50,17 @@ func (c *Client) GetUserMarksCount(ctx context.Context, userID uint) (int64, err
 	return res.GetCount(), nil
 }
 
+func (c *Client) GetUserMarksMonthlyActivity(ctx context.Context, userID uint, year int) ([]*MonthlyActivity, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	res, err := c.api.GetUserMarksMonthlyActivity(ctx, &markstat.MarksMonthlyActivityRequest{UserId: uint64(userID), Year: int64(year)})
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+	return toMonthlyActivityResponse(res), nil
+}
+
 func wrapErr(err error) error {
 	if isUnavailable(err) {
 		return fmt.Errorf("%w: %v", ErrServiceUnavailable, err)
@@ -68,4 +79,16 @@ func isUnavailable(err error) bool {
 	default:
 		return false
 	}
+}
+
+func toMonthlyActivityResponse(data *markstat.UserMarksActivityResponse) []*MonthlyActivity {
+	res := make([]*MonthlyActivity, 0, len(data.GetActivities()))
+	for _, a := range data.GetActivities() {
+		res = append(res, &MonthlyActivity{
+			Month: a.GetMonth(),
+			Count: a.GetCount(),
+		})
+	}
+	return res
+
 }

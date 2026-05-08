@@ -11,6 +11,7 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 	api := g.Group("/api/v2")
 
 	handler.NewCommentRoute(api, container.CommentService, container.Logger)
+	handler.RegisterStatHandler(api, container.StatService, container.Logger)
 
 	health := http.HealthHandler("comment-service", container.DB)
 	g.GET("/comment/health", health)

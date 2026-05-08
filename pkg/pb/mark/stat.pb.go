@@ -21,6 +21,154 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type MarksMonthlyActivityRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Year          int64                  `protobuf:"varint,2,opt,name=year,proto3" json:"year,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MarksMonthlyActivityRequest) Reset() {
+	*x = MarksMonthlyActivityRequest{}
+	mi := &file_mark_stat_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MarksMonthlyActivityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MarksMonthlyActivityRequest) ProtoMessage() {}
+
+func (x *MarksMonthlyActivityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mark_stat_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MarksMonthlyActivityRequest.ProtoReflect.Descriptor instead.
+func (*MarksMonthlyActivityRequest) Descriptor() ([]byte, []int) {
+	return file_mark_stat_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *MarksMonthlyActivityRequest) GetUserId() uint64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *MarksMonthlyActivityRequest) GetYear() int64 {
+	if x != nil {
+		return x.Year
+	}
+	return 0
+}
+
+type MarkMonthResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Month         string                 `protobuf:"bytes,1,opt,name=month,proto3" json:"month,omitempty"`
+	Count         int64                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MarkMonthResponse) Reset() {
+	*x = MarkMonthResponse{}
+	mi := &file_mark_stat_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MarkMonthResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MarkMonthResponse) ProtoMessage() {}
+
+func (x *MarkMonthResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mark_stat_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MarkMonthResponse.ProtoReflect.Descriptor instead.
+func (*MarkMonthResponse) Descriptor() ([]byte, []int) {
+	return file_mark_stat_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *MarkMonthResponse) GetMonth() string {
+	if x != nil {
+		return x.Month
+	}
+	return ""
+}
+
+func (x *MarkMonthResponse) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+type UserMarksActivityResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Activities    []*MarkMonthResponse   `protobuf:"bytes,1,rep,name=activities,proto3" json:"activities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserMarksActivityResponse) Reset() {
+	*x = UserMarksActivityResponse{}
+	mi := &file_mark_stat_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserMarksActivityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserMarksActivityResponse) ProtoMessage() {}
+
+func (x *UserMarksActivityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mark_stat_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserMarksActivityResponse.ProtoReflect.Descriptor instead.
+func (*UserMarksActivityResponse) Descriptor() ([]byte, []int) {
+	return file_mark_stat_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *UserMarksActivityResponse) GetActivities() []*MarkMonthResponse {
+	if x != nil {
+		return x.Activities
+	}
+	return nil
+}
+
 type MarksCountRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -30,7 +178,7 @@ type MarksCountRequest struct {
 
 func (x *MarksCountRequest) Reset() {
 	*x = MarksCountRequest{}
-	mi := &file_mark_stat_proto_msgTypes[0]
+	mi := &file_mark_stat_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +190,7 @@ func (x *MarksCountRequest) String() string {
 func (*MarksCountRequest) ProtoMessage() {}
 
 func (x *MarksCountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mark_stat_proto_msgTypes[0]
+	mi := &file_mark_stat_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,7 +203,7 @@ func (x *MarksCountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarksCountRequest.ProtoReflect.Descriptor instead.
 func (*MarksCountRequest) Descriptor() ([]byte, []int) {
-	return file_mark_stat_proto_rawDescGZIP(), []int{0}
+	return file_mark_stat_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *MarksCountRequest) GetUserId() uint64 {
@@ -74,7 +222,7 @@ type MarksCountResponse struct {
 
 func (x *MarksCountResponse) Reset() {
 	*x = MarksCountResponse{}
-	mi := &file_mark_stat_proto_msgTypes[1]
+	mi := &file_mark_stat_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -86,7 +234,7 @@ func (x *MarksCountResponse) String() string {
 func (*MarksCountResponse) ProtoMessage() {}
 
 func (x *MarksCountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mark_stat_proto_msgTypes[1]
+	mi := &file_mark_stat_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -99,7 +247,7 @@ func (x *MarksCountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarksCountResponse.ProtoReflect.Descriptor instead.
 func (*MarksCountResponse) Descriptor() ([]byte, []int) {
-	return file_mark_stat_proto_rawDescGZIP(), []int{1}
+	return file_mark_stat_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *MarksCountResponse) GetCount() int64 {
@@ -113,13 +261,24 @@ var File_mark_stat_proto protoreflect.FileDescriptor
 
 const file_mark_stat_proto_rawDesc = "" +
 	"\n" +
-	"\x0fmark/stat.proto\x12\bmarkstat\",\n" +
+	"\x0fmark/stat.proto\x12\bmarkstat\"J\n" +
+	"\x1bMarksMonthlyActivityRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x04R\x06userId\x12\x12\n" +
+	"\x04year\x18\x02 \x01(\x03R\x04year\"?\n" +
+	"\x11MarkMonthResponse\x12\x14\n" +
+	"\x05month\x18\x01 \x01(\tR\x05month\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\"X\n" +
+	"\x19UserMarksActivityResponse\x12;\n" +
+	"\n" +
+	"activities\x18\x01 \x03(\v2\x1b.markstat.MarkMonthResponseR\n" +
+	"activities\",\n" +
 	"\x11MarksCountRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x04R\x06userId\"*\n" +
 	"\x12MarksCountResponse\x12\x14\n" +
-	"\x05count\x18\x01 \x01(\x03R\x05count2b\n" +
+	"\x05count\x18\x01 \x01(\x03R\x05count2\xcd\x01\n" +
 	"\x10MarkStatsService\x12N\n" +
-	"\x11GetUserMarksCount\x12\x1b.markstat.MarksCountRequest\x1a\x1c.markstat.MarksCountResponseB<Z:github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/markstatb\x06proto3"
+	"\x11GetUserMarksCount\x12\x1b.markstat.MarksCountRequest\x1a\x1c.markstat.MarksCountResponse\x12i\n" +
+	"\x1bGetUserMarksMonthlyActivity\x12%.markstat.MarksMonthlyActivityRequest\x1a#.markstat.UserMarksActivityResponseB<Z:github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/markstatb\x06proto3"
 
 var (
 	file_mark_stat_proto_rawDescOnce sync.Once
@@ -133,19 +292,25 @@ func file_mark_stat_proto_rawDescGZIP() []byte {
 	return file_mark_stat_proto_rawDescData
 }
 
-var file_mark_stat_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_mark_stat_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_mark_stat_proto_goTypes = []any{
-	(*MarksCountRequest)(nil),  // 0: markstat.MarksCountRequest
-	(*MarksCountResponse)(nil), // 1: markstat.MarksCountResponse
+	(*MarksMonthlyActivityRequest)(nil), // 0: markstat.MarksMonthlyActivityRequest
+	(*MarkMonthResponse)(nil),           // 1: markstat.MarkMonthResponse
+	(*UserMarksActivityResponse)(nil),   // 2: markstat.UserMarksActivityResponse
+	(*MarksCountRequest)(nil),           // 3: markstat.MarksCountRequest
+	(*MarksCountResponse)(nil),          // 4: markstat.MarksCountResponse
 }
 var file_mark_stat_proto_depIdxs = []int32{
-	0, // 0: markstat.MarkStatsService.GetUserMarksCount:input_type -> markstat.MarksCountRequest
-	1, // 1: markstat.MarkStatsService.GetUserMarksCount:output_type -> markstat.MarksCountResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: markstat.UserMarksActivityResponse.activities:type_name -> markstat.MarkMonthResponse
+	3, // 1: markstat.MarkStatsService.GetUserMarksCount:input_type -> markstat.MarksCountRequest
+	0, // 2: markstat.MarkStatsService.GetUserMarksMonthlyActivity:input_type -> markstat.MarksMonthlyActivityRequest
+	4, // 3: markstat.MarkStatsService.GetUserMarksCount:output_type -> markstat.MarksCountResponse
+	2, // 4: markstat.MarkStatsService.GetUserMarksMonthlyActivity:output_type -> markstat.UserMarksActivityResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_mark_stat_proto_init() }
@@ -159,7 +324,7 @@ func file_mark_stat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mark_stat_proto_rawDesc), len(file_mark_stat_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

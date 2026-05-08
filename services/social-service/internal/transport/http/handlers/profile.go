@@ -41,6 +41,7 @@ func RegisterProfileHandler(g *gin.RouterGroup, deps ProfileDeps) {
 		profileGroup.GET("/search", handler.SearchProfile)
 		profileGroup.GET("/:profileID", handler.GetDetailProfile)
 		profileGroup.GET("/:profileID/summary", handler.GetProfileSummaryStat)
+		profileGroup.GET("/:profileID/stat/monthly", handler.GetProfileMonthlyActivity)
 	}
 }
 
@@ -163,4 +164,19 @@ func (h *ProfileHandler) GetProfileSummaryStat(c *gin.Context) {
 	}
 	res := dto.NewSummaryProfileStat(marks, friends, subs)
 	c.JSON(http.StatusOK, res)
+}
+
+func (h *ProfileHandler) GetProfileMonthlyActivity(c *gin.Context) {
+	pID, err := strconv.Atoi(c.Param("profileID"))
+	if err != nil {
+		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	res, err := h.service.GetUserMonthlyActivity(c.Request.Context(), uint(pID))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewMultipleMonthlyActivity(res))
 }

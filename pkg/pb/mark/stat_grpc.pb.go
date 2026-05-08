@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MarkStatsService_GetUserMarksCount_FullMethodName = "/markstat.MarkStatsService/GetUserMarksCount"
+	MarkStatsService_GetUserMarksCount_FullMethodName           = "/markstat.MarkStatsService/GetUserMarksCount"
+	MarkStatsService_GetUserMarksMonthlyActivity_FullMethodName = "/markstat.MarkStatsService/GetUserMarksMonthlyActivity"
 )
 
 // MarkStatsServiceClient is the client API for MarkStatsService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MarkStatsServiceClient interface {
 	GetUserMarksCount(ctx context.Context, in *MarksCountRequest, opts ...grpc.CallOption) (*MarksCountResponse, error)
+	GetUserMarksMonthlyActivity(ctx context.Context, in *MarksMonthlyActivityRequest, opts ...grpc.CallOption) (*UserMarksActivityResponse, error)
 }
 
 type markStatsServiceClient struct {
@@ -47,11 +49,22 @@ func (c *markStatsServiceClient) GetUserMarksCount(ctx context.Context, in *Mark
 	return out, nil
 }
 
+func (c *markStatsServiceClient) GetUserMarksMonthlyActivity(ctx context.Context, in *MarksMonthlyActivityRequest, opts ...grpc.CallOption) (*UserMarksActivityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserMarksActivityResponse)
+	err := c.cc.Invoke(ctx, MarkStatsService_GetUserMarksMonthlyActivity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MarkStatsServiceServer is the server API for MarkStatsService service.
 // All implementations must embed UnimplementedMarkStatsServiceServer
 // for forward compatibility.
 type MarkStatsServiceServer interface {
 	GetUserMarksCount(context.Context, *MarksCountRequest) (*MarksCountResponse, error)
+	GetUserMarksMonthlyActivity(context.Context, *MarksMonthlyActivityRequest) (*UserMarksActivityResponse, error)
 	mustEmbedUnimplementedMarkStatsServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedMarkStatsServiceServer struct{}
 
 func (UnimplementedMarkStatsServiceServer) GetUserMarksCount(context.Context, *MarksCountRequest) (*MarksCountResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserMarksCount not implemented")
+}
+func (UnimplementedMarkStatsServiceServer) GetUserMarksMonthlyActivity(context.Context, *MarksMonthlyActivityRequest) (*UserMarksActivityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserMarksMonthlyActivity not implemented")
 }
 func (UnimplementedMarkStatsServiceServer) mustEmbedUnimplementedMarkStatsServiceServer() {}
 func (UnimplementedMarkStatsServiceServer) testEmbeddedByValue()                          {}
@@ -104,6 +120,24 @@ func _MarkStatsService_GetUserMarksCount_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MarkStatsService_GetUserMarksMonthlyActivity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MarksMonthlyActivityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MarkStatsServiceServer).GetUserMarksMonthlyActivity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MarkStatsService_GetUserMarksMonthlyActivity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MarkStatsServiceServer).GetUserMarksMonthlyActivity(ctx, req.(*MarksMonthlyActivityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MarkStatsService_ServiceDesc is the grpc.ServiceDesc for MarkStatsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var MarkStatsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserMarksCount",
 			Handler:    _MarkStatsService_GetUserMarksCount_Handler,
+		},
+		{
+			MethodName: "GetUserMarksMonthlyActivity",
+			Handler:    _MarkStatsService_GetUserMarksMonthlyActivity_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

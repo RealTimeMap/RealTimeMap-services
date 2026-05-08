@@ -36,4 +36,5 @@ type MarkRepository interface {
 
 type MarkStatsRepository interface {
 	GetMarkCount(ctx context.Context, userID uint) (int64, error)
+	GetCountForMonths(ctx context.Context, userID uint, year int) ([]model.MonthlyActivity, error)
 }

@@ -4,6 +4,7 @@ import type { Protocol, HttpDocs, SocketIODocs, KafkaDocs, GrpcDocs } from '@/ty
 import { fetchProtocolDocs } from '@/api/docs'
 import { PROTOCOL_LABELS } from '@/constants'
 import HttpDocsView from '@/components/endpoints/HttpDocsView.vue'
+import SocketIODocsView from '@/components/endpoints/SocketIODocsView.vue'
 
 const props = defineProps<{ serviceId: string; protocol: string }>()
 
@@ -46,6 +47,8 @@ onMounted(async () => {
 
     <template v-else-if="docs">
       <HttpDocsView v-if="protocolKey === 'http'" :docs="(docs as HttpDocs)" :service-id="serviceId" />
+
+      <SocketIODocsView v-else-if="protocolKey === 'socketio'" :docs="(docs as SocketIODocs)" :service-id="serviceId" />
 
       <div v-else class="fallback">
         <pre class="fallback-pre">{{ JSON.stringify(docs, null, 2) }}</pre>

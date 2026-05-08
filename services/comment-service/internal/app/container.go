@@ -6,6 +6,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/service"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/service/comment"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/service/stats"
 	profilegrpc "github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/infrastructure/grpc/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/infrastructure/kafka"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/infrastructure/persistence/postgres"
@@ -20,8 +21,9 @@ type Container struct {
 
 	profileClient *pkgprofile.Client
 
-	Logger *zap.Logger
-	DB     *gorm.DB
+	StatService *stats.CommentStatsService
+	Logger      *zap.Logger
+	DB          *gorm.DB
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Container {
@@ -62,12 +64,15 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	// Сервисы
 	commentService := comment.NewCommentService(commentRepo, reactionRepo, publisher, txManager, profileAdapter, logger)
+	statRepo := postgres.NewPgStatisticRepositoryRepository(db, logger)
+	statService := stats.NewCommentStatsService(statRepo, logger)
 
 	return &Container{
 		CommentService: commentService,
 		EventPublisher: publisher,
 		ProfileAdapter: profileAdapter,
 		profileClient:  profileClient,
+		StatService:    statService,
 		DB:             db,
 		Logger:         logger,
 	}

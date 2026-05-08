@@ -26,6 +26,14 @@ func (a *Adapter) GetUserMarksCount(ctx context.Context, userID uint) (int64, er
 	return count, nil
 }
 
+func (a *Adapter) GetUserMarksMonthlyActivity(ctx context.Context, userID uint, year int) ([]*pkgmark.MonthlyActivity, error) {
+	result, err := a.client.GetUserMarksMonthlyActivity(ctx, userID, year)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return result, nil
+}
+
 func mapError(err error) error {
 	if errors.Is(err, pkgmark.ErrServiceUnavailable) {
 		return domainerrors.ProgressServiceUnavailable(err)
