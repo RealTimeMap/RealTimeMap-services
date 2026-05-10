@@ -36,6 +36,7 @@ func RegisterStatHandler(g *gin.RouterGroup, deps StatDeps) {
 		statGroup.GET("/statistics/summary", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.GetProfileSummaryStat)
 		statGroup.GET("/statistics/monthly", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.GetProfileMonthlyActivity)
 		statGroup.GET("/statistics/heatmap", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.GetHeatMap)
+		statGroup.GET("/statistics/categories", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.GetPopularUserCategories)
 	}
 }
 
@@ -114,4 +115,20 @@ func (h *StatHandler) GetHeatMap(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, dto.NewHeatmapResponse(activities, req.Start, req.End))
 
+}
+
+func (h *StatHandler) GetPopularUserCategories(c *gin.Context) {
+	pID, err := strconv.Atoi(c.Param("profileID"))
+	if err != nil {
+		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	result, err := h.service.GetPopularCategories(c.Request.Context(), uint(pID))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	response := dto.NewMultiplePopularCategoryResponse(result)
+	c.JSON(http.StatusOK, response)
 }

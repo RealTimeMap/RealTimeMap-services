@@ -22,6 +22,7 @@ const (
 	MarkStatsService_GetUserMarksCount_FullMethodName           = "/markstat.MarkStatsService/GetUserMarksCount"
 	MarkStatsService_GetUserMarksMonthlyActivity_FullMethodName = "/markstat.MarkStatsService/GetUserMarksMonthlyActivity"
 	MarkStatsService_GetUserMarksHeatMap_FullMethodName         = "/markstat.MarkStatsService/GetUserMarksHeatMap"
+	MarkStatsService_GetPopularUserCategories_FullMethodName    = "/markstat.MarkStatsService/GetPopularUserCategories"
 )
 
 // MarkStatsServiceClient is the client API for MarkStatsService service.
@@ -31,6 +32,7 @@ type MarkStatsServiceClient interface {
 	GetUserMarksCount(ctx context.Context, in *MarksCountRequest, opts ...grpc.CallOption) (*MarksCountResponse, error)
 	GetUserMarksMonthlyActivity(ctx context.Context, in *MarksMonthlyActivityRequest, opts ...grpc.CallOption) (*UserMarksActivityResponse, error)
 	GetUserMarksHeatMap(ctx context.Context, in *MarksHeatMapRequest, opts ...grpc.CallOption) (*MarksHeatMapResponse, error)
+	GetPopularUserCategories(ctx context.Context, in *PopularCategoriesRequest, opts ...grpc.CallOption) (*PopularCategoriesResponse, error)
 }
 
 type markStatsServiceClient struct {
@@ -71,6 +73,16 @@ func (c *markStatsServiceClient) GetUserMarksHeatMap(ctx context.Context, in *Ma
 	return out, nil
 }
 
+func (c *markStatsServiceClient) GetPopularUserCategories(ctx context.Context, in *PopularCategoriesRequest, opts ...grpc.CallOption) (*PopularCategoriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PopularCategoriesResponse)
+	err := c.cc.Invoke(ctx, MarkStatsService_GetPopularUserCategories_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MarkStatsServiceServer is the server API for MarkStatsService service.
 // All implementations must embed UnimplementedMarkStatsServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type MarkStatsServiceServer interface {
 	GetUserMarksCount(context.Context, *MarksCountRequest) (*MarksCountResponse, error)
 	GetUserMarksMonthlyActivity(context.Context, *MarksMonthlyActivityRequest) (*UserMarksActivityResponse, error)
 	GetUserMarksHeatMap(context.Context, *MarksHeatMapRequest) (*MarksHeatMapResponse, error)
+	GetPopularUserCategories(context.Context, *PopularCategoriesRequest) (*PopularCategoriesResponse, error)
 	mustEmbedUnimplementedMarkStatsServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedMarkStatsServiceServer) GetUserMarksMonthlyActivity(context.C
 }
 func (UnimplementedMarkStatsServiceServer) GetUserMarksHeatMap(context.Context, *MarksHeatMapRequest) (*MarksHeatMapResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserMarksHeatMap not implemented")
+}
+func (UnimplementedMarkStatsServiceServer) GetPopularUserCategories(context.Context, *PopularCategoriesRequest) (*PopularCategoriesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPopularUserCategories not implemented")
 }
 func (UnimplementedMarkStatsServiceServer) mustEmbedUnimplementedMarkStatsServiceServer() {}
 func (UnimplementedMarkStatsServiceServer) testEmbeddedByValue()                          {}
@@ -172,6 +188,24 @@ func _MarkStatsService_GetUserMarksHeatMap_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MarkStatsService_GetPopularUserCategories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PopularCategoriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MarkStatsServiceServer).GetPopularUserCategories(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MarkStatsService_GetPopularUserCategories_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MarkStatsServiceServer).GetPopularUserCategories(ctx, req.(*PopularCategoriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MarkStatsService_ServiceDesc is the grpc.ServiceDesc for MarkStatsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var MarkStatsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserMarksHeatMap",
 			Handler:    _MarkStatsService_GetUserMarksHeatMap_Handler,
+		},
+		{
+			MethodName: "GetPopularUserCategories",
+			Handler:    _MarkStatsService_GetPopularUserCategories_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

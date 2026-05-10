@@ -53,6 +53,15 @@ func (h *Handler) GetUserMarksHeatMap(ctx context.Context, req *markstat.MarksHe
 	return toDayActivity(activities), nil
 }
 
+func (h *Handler) GetPopularUserCategories(ctx context.Context, req *markstat.PopularCategoriesRequest) (*markstat.PopularCategoriesResponse, error) {
+	categories, err := h.service.GetPopularUserCategories(ctx, uint(req.GetUserId()), int(req.GetTopN()))
+	if err != nil {
+		h.logger.Error("GetPopularUserCategories error", zap.Error(err))
+		return nil, status.Error(codes.Internal, "internal err")
+	}
+	return toPopularCategoriesResponse(categories), nil
+}
+
 func toDayActivity(data []model.DayActivity) *markstat.MarksHeatMapResponse {
 	result := make([]*markstat.MarkHeatMapResponse, 0, len(data))
 	for _, d := range data {
@@ -76,6 +85,20 @@ func toActivityResponse(data []model.MonthlyActivity) *markstat.UserMarksActivit
 	}
 	return &markstat.UserMarksActivityResponse{
 		Activities: results,
+	}
+}
+
+func toPopularCategoriesResponse(data []model.CategoryStat) *markstat.PopularCategoriesResponse {
+	results := make([]*markstat.PopularCategoriesItem, 0, len(data))
+	for _, item := range data {
+		results = append(results, &markstat.PopularCategoriesItem{
+			CategoryName: item.CategoryName,
+			Percent:      item.Percent,
+			Count:        item.Count,
+		})
+	}
+	return &markstat.PopularCategoriesResponse{
+		Categories: results,
 	}
 }
 

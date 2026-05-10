@@ -41,5 +41,6 @@ type MarkStatsRepository interface {
 	GetCountForMonths(ctx context.Context, userID uint, year int) ([]model.MonthlyActivity, error)
 	// GetCountPerPeriod метод получения счетчика по дням в течении определенного периода
 	GetCountPerPeriod(ctx context.Context, userID uint, start, end time.Time) ([]model.DayActivity, error)
+	// GetPopularCategories Получение популярных категорий пользователя на основе меток
 	GetPopularCategories(ctx context.Context, userID uint) ([]model.CategoryStat, error)
 }

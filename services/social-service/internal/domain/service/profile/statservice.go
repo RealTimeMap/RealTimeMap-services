@@ -10,10 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+const topN int = 3
+
 type MarkStatGetter interface {
 	GetUserMarksCount(ctx context.Context, userID uint) (int64, error)
 	GetUserMarksMonthlyActivity(ctx context.Context, userID uint, year int) ([]*mark.MonthlyActivity, error)
 	GetUserMarksHeatMap(ctx context.Context, userID uint, start, end time.Time) ([]*mark.HeatMapItem, error)
+	GetPopularUserCategories(ctx context.Context, userID uint, topN int) ([]*mark.PopularCategory, error)
 }
 
 type StatService struct {
@@ -67,6 +70,17 @@ func (s *StatService) GetUserMarksHeatMap(ctx context.Context, userID uint, star
 		return nil, err
 	}
 	return marks, nil
+}
+
+func (s *StatService) GetPopularCategories(ctx context.Context, userID uint) ([]*mark.PopularCategory, error) {
+	s.logger.Info("StatService.GetPopularCategories", zap.Uint("user_id", userID))
+
+	categories, err := s.markStat.GetPopularUserCategories(ctx, userID, topN)
+	if err != nil {
+		s.logger.Warn("failed to get marks categories")
+		return nil, err
+	}
+	return categories, nil
 }
 
 func validateDateRange(start, end time.Time) error {

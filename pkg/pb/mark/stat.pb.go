@@ -414,6 +414,162 @@ func (x *MarksHeatMapResponse) GetActivity() []*MarkHeatMapResponse {
 	return nil
 }
 
+type PopularCategoriesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TopN          int64                  `protobuf:"varint,2,opt,name=top_n,json=topN,proto3" json:"top_n,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PopularCategoriesRequest) Reset() {
+	*x = PopularCategoriesRequest{}
+	mi := &file_mark_stat_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PopularCategoriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PopularCategoriesRequest) ProtoMessage() {}
+
+func (x *PopularCategoriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mark_stat_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PopularCategoriesRequest.ProtoReflect.Descriptor instead.
+func (*PopularCategoriesRequest) Descriptor() ([]byte, []int) {
+	return file_mark_stat_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PopularCategoriesRequest) GetUserId() uint64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *PopularCategoriesRequest) GetTopN() int64 {
+	if x != nil {
+		return x.TopN
+	}
+	return 0
+}
+
+type PopularCategoriesItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CategoryName  string                 `protobuf:"bytes,1,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
+	Count         int64                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Percent       float64                `protobuf:"fixed64,3,opt,name=percent,proto3" json:"percent,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PopularCategoriesItem) Reset() {
+	*x = PopularCategoriesItem{}
+	mi := &file_mark_stat_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PopularCategoriesItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PopularCategoriesItem) ProtoMessage() {}
+
+func (x *PopularCategoriesItem) ProtoReflect() protoreflect.Message {
+	mi := &file_mark_stat_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PopularCategoriesItem.ProtoReflect.Descriptor instead.
+func (*PopularCategoriesItem) Descriptor() ([]byte, []int) {
+	return file_mark_stat_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *PopularCategoriesItem) GetCategoryName() string {
+	if x != nil {
+		return x.CategoryName
+	}
+	return ""
+}
+
+func (x *PopularCategoriesItem) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *PopularCategoriesItem) GetPercent() float64 {
+	if x != nil {
+		return x.Percent
+	}
+	return 0
+}
+
+type PopularCategoriesResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Categories    []*PopularCategoriesItem `protobuf:"bytes,1,rep,name=categories,proto3" json:"categories,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PopularCategoriesResponse) Reset() {
+	*x = PopularCategoriesResponse{}
+	mi := &file_mark_stat_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PopularCategoriesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PopularCategoriesResponse) ProtoMessage() {}
+
+func (x *PopularCategoriesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mark_stat_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PopularCategoriesResponse.ProtoReflect.Descriptor instead.
+func (*PopularCategoriesResponse) Descriptor() ([]byte, []int) {
+	return file_mark_stat_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *PopularCategoriesResponse) GetCategories() []*PopularCategoriesItem {
+	if x != nil {
+		return x.Categories
+	}
+	return nil
+}
+
 var File_mark_stat_proto protoreflect.FileDescriptor
 
 const file_mark_stat_proto_rawDesc = "" +
@@ -442,11 +598,23 @@ const file_mark_stat_proto_rawDesc = "" +
 	"\x03day\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x03day\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x03R\x05count\"Q\n" +
 	"\x14MarksHeatMapResponse\x129\n" +
-	"\bactivity\x18\x01 \x03(\v2\x1d.markstat.MarkHeatMapResponseR\bactivity2\xa3\x02\n" +
+	"\bactivity\x18\x01 \x03(\v2\x1d.markstat.MarkHeatMapResponseR\bactivity\"H\n" +
+	"\x18PopularCategoriesRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x04R\x06userId\x12\x13\n" +
+	"\x05top_n\x18\x02 \x01(\x03R\x04topN\"l\n" +
+	"\x15PopularCategoriesItem\x12#\n" +
+	"\rcategory_name\x18\x01 \x01(\tR\fcategoryName\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\x12\x18\n" +
+	"\apercent\x18\x03 \x01(\x01R\apercent\"\\\n" +
+	"\x19PopularCategoriesResponse\x12?\n" +
+	"\n" +
+	"categories\x18\x01 \x03(\v2\x1f.markstat.PopularCategoriesItemR\n" +
+	"categories2\x88\x03\n" +
 	"\x10MarkStatsService\x12N\n" +
 	"\x11GetUserMarksCount\x12\x1b.markstat.MarksCountRequest\x1a\x1c.markstat.MarksCountResponse\x12i\n" +
 	"\x1bGetUserMarksMonthlyActivity\x12%.markstat.MarksMonthlyActivityRequest\x1a#.markstat.UserMarksActivityResponse\x12T\n" +
-	"\x13GetUserMarksHeatMap\x12\x1d.markstat.MarksHeatMapRequest\x1a\x1e.markstat.MarksHeatMapResponseB<Z:github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/markstatb\x06proto3"
+	"\x13GetUserMarksHeatMap\x12\x1d.markstat.MarksHeatMapRequest\x1a\x1e.markstat.MarksHeatMapResponse\x12c\n" +
+	"\x18GetPopularUserCategories\x12\".markstat.PopularCategoriesRequest\x1a#.markstat.PopularCategoriesResponseB<Z:github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/markstatb\x06proto3"
 
 var (
 	file_mark_stat_proto_rawDescOnce sync.Once
@@ -460,7 +628,7 @@ func file_mark_stat_proto_rawDescGZIP() []byte {
 	return file_mark_stat_proto_rawDescData
 }
 
-var file_mark_stat_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_mark_stat_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_mark_stat_proto_goTypes = []any{
 	(*MarksMonthlyActivityRequest)(nil), // 0: markstat.MarksMonthlyActivityRequest
 	(*MarkMonthResponse)(nil),           // 1: markstat.MarkMonthResponse
@@ -470,25 +638,31 @@ var file_mark_stat_proto_goTypes = []any{
 	(*MarksHeatMapRequest)(nil),         // 5: markstat.MarksHeatMapRequest
 	(*MarkHeatMapResponse)(nil),         // 6: markstat.MarkHeatMapResponse
 	(*MarksHeatMapResponse)(nil),        // 7: markstat.MarksHeatMapResponse
-	(*timestamppb.Timestamp)(nil),       // 8: google.protobuf.Timestamp
+	(*PopularCategoriesRequest)(nil),    // 8: markstat.PopularCategoriesRequest
+	(*PopularCategoriesItem)(nil),       // 9: markstat.PopularCategoriesItem
+	(*PopularCategoriesResponse)(nil),   // 10: markstat.PopularCategoriesResponse
+	(*timestamppb.Timestamp)(nil),       // 11: google.protobuf.Timestamp
 }
 var file_mark_stat_proto_depIdxs = []int32{
-	1, // 0: markstat.UserMarksActivityResponse.activities:type_name -> markstat.MarkMonthResponse
-	8, // 1: markstat.MarksHeatMapRequest.start_date:type_name -> google.protobuf.Timestamp
-	8, // 2: markstat.MarksHeatMapRequest.end_date:type_name -> google.protobuf.Timestamp
-	8, // 3: markstat.MarkHeatMapResponse.day:type_name -> google.protobuf.Timestamp
-	6, // 4: markstat.MarksHeatMapResponse.activity:type_name -> markstat.MarkHeatMapResponse
-	3, // 5: markstat.MarkStatsService.GetUserMarksCount:input_type -> markstat.MarksCountRequest
-	0, // 6: markstat.MarkStatsService.GetUserMarksMonthlyActivity:input_type -> markstat.MarksMonthlyActivityRequest
-	5, // 7: markstat.MarkStatsService.GetUserMarksHeatMap:input_type -> markstat.MarksHeatMapRequest
-	4, // 8: markstat.MarkStatsService.GetUserMarksCount:output_type -> markstat.MarksCountResponse
-	2, // 9: markstat.MarkStatsService.GetUserMarksMonthlyActivity:output_type -> markstat.UserMarksActivityResponse
-	7, // 10: markstat.MarkStatsService.GetUserMarksHeatMap:output_type -> markstat.MarksHeatMapResponse
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	1,  // 0: markstat.UserMarksActivityResponse.activities:type_name -> markstat.MarkMonthResponse
+	11, // 1: markstat.MarksHeatMapRequest.start_date:type_name -> google.protobuf.Timestamp
+	11, // 2: markstat.MarksHeatMapRequest.end_date:type_name -> google.protobuf.Timestamp
+	11, // 3: markstat.MarkHeatMapResponse.day:type_name -> google.protobuf.Timestamp
+	6,  // 4: markstat.MarksHeatMapResponse.activity:type_name -> markstat.MarkHeatMapResponse
+	9,  // 5: markstat.PopularCategoriesResponse.categories:type_name -> markstat.PopularCategoriesItem
+	3,  // 6: markstat.MarkStatsService.GetUserMarksCount:input_type -> markstat.MarksCountRequest
+	0,  // 7: markstat.MarkStatsService.GetUserMarksMonthlyActivity:input_type -> markstat.MarksMonthlyActivityRequest
+	5,  // 8: markstat.MarkStatsService.GetUserMarksHeatMap:input_type -> markstat.MarksHeatMapRequest
+	8,  // 9: markstat.MarkStatsService.GetPopularUserCategories:input_type -> markstat.PopularCategoriesRequest
+	4,  // 10: markstat.MarkStatsService.GetUserMarksCount:output_type -> markstat.MarksCountResponse
+	2,  // 11: markstat.MarkStatsService.GetUserMarksMonthlyActivity:output_type -> markstat.UserMarksActivityResponse
+	7,  // 12: markstat.MarkStatsService.GetUserMarksHeatMap:output_type -> markstat.MarksHeatMapResponse
+	10, // 13: markstat.MarkStatsService.GetPopularUserCategories:output_type -> markstat.PopularCategoriesResponse
+	10, // [10:14] is the sub-list for method output_type
+	6,  // [6:10] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_mark_stat_proto_init() }
@@ -502,7 +676,7 @@ func file_mark_stat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mark_stat_proto_rawDesc), len(file_mark_stat_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

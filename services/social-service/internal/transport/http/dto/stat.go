@@ -92,6 +92,34 @@ func NewHeatmapResponse(items []*mark.HeatMapItem, start, end time.Time) Heatmap
 	}
 }
 
+type PopularCategoryResponse struct {
+	CategoryName string  `json:"categoryName"`
+	Count        int64   `json:"count"`
+	Percent      float64 `json:"percent"`
+}
+
+func NewPopularCategoryResponse(item *mark.PopularCategory) PopularCategoryResponse {
+	if item == nil {
+		return PopularCategoryResponse{}
+	}
+	return PopularCategoryResponse{
+		CategoryName: item.CategoryName,
+		Count:        item.Count,
+		Percent:      item.Percent,
+	}
+}
+
+func NewMultiplePopularCategoryResponse(items []*mark.PopularCategory) []PopularCategoryResponse {
+	if len(items) == 0 {
+		return []PopularCategoryResponse{}
+	}
+	res := make([]PopularCategoryResponse, 0, len(items))
+	for _, item := range items {
+		res = append(res, NewPopularCategoryResponse(item))
+	}
+	return res
+}
+
 type DateRangeParam struct {
 	Start time.Time `json:"start" form:"start" query:"start" binding:"required"`
 	End   time.Time `json:"end" form:"end" query:"end"`

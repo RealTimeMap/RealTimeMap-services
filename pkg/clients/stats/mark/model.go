@@ -15,3 +15,9 @@ type HeatMapItem struct {
 	Day   time.Time
 	Count int64
 }
+
+type PopularCategory struct {
+	CategoryName string
+	Count        int64
+	Percent      float64
+}

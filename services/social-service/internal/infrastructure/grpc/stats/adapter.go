@@ -43,6 +43,14 @@ func (a *Adapter) GetUserMarksHeatMap(ctx context.Context, userID uint, start, e
 	return result, nil
 }
 
+func (a *Adapter) GetPopularUserCategories(ctx context.Context, userID uint, topN int) ([]*pkgmark.PopularCategory, error) {
+	result, err := a.client.GetPopularUserCategories(ctx, userID, topN)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return result, nil
+}
+
 func mapError(err error) error {
 	if errors.Is(err, pkgmark.ErrServiceUnavailable) {
 		return domainerrors.MarkServiceUnavailable(err)

@@ -73,6 +73,17 @@ func (c *Client) GetUserMarksHeatMap(ctx context.Context, userID uint, start, en
 	return toHeatMapResponse(res), nil
 }
 
+func (c *Client) GetPopularUserCategories(ctx context.Context, userID uint, topN int) ([]*PopularCategory, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	res, err := c.api.GetPopularUserCategories(ctx, &markstat.PopularCategoriesRequest{UserId: uint64(userID), TopN: int64(topN)})
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+	return toPopularCategoriesResponse(res), nil
+}
+
 func wrapErr(err error) error {
 	if isUnavailable(err) {
 		return fmt.Errorf("%w: %v", ErrServiceUnavailable, err)
@@ -117,4 +128,16 @@ func toMonthlyActivityResponse(data *markstat.UserMarksActivityResponse) []*Mont
 	}
 	return res
 
+}
+
+func toPopularCategoriesResponse(data *markstat.PopularCategoriesResponse) []*PopularCategory {
+	res := make([]*PopularCategory, 0, len(data.GetCategories()))
+	for _, category := range data.GetCategories() {
+		res = append(res, &PopularCategory{
+			CategoryName: category.GetCategoryName(),
+			Count:        category.GetCount(),
+			Percent:      category.GetPercent(),
+		})
+	}
+	return res
 }
