@@ -33,10 +33,10 @@ func RegisterStatHandler(g *gin.RouterGroup, deps StatDeps) {
 	}
 	statGroup := g.Group("/:profileID")
 	{
-		statGroup.GET("/statistics/summary", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.GetProfileSummaryStat)
-		statGroup.GET("/statistics/monthly", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.GetProfileMonthlyActivity)
-		statGroup.GET("/statistics/heatmap", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.GetHeatMap)
-		statGroup.GET("/statistics/categories", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.GetPopularUserCategories)
+		statGroup.GET("/statistics/summary", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetProfileSummaryStat))
+		statGroup.GET("/statistics/monthly", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetProfileMonthlyActivity))
+		statGroup.GET("/statistics/heatmap", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetHeatMap))
+		statGroup.GET("/statistics/categories", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetPopularUserCategories))
 	}
 }
 
@@ -65,13 +65,8 @@ func RegisterStatHandler(g *gin.RouterGroup, deps StatDeps) {
 //
 //}
 
-func (h *StatHandler) GetProfileSummaryStat(c *gin.Context) {
-	pID, err := strconv.Atoi(c.Param("profileID"))
-	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
-		errorhandler.HandleError(c, err, h.logger)
-	}
-	marks, friends, subs, err := h.service.GetProfileSummaryStat(c.Request.Context(), uint(pID))
+func (h *StatHandler) GetProfileSummaryStat(c *gin.Context, pID uint) {
+	marks, friends, subs, err := h.service.GetProfileSummaryStat(c.Request.Context(), pID)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -80,14 +75,8 @@ func (h *StatHandler) GetProfileSummaryStat(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-func (h *StatHandler) GetProfileMonthlyActivity(c *gin.Context) {
-	pID, err := strconv.Atoi(c.Param("profileID"))
-	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
-	res, err := h.service.GetUserMonthlyActivity(c.Request.Context(), uint(pID))
+func (h *StatHandler) GetProfileMonthlyActivity(c *gin.Context, pID uint) {
+	res, err := h.service.GetUserMonthlyActivity(c.Request.Context(), pID)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -95,20 +84,14 @@ func (h *StatHandler) GetProfileMonthlyActivity(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.NewMultipleMonthlyActivity(res))
 }
 
-func (h *StatHandler) GetHeatMap(c *gin.Context) {
-	pID, err := strconv.Atoi(c.Param("profileID"))
-	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
+func (h *StatHandler) GetHeatMap(c *gin.Context, pID uint) {
 	var req dto.DateRangeParam
 	if err := c.ShouldBind(&req); err != nil {
 		validation.AbortWithBindingError(c, err)
 		return
 	}
 	req.Defaults()
-	activities, err := h.service.GetUserMarksHeatMap(c.Request.Context(), uint(pID), req.Start, req.End)
+	activities, err := h.service.GetUserMarksHeatMap(c.Request.Context(), pID, req.Start, req.End)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -117,18 +100,32 @@ func (h *StatHandler) GetHeatMap(c *gin.Context) {
 
 }
 
-func (h *StatHandler) GetPopularUserCategories(c *gin.Context) {
-	pID, err := strconv.Atoi(c.Param("profileID"))
-	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
-	result, err := h.service.GetPopularCategories(c.Request.Context(), uint(pID))
+func (h *StatHandler) GetPopularUserCategories(c *gin.Context, pID uint) {
+	result, err := h.service.GetPopularCategories(c.Request.Context(), pID)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 	response := dto.NewMultiplePopularCategoryResponse(result)
 	c.JSON(http.StatusOK, response)
+}
+
+func parseProfileID(c *gin.Context) (uint, error) {
+	pID, err := strconv.Atoi(c.Param("profileID"))
+	if err != nil {
+		err = apperror.NewFieldValidationError("profileID", "profileID must be a number", "value_error", c.Param("profileID"))
+		return 0, err
+	}
+	return uint(pID), nil
+}
+
+func (h *StatHandler) withProfileID(fn func(*gin.Context, uint)) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pID, err := parseProfileID(c)
+		if err != nil {
+			errorhandler.HandleError(c, err, h.logger)
+			return
+		}
+		fn(c, pID)
+	}
 }
