@@ -20,6 +20,7 @@ services:
     restart: always
     depends_on:
       - social-postgres
+      - redis
     labels:
       - "traefik.enable=true"
 
@@ -77,6 +78,7 @@ services:
 
     networks:
       - web
+      - redis-network
       - internal-social
     volumes:
       - social_store_data:/app/store

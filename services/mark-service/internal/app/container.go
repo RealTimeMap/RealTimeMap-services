@@ -73,7 +73,6 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	if err != nil {
 		log.Fatal("Profile client initialization failed", zap.Error(err))
 	}
-
 	profileAdapter := profile.NewAdapter(profileGrpcHandler)
 	// Создание сервисов
 	categoryService := service.NewCategoryService(categoryRepo, store)

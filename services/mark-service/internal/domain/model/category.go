@@ -9,3 +9,9 @@ type Category struct {
 	IsActive     bool        `gorm:"default:true"`
 	Icon         types.Photo `gorm:"type:jsonb"`
 }
+
+type CategoryStat struct {
+	CategoryName string
+	Count        int64
+	Percent      float64
+}

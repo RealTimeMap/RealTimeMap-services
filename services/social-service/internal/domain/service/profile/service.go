@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"math/rand"
-	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
@@ -23,11 +20,6 @@ type ProgressGetter interface {
 	GetUserProgress(ctx context.Context, userID uint) (*model.Progress, error)
 }
 
-type MarkStatGetter interface {
-	GetUserMarksCount(ctx context.Context, userID uint) (int64, error)
-	GetUserMarksMonthlyActivity(ctx context.Context, userID uint, year int) ([]*mark.MonthlyActivity, error)
-}
-
 const avatarMaxSize = 5 * 1024 * 1024 // 5MB
 
 type Service struct {
@@ -35,7 +27,6 @@ type Service struct {
 	store          storage.Storage
 	photoValidator *mediavalidator.PhotoValidator
 	progress       ProgressGetter
-	markStat       MarkStatGetter
 
 	logger *zap.Logger
 }
@@ -45,7 +36,6 @@ func NewProfileService(
 	store storage.Storage,
 	photoValidator *mediavalidator.PhotoValidator,
 	progress ProgressGetter,
-	markStat MarkStatGetter,
 	logger *zap.Logger,
 ) *Service {
 	return &Service{
@@ -53,7 +43,6 @@ func NewProfileService(
 		store:          store,
 		photoValidator: photoValidator,
 		progress:       progress,
-		markStat:       markStat,
 		logger:         logger,
 	}
 }
@@ -240,23 +229,6 @@ func (s *Service) SearchProfiles(ctx context.Context, input *SearchProfilesInput
 	return profiles, total, nil
 }
 
-func (s *Service) GetProfileSummaryStat(ctx context.Context, userID uint) (int64, int64, int64, error) {
-	s.logger.Info("ProfileService.GetProfileSummaryStat", zap.Uint("user_id", userID))
-
-	marksCount, err := s.markStat.GetUserMarksCount(ctx, userID)
-	if err != nil {
-		s.logger.Warn("failed to get marks count")
-	}
-	return marksCount, rand.Int63(), rand.Int63(), nil
-
-}
-
-func (s *Service) GetUserMonthlyActivity(ctx context.Context, userID uint) ([]*mark.MonthlyActivity, error) {
-	year := time.Now().Year()
-	activities, err := s.markStat.GetUserMarksMonthlyActivity(ctx, userID, year)
-	if err != nil {
-		s.logger.Warn("failed to get marks monthly activity")
-		return nil, err
-	}
-	return activities, nil
+func (s *Service) Exist(ctx context.Context, userID uint) (bool, error) {
+	return s.profileRepo.Exist(ctx, userID)
 }

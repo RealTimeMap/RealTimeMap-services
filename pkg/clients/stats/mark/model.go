@@ -1,5 +1,7 @@
 package mark
 
+import "time"
+
 type MarksCount struct {
 	Count int64
 }
@@ -7,4 +9,15 @@ type MarksCount struct {
 type MonthlyActivity struct {
 	Month string
 	Count int64
+}
+
+type HeatMapItem struct {
+	Day   time.Time
+	Count int64
+}
+
+type PopularCategory struct {
+	CategoryName string
+	Count        int64
+	Percent      float64
 }

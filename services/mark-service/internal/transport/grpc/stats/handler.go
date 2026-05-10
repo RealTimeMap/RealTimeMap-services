@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Handler struct {
@@ -43,6 +44,37 @@ func (h *Handler) GetUserMarksMonthlyActivity(ctx context.Context, req *markstat
 	return toActivityResponse(activities), nil
 }
 
+func (h *Handler) GetUserMarksHeatMap(ctx context.Context, req *markstat.MarksHeatMapRequest) (*markstat.MarksHeatMapResponse, error) {
+	activities, err := h.service.GetCountsForPeriod(ctx, uint(req.GetUserId()), req.GetStartDate().AsTime(), req.GetEndDate().AsTime())
+	if err != nil {
+		h.logger.Error("GetUserMarksHeatMap error", zap.Error(err))
+		return nil, status.Error(codes.Internal, "internal err")
+	}
+	return toDayActivity(activities), nil
+}
+
+func (h *Handler) GetPopularUserCategories(ctx context.Context, req *markstat.PopularCategoriesRequest) (*markstat.PopularCategoriesResponse, error) {
+	categories, err := h.service.GetPopularUserCategories(ctx, uint(req.GetUserId()), int(req.GetTopN()))
+	if err != nil {
+		h.logger.Error("GetPopularUserCategories error", zap.Error(err))
+		return nil, status.Error(codes.Internal, "internal err")
+	}
+	return toPopularCategoriesResponse(categories), nil
+}
+
+func toDayActivity(data []model.DayActivity) *markstat.MarksHeatMapResponse {
+	result := make([]*markstat.MarkHeatMapResponse, 0, len(data))
+	for _, d := range data {
+		result = append(result, &markstat.MarkHeatMapResponse{
+			Day:   timestamppb.New(d.Day),
+			Count: d.Count,
+		})
+	}
+	return &markstat.MarksHeatMapResponse{
+		Activity: result,
+	}
+}
+
 func toActivityResponse(data []model.MonthlyActivity) *markstat.UserMarksActivityResponse {
 	results := make([]*markstat.MarkMonthResponse, 0, len(data))
 	for _, item := range data {
@@ -53,6 +85,20 @@ func toActivityResponse(data []model.MonthlyActivity) *markstat.UserMarksActivit
 	}
 	return &markstat.UserMarksActivityResponse{
 		Activities: results,
+	}
+}
+
+func toPopularCategoriesResponse(data []model.CategoryStat) *markstat.PopularCategoriesResponse {
+	results := make([]*markstat.PopularCategoriesItem, 0, len(data))
+	for _, item := range data {
+		results = append(results, &markstat.PopularCategoriesItem{
+			CategoryName: item.CategoryName,
+			Percent:      item.Percent,
+			Count:        item.Count,
+		})
+	}
+	return &markstat.PopularCategoriesResponse{
+		Categories: results,
 	}
 }
 

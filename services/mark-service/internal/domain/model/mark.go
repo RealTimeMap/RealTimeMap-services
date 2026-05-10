@@ -133,3 +133,8 @@ type MonthlyActivity struct {
 	Month string
 	Count int64
 }
+
+type DayActivity struct {
+	Day   time.Time
+	Count int64
+}

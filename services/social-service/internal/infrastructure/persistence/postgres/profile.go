@@ -105,6 +105,25 @@ func (r *PgProfileRepository) Update(ctx context.Context, userID uint, fields ma
 	return r.GetProfile(ctx, userID)
 }
 
+func (r *PgProfileRepository) Exist(ctx context.Context, id uint) (bool, error) {
+	r.logger.Info("PgProfileRepository.Exist", zap.Uint("id", id))
+	var exists bool
+	err := r.db.WithContext(ctx).
+		Model(&model.Profile{}).
+		Select("1").
+		Where("user_id = ?", id).
+		Limit(1).
+		Find(&exists).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, domainerrors.ProfileNotFound(id)
+		}
+		return false, err
+	}
+	return exists, nil
+}
+
 func (r *PgProfileRepository) GetProfilesByIDs(ctx context.Context, ids []uint) ([]*model.Profile, error) {
 	if len(ids) == 0 {
 		return []*model.Profile{}, nil

@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 	"errors"
+	"time"
 
 	pkgmark "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
@@ -34,9 +35,25 @@ func (a *Adapter) GetUserMarksMonthlyActivity(ctx context.Context, userID uint, 
 	return result, nil
 }
 
+func (a *Adapter) GetUserMarksHeatMap(ctx context.Context, userID uint, start, end time.Time) ([]*pkgmark.HeatMapItem, error) {
+	result, err := a.client.GetUserMarksHeatMap(ctx, userID, start, end)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return result, nil
+}
+
+func (a *Adapter) GetPopularUserCategories(ctx context.Context, userID uint, topN int) ([]*pkgmark.PopularCategory, error) {
+	result, err := a.client.GetPopularUserCategories(ctx, userID, topN)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return result, nil
+}
+
 func mapError(err error) error {
 	if errors.Is(err, pkgmark.ErrServiceUnavailable) {
-		return domainerrors.ProgressServiceUnavailable(err)
+		return domainerrors.MarkServiceUnavailable(err)
 	}
 	return err
 }

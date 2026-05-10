@@ -4,10 +4,13 @@ package markstat;
 
 option go_package = "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/markstat";
 
+import "google/protobuf/timestamp.proto";
 
 service MarkStatsService {
   rpc GetUserMarksCount(MarksCountRequest) returns (MarksCountResponse);
   rpc GetUserMarksMonthlyActivity(MarksMonthlyActivityRequest) returns (UserMarksActivityResponse);
+  rpc GetUserMarksHeatMap(MarksHeatMapRequest) returns (MarksHeatMapResponse);
+  rpc GetPopularUserCategories(PopularCategoriesRequest) returns (PopularCategoriesResponse);
 }
 
 message MarksMonthlyActivityRequest {
@@ -31,4 +34,34 @@ message MarksCountRequest {
 
 message MarksCountResponse {
   int64 count = 1;
+}
+
+message MarksHeatMapRequest {
+  uint64 user_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message MarkHeatMapResponse {
+  google.protobuf.Timestamp day = 1;
+  int64 count = 2;
+}
+
+message MarksHeatMapResponse {
+  repeated MarkHeatMapResponse activity = 1;
+}
+
+message PopularCategoriesRequest {
+  uint64 user_id = 1;
+  int64 top_n = 2;
+}
+
+message PopularCategoriesItem {
+  string category_name = 1;
+  int64 count = 2;
+  double percent = 3;
+}
+
+message  PopularCategoriesResponse {
+  repeated PopularCategoriesItem categories = 1;
 }

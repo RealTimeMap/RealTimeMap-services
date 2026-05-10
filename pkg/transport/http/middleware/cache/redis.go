@@ -14,6 +14,8 @@ type RedisCache struct {
 	logger *zap.Logger
 }
 
+const timeout = time.Millisecond * 100
+
 func NewRedisCache(client *redis.Client, logger *zap.Logger) Cache {
 	return &RedisCache{
 		r:      client,
@@ -23,6 +25,9 @@ func NewRedisCache(client *redis.Client, logger *zap.Logger) Cache {
 
 func (c *RedisCache) Get(ctx context.Context, key string) ([]byte, bool) {
 	c.logger.Info("start RedisCache.Get", zap.String("key", key))
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	val, err := c.r.Get(ctx, key).Result()
 
 	if errors.Is(err, redis.Nil) {
@@ -37,10 +42,14 @@ func (c *RedisCache) Get(ctx context.Context, key string) ([]byte, bool) {
 
 func (c *RedisCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	c.logger.Info("start RedisCache.Set", zap.String("key", key))
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	return c.r.Set(ctx, key, value, ttl).Err()
 }
 
 func (c *RedisCache) Delete(ctx context.Context, key string) error {
 	c.logger.Info("start RedisCache.Delete", zap.String("key", key))
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	return c.r.Del(ctx, key).Err()
 }

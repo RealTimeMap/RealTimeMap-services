@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,7 +41,6 @@ func Middleware(cache Cache, opts Options) gin.HandlerFunc {
 		}
 
 		key := buildKey(c, opts.Prefix)
-
 		if data, ok := cache.Get(c.Request.Context(), key); ok {
 			var cached cachedResponse
 			if err := decode(data, &cached); err == nil {
@@ -50,6 +50,7 @@ func Middleware(cache Cache, opts Options) gin.HandlerFunc {
 					}
 				}
 				c.Header("X-Cache-Status", "HIT")
+				c.Header("X-Cache-TTL", strconv.FormatFloat(opts.TTL.Seconds(), 'f', 0, 64))
 				c.Data(cached.Status, cached.Header.Get("Content-Type"), cached.Body)
 				c.Abort()
 				return

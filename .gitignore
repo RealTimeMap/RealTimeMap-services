@@ -115,3 +115,7 @@ fabric.properties
 !/services/gamification-service/config/config.yaml
 
 /services/*/config/config.yaml
+
+/services/docs-service/node_modules
+/services/docs-service/dist
+/services/*/photos

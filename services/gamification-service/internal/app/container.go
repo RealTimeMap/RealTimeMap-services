@@ -1,7 +1,8 @@
 package app
 
 import (
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/cache"
+	redispkg "github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/gamificationservice"
@@ -34,7 +35,7 @@ func NewContainer(config *config.Config, db *gorm.DB, logger *zap.Logger) *Conta
 	configRepo := postgres.NewPgEventConfigRepository(db, logger)
 	userHistoryRepo := postgres.NewPgUserExpHistoryRepository(db, logger)
 
-	cli := redis.NewClient(&redis.Options{Addr: config.Redis.Host})
+	cli := redispkg.NewRedisCli(config.Redis)
 
 	cacheStrategy := getCacheStrategy(config.CacheStrategy, logger, cli)
 	strategy := levelgenerator.NewLinearGenerator()

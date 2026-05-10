@@ -22,6 +22,27 @@ services:
     networks:
       - web
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - redis-network
+
+volumes:
+  redis_data:
+
 networks:
   web:
     external: true
+  redis-network:
+    external: true
+    name: redis-network
