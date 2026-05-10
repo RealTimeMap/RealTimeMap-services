@@ -102,11 +102,11 @@ func (h *StatHandler) GetHeatMap(c *gin.Context) {
 		return
 	}
 	var req dto.DateRangeParam
-	req.Defaults()
 	if err := c.ShouldBind(&req); err != nil {
 		validation.AbortWithBindingError(c, err)
 		return
 	}
+	req.Defaults()
 	activities, err := h.service.GetUserMarksHeatMap(c.Request.Context(), uint(pID), req.Start, req.End)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)

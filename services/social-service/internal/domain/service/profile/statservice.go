@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
 	"go.uber.org/zap"
 )
 
@@ -55,10 +56,25 @@ func (s *StatService) GetUserMonthlyActivity(ctx context.Context, userID uint) (
 // GetUserMarksHeatMap делает запрос к gRPC сервису для получение данных используемых для формирования Тепловой карты активности
 func (s *StatService) GetUserMarksHeatMap(ctx context.Context, userID uint, start, end time.Time) ([]*mark.HeatMapItem, error) {
 	s.logger.Info("StatService.GetUserMarksHeatMap", zap.Uint("user_id", userID))
+
+	if err := validateDateRange(start, end); err != nil {
+		return nil, err
+	}
+
 	marks, err := s.markStat.GetUserMarksHeatMap(ctx, userID, start, end)
 	if err != nil {
 		s.logger.Warn("failed to get marks heat map")
 		return nil, err
 	}
 	return marks, nil
+}
+
+func validateDateRange(start, end time.Time) error {
+	if start.After(end) {
+		return domainerrors.DateValidationErr("start", "must be before end", start)
+	}
+	if end.After(time.Now().AddDate(0, 0, 1)) {
+		return domainerrors.DateValidationErr("end", "cannot be greater than the current date", end)
+	}
+	return nil
 }

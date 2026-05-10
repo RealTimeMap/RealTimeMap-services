@@ -94,9 +94,11 @@ func NewHeatmapResponse(items []*mark.HeatMapItem, start, end time.Time) Heatmap
 
 type DateRangeParam struct {
 	Start time.Time `json:"start" form:"start" query:"start" binding:"required"`
-	End   time.Time `json:"end" form:"end" query:"end" binding:"-"`
+	End   time.Time `json:"end" form:"end" query:"end"`
 }
 
-func (p DateRangeParam) Defaults() {
-	p.End = time.Now()
+func (p *DateRangeParam) Defaults() {
+	if p.End.IsZero() {
+		p.End = time.Now()
+	}
 }
