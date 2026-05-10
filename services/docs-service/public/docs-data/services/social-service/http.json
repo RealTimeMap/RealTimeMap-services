@@ -332,9 +332,9 @@
     {
       "id": "get-summary-stat",
       "method": "GET",
-      "path": "/api/v2/profile/{profileID}/summary",
+      "path": "/api/v2/profile/{profileID}/statistics/summary",
       "summary": "Сводная статистика профиля",
-      "description": "Возвращает 3 численных значения статистики профиля: общее количество созданных пользователем меток, количество друзей и количество подписчиков. Авторизация не требуется.",
+      "description": "Возвращает 3 численных значения статистики профиля: общее количество созданных пользователем меток, количество друзей и количество подписчиков. Значения проходят через пороговое преобразование (`utils.Threshold`), поэтому возвращаются как числа с плавающей точкой. Авторизация не требуется. Перед обработкой проверяется существование профиля по `profileID`.",
       "tags": ["Профили", "Статистика"],
       "parameters": [
         { "name": "profileID", "type": "integer", "required": true, "description": "ID профиля", "location": "path", "example": "42" }
@@ -344,9 +344,9 @@
           "statusCode": 200,
           "description": "Сводная статистика",
           "schema": [
-            { "name": "markCount", "type": "integer", "required": true, "description": "Общее количество созданных меток" },
-            { "name": "friendsCount", "type": "integer", "required": true, "description": "Общее количество друзей" },
-            { "name": "subscribersCount", "type": "integer", "required": true, "description": "Общее количество подписчиков" }
+            { "name": "markCount", "type": "number", "required": true, "description": "Общее количество созданных меток (с пороговым округлением)" },
+            { "name": "friendsCount", "type": "number", "required": true, "description": "Общее количество друзей (с пороговым округлением)" },
+            { "name": "subscribersCount", "type": "number", "required": true, "description": "Общее количество подписчиков (с пороговым округлением)" }
           ],
           "example": {
             "markCount": 27,
@@ -358,45 +358,11 @@
       "errors": ["validation-error", "not-found"]
     },
     {
-      "id": "statistic",
-      "method": "GET",
-      "path": "/api/v2/statistic/",
-      "summary": "Сводная статистика по периоду",
-      "description": "Технический endpoint, возвращающий разрешённые границы периода (текущий и предыдущий) для сводных дашбордов. Период задаётся через query-параметры из общего набора `pkg/date.Query` (например, `period=week`). На текущий момент возвращает только метаданные периода, без агрегатов — используется фронтендом для синхронизации временных диапазонов.",
-      "tags": ["Статистика"],
-      "parameters": [
-        { "name": "period", "type": "string", "required": false, "description": "Шорткат периода (например, 'day', 'week', 'month', 'year')", "location": "query", "example": "week" },
-        { "name": "start", "type": "string", "required": false, "description": "Начало периода (ISO 8601). Используется вместе с `end`", "location": "query", "example": "2026-04-01T00:00:00Z" },
-        { "name": "end", "type": "string", "required": false, "description": "Конец периода (ISO 8601). Используется вместе с `start`", "location": "query", "example": "2026-04-30T23:59:59Z" }
-      ],
-      "responses": [
-        {
-          "statusCode": 200,
-          "description": "Границы текущего и предыдущего периода",
-          "schema": [
-            { "name": "status", "type": "string", "required": true, "description": "Статус ответа", "enum": ["ok"] },
-            { "name": "currentStart", "type": "string", "required": true, "description": "Начало текущего периода (ISO 8601)" },
-            { "name": "currentEnd", "type": "string", "required": true, "description": "Конец текущего периода (ISO 8601)" },
-            { "name": "previousStart", "type": "string", "required": true, "description": "Начало предыдущего периода (ISO 8601)" },
-            { "name": "previousEnd", "type": "string", "required": true, "description": "Конец предыдущего периода (ISO 8601)" }
-          ],
-          "example": {
-            "status": "ok",
-            "currentStart": "2026-04-28T00:00:00Z",
-            "currentEnd": "2026-05-05T00:00:00Z",
-            "previousStart": "2026-04-21T00:00:00Z",
-            "previousEnd": "2026-04-28T00:00:00Z"
-          }
-        }
-      ],
-      "errors": ["validation-error"]
-    },
-    {
       "id": "get-monthly-stat",
       "method": "GET",
-      "path": "/api/v2/profile/{profileID}/stat/monthly",
+      "path": "/api/v2/profile/{profileID}/statistics/monthly",
       "summary": "Статистика активности меток по месяцам",
-      "description": "Возвращает 12 объектов — по одному на каждый месяц текущего года. Для каждого месяца возвращается полное название, короткое название (первые 3 символа) и количество созданных пользователем меток. Год берётся серверным временем (текущий календарный год), параметром не задаётся. Данные подтягиваются из mark-service по gRPC. Авторизация не требуется.",
+      "description": "Возвращает 12 объектов — по одному на каждый месяц текущего года. Для каждого месяца возвращается полное название, короткое название (первые 3 символа) и количество созданных пользователем меток. Год берётся серверным временем (текущий календарный год), параметром не задаётся. Данные подтягиваются из mark-service по gRPC. Авторизация не требуется. Перед обработкой проверяется существование профиля по `profileID`.",
       "tags": ["Профили", "Статистика"],
       "parameters": [
         { "name": "profileID", "type": "integer", "required": true, "description": "ID профиля", "location": "path", "example": "42" }
@@ -432,6 +398,60 @@
             { "month": "November", "shortMonth": "Nov", "count": 0 },
             { "month": "December", "shortMonth": "Dec", "count": 0 }
           ]
+        }
+      ],
+      "errors": ["validation-error", "not-found"]
+    },
+    {
+      "id": "get-heatmap-stat",
+      "method": "GET",
+      "path": "/api/v2/profile/{profileID}/statistics/heatmap",
+      "summary": "Heatmap активности меток по дням",
+      "description": "Возвращает посуточную активность пользователя по созданию меток в заданном диапазоне дат. Данные подтягиваются из mark-service по gRPC. Параметр `start` обязательный, `end` — опциональный (по умолчанию текущее время сервера). Авторизация не требуется. Перед обработкой проверяется существование профиля по `profileID`.",
+      "tags": ["Профили", "Статистика"],
+      "parameters": [
+        { "name": "profileID", "type": "integer", "required": true, "description": "ID профиля", "location": "path", "example": "42" },
+        { "name": "start", "type": "string", "required": true, "description": "Начало периода (ISO 8601 / RFC 3339)", "location": "query", "example": "2026-01-01T00:00:00Z" },
+        { "name": "end", "type": "string", "required": false, "description": "Конец периода (ISO 8601 / RFC 3339). По умолчанию — текущее серверное время", "location": "query", "example": "2026-05-10T23:59:59Z" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Heatmap активности с диапазоном",
+          "schema": [
+            {
+              "name": "items",
+              "type": "array",
+              "required": true,
+              "description": "Список посуточной активности",
+              "children": [
+                { "name": "day", "type": "string", "required": true, "description": "Дата дня (ISO 8601)" },
+                { "name": "count", "type": "integer", "required": true, "description": "Количество меток, созданных в этот день" }
+              ]
+            },
+            {
+              "name": "range",
+              "type": "object",
+              "required": true,
+              "description": "Фактический диапазон, использованный для запроса",
+              "children": [
+                { "name": "start", "type": "string", "required": true, "description": "Начало периода (ISO 8601)" },
+                { "name": "end", "type": "string", "required": true, "description": "Конец периода (ISO 8601)" }
+              ]
+            }
+          ],
+          "example": {
+            "items": [
+              { "day": "2026-04-28T00:00:00Z", "count": 4 },
+              { "day": "2026-04-29T00:00:00Z", "count": 0 },
+              { "day": "2026-04-30T00:00:00Z", "count": 2 },
+              { "day": "2026-05-01T00:00:00Z", "count": 7 }
+            ],
+            "range": {
+              "start": "2026-04-28T00:00:00Z",
+              "end": "2026-05-10T23:59:59Z"
+            }
+          }
         }
       ],
       "errors": ["validation-error", "not-found"]
