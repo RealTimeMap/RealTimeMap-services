@@ -4,6 +4,7 @@ import (
 	"time"
 
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
 	servergrpc "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/grpc"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 )
@@ -25,10 +26,6 @@ type Kafka struct {
 	CommitInterval time.Duration `yaml:"commit_interval" env-default:"0"`
 }
 
-type Redis struct {
-	Host string `yaml:"host" env:"REDIS_HOST" env-default:"localhost"`
-}
-
 type Config struct {
 	Env           string            `env:"ENV" env-default:"local"`
 	CacheStrategy string            ` yaml:"cacheStrategy" env:"CACHE_STRATEGY" env-required:"true"`
@@ -36,7 +33,7 @@ type Config struct {
 	Kafka         Kafka             `yaml:"kafka"`
 	GRPC          servergrpc.Config `yaml:"grpc"`
 	HTTP          http.Config       `yaml:"http"`
-	Redis         Redis             `yaml:"redis"`
+	Redis         redis.Config      `yaml:"redis"`
 }
 
 func MustLoad() *Config {
