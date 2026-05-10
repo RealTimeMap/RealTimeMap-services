@@ -3,15 +3,18 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http/dto"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -23,6 +26,7 @@ type StatHandler struct {
 type StatDeps struct {
 	Service     *profile.StatService
 	ProfileRepo repository.ProfileRepository
+	Redis       *redis.Client
 	Logger      *zap.Logger
 }
 
@@ -31,12 +35,13 @@ func RegisterStatHandler(g *gin.RouterGroup, deps StatDeps) {
 		service: deps.Service,
 		logger:  deps.Logger,
 	}
+	c := cache.NewRedisCache(deps.Redis, deps.Logger)
 	statGroup := g.Group("/:profileID")
 	{
-		statGroup.GET("/statistics/summary", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetProfileSummaryStat))
-		statGroup.GET("/statistics/monthly", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetProfileMonthlyActivity))
-		statGroup.GET("/statistics/heatmap", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetHeatMap))
-		statGroup.GET("/statistics/categories", middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetPopularUserCategories))
+		statGroup.GET("/statistics/summary", cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "summary_cache"}), middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetProfileSummaryStat))
+		statGroup.GET("/statistics/monthly", cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "monthly_cache"}), middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetProfileMonthlyActivity))
+		statGroup.GET("/statistics/heatmap", cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "heatmap_cache"}), middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetHeatMap))
+		statGroup.GET("/statistics/categories", cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "categories_cache"}), middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetPopularUserCategories))
 	}
 }
 

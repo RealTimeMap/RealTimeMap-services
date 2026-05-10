@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/cache"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/gamificationservice"

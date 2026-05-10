@@ -4,6 +4,7 @@ import (
 	pkgprogress "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/progress"
 	pkgmark "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
+	pkgredis "github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
@@ -13,6 +14,7 @@ import (
 	markstatadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/persistence/postgres"
 	profilegrpc "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/grpc/profile"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -31,6 +33,8 @@ type Container struct {
 	ProgressClient *pkgprogress.Client
 	MarkStatClient *pkgmark.Client
 
+	Redis *redis.Client
+
 	Logger *zap.Logger
 	DB     *gorm.DB
 }
@@ -39,6 +43,7 @@ func (c *Container) Close() error {
 	if c.ProgressClient != nil {
 		return c.ProgressClient.Close()
 	}
+
 	return nil
 }
 
@@ -80,6 +85,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	profileStatService := profile.NewStatService(markStatPort, logger)
 	profileHandler := profilegrpc.NewHandler(profileService, logger)
 
+	redisCli := getRedisCli(cfg.Redis)
+
 	blockedUserRepo := postgres.NewPgBlockedUserRepository(db, logger)
 	blockedUserService := blockeduser.NewService(blockedUserRepo, profileRepo, logger)
 
@@ -96,7 +103,12 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 		ProgressClient: progressClient,
 
+		Redis:  redisCli,
 		Logger: logger,
 		DB:     db,
 	}
+}
+
+func getRedisCli(cfg pkgredis.Config) *redis.Client {
+	return pkgredis.NewRedisCli(cfg)
 }

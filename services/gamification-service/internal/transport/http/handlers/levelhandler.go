@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/cache"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/app/dto"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/levelservice"
 	"github.com/gin-gonic/gin"

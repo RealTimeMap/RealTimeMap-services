@@ -20,6 +20,7 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 	handlers.RegisterStatHandler(profile, handlers.StatDeps{
 		ProfileRepo: container.ProfileRepo,
 		Logger:      container.Logger,
+		Redis:       container.Redis,
 		Service:     container.ProfileStatService,
 	})
 
