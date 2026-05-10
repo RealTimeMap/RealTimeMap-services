@@ -11,6 +11,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	profileservice "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http/dto"
 	"github.com/gin-gonic/gin"
@@ -34,14 +35,12 @@ func RegisterProfileHandler(g *gin.RouterGroup, deps ProfileDeps) {
 		logger:  deps.Logger,
 	}
 
-	profileGroup := g.Group("/profile")
+	profileGroup := g.Group("")
 	{
 		profileGroup.GET("/me", auth.AuthRequired(), handler.GetMyProfile)
 		profileGroup.PATCH("/me", auth.AuthRequired(), handler.UpdateMyProfile)
 		profileGroup.GET("/search", handler.SearchProfile)
-		profileGroup.GET("/:profileID", handler.GetDetailProfile)
-		profileGroup.GET("/:profileID/summary", handler.GetProfileSummaryStat)
-		profileGroup.GET("/:profileID/stat/monthly", handler.GetProfileMonthlyActivity)
+		profileGroup.GET("/:profileID", middleware.Exist(handler.service.Exist, handler.logger, "profileID"), handler.GetDetailProfile)
 	}
 }
 
@@ -149,34 +148,4 @@ func (h *ProfileHandler) UpdateMyProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.NewPersonalProfileResponse(updated))
-}
-
-func (h *ProfileHandler) GetProfileSummaryStat(c *gin.Context) {
-	pID, err := strconv.Atoi(c.Param("profileID"))
-	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
-		errorhandler.HandleError(c, err, h.logger)
-	}
-	marks, friends, subs, err := h.service.GetProfileSummaryStat(c.Request.Context(), uint(pID))
-	if err != nil {
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
-	res := dto.NewSummaryProfileStat(marks, friends, subs)
-	c.JSON(http.StatusOK, res)
-}
-
-func (h *ProfileHandler) GetProfileMonthlyActivity(c *gin.Context) {
-	pID, err := strconv.Atoi(c.Param("profileID"))
-	if err != nil {
-		err = apperror.NewFieldValidationError("id", "id must be a number", "value_error", c.Param("id"))
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
-	res, err := h.service.GetUserMonthlyActivity(c.Request.Context(), uint(pID))
-	if err != nil {
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
-	c.JSON(http.StatusOK, dto.NewMultipleMonthlyActivity(res))
 }

@@ -20,6 +20,7 @@ import (
 type Container struct {
 	ProfileRepo        repository.ProfileRepository
 	ProfileService     *profile.Service
+	ProfileStatService *profile.StatService
 	ProfileGRPCHandler *profilegrpc.Handler
 
 	BlockedUserRepo    repository.BlockedUserRepository
@@ -75,7 +76,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	}
 
 	profileRepo := postgres.NewPgProfileRepository(db, logger)
-	profileService := profile.NewProfileService(profileRepo, store, photoValidator, progressPort, markStatPort, logger)
+	profileService := profile.NewProfileService(profileRepo, store, photoValidator, progressPort, logger)
+	profileStatService := profile.NewStatService(markStatPort, logger)
 	profileHandler := profilegrpc.NewHandler(profileService, logger)
 
 	blockedUserRepo := postgres.NewPgBlockedUserRepository(db, logger)
@@ -84,6 +86,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	return &Container{
 		ProfileRepo:        profileRepo,
 		ProfileService:     profileService,
+		ProfileStatService: profileStatService,
 		ProfileGRPCHandler: profileHandler,
 
 		BlockedUserRepo:    blockedUserRepo,

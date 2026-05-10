@@ -35,6 +35,11 @@ type MarkRepository interface {
 }
 
 type MarkStatsRepository interface {
+	// GetMarkCount получение общего количества меток пользователя
 	GetMarkCount(ctx context.Context, userID uint) (int64, error)
+	// GetCountForMonths метод получен счетчика по месяцам в течении года
 	GetCountForMonths(ctx context.Context, userID uint, year int) ([]model.MonthlyActivity, error)
+	// GetCountPerPeriod метод получения счетчика по дням в течении определенного периода
+	GetCountPerPeriod(ctx context.Context, userID uint, start, end time.Time) ([]model.DayActivity, error)
+	GetPopularCategories(ctx context.Context, userID uint) ([]model.CategoryStat, error)
 }

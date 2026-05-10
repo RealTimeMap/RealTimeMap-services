@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Handler struct {
@@ -41,6 +42,28 @@ func (h *Handler) GetUserMarksMonthlyActivity(ctx context.Context, req *markstat
 		return nil, status.Error(codes.Internal, "internal err")
 	}
 	return toActivityResponse(activities), nil
+}
+
+func (h *Handler) GetUserMarksHeatMap(ctx context.Context, req *markstat.MarksHeatMapRequest) (*markstat.MarksHeatMapResponse, error) {
+	activities, err := h.service.GetCountsForPeriod(ctx, uint(req.GetUserId()), req.GetStartDate().AsTime(), req.GetEndDate().AsTime())
+	if err != nil {
+		h.logger.Error("GetUserMarksHeatMap error", zap.Error(err))
+		return nil, status.Error(codes.Internal, "internal err")
+	}
+	return toDayActivity(activities), nil
+}
+
+func toDayActivity(data []model.DayActivity) *markstat.MarksHeatMapResponse {
+	result := make([]*markstat.MarkHeatMapResponse, 0, len(data))
+	for _, d := range data {
+		result = append(result, &markstat.MarkHeatMapResponse{
+			Day:   timestamppb.New(d.Day),
+			Count: d.Count,
+		})
+	}
+	return &markstat.MarksHeatMapResponse{
+		Activity: result,
+	}
 }
 
 func toActivityResponse(data []model.MonthlyActivity) *markstat.UserMarksActivityResponse {

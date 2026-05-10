@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	MarkStatsService_GetUserMarksCount_FullMethodName           = "/markstat.MarkStatsService/GetUserMarksCount"
 	MarkStatsService_GetUserMarksMonthlyActivity_FullMethodName = "/markstat.MarkStatsService/GetUserMarksMonthlyActivity"
+	MarkStatsService_GetUserMarksHeatMap_FullMethodName         = "/markstat.MarkStatsService/GetUserMarksHeatMap"
 )
 
 // MarkStatsServiceClient is the client API for MarkStatsService service.
@@ -29,6 +30,7 @@ const (
 type MarkStatsServiceClient interface {
 	GetUserMarksCount(ctx context.Context, in *MarksCountRequest, opts ...grpc.CallOption) (*MarksCountResponse, error)
 	GetUserMarksMonthlyActivity(ctx context.Context, in *MarksMonthlyActivityRequest, opts ...grpc.CallOption) (*UserMarksActivityResponse, error)
+	GetUserMarksHeatMap(ctx context.Context, in *MarksHeatMapRequest, opts ...grpc.CallOption) (*MarksHeatMapResponse, error)
 }
 
 type markStatsServiceClient struct {
@@ -59,12 +61,23 @@ func (c *markStatsServiceClient) GetUserMarksMonthlyActivity(ctx context.Context
 	return out, nil
 }
 
+func (c *markStatsServiceClient) GetUserMarksHeatMap(ctx context.Context, in *MarksHeatMapRequest, opts ...grpc.CallOption) (*MarksHeatMapResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MarksHeatMapResponse)
+	err := c.cc.Invoke(ctx, MarkStatsService_GetUserMarksHeatMap_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MarkStatsServiceServer is the server API for MarkStatsService service.
 // All implementations must embed UnimplementedMarkStatsServiceServer
 // for forward compatibility.
 type MarkStatsServiceServer interface {
 	GetUserMarksCount(context.Context, *MarksCountRequest) (*MarksCountResponse, error)
 	GetUserMarksMonthlyActivity(context.Context, *MarksMonthlyActivityRequest) (*UserMarksActivityResponse, error)
+	GetUserMarksHeatMap(context.Context, *MarksHeatMapRequest) (*MarksHeatMapResponse, error)
 	mustEmbedUnimplementedMarkStatsServiceServer()
 }
 
@@ -80,6 +93,9 @@ func (UnimplementedMarkStatsServiceServer) GetUserMarksCount(context.Context, *M
 }
 func (UnimplementedMarkStatsServiceServer) GetUserMarksMonthlyActivity(context.Context, *MarksMonthlyActivityRequest) (*UserMarksActivityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserMarksMonthlyActivity not implemented")
+}
+func (UnimplementedMarkStatsServiceServer) GetUserMarksHeatMap(context.Context, *MarksHeatMapRequest) (*MarksHeatMapResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserMarksHeatMap not implemented")
 }
 func (UnimplementedMarkStatsServiceServer) mustEmbedUnimplementedMarkStatsServiceServer() {}
 func (UnimplementedMarkStatsServiceServer) testEmbeddedByValue()                          {}
@@ -138,6 +154,24 @@ func _MarkStatsService_GetUserMarksMonthlyActivity_Handler(srv interface{}, ctx 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MarkStatsService_GetUserMarksHeatMap_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MarksHeatMapRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MarkStatsServiceServer).GetUserMarksHeatMap(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MarkStatsService_GetUserMarksHeatMap_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MarkStatsServiceServer).GetUserMarksHeatMap(ctx, req.(*MarksHeatMapRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MarkStatsService_ServiceDesc is the grpc.ServiceDesc for MarkStatsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +186,10 @@ var MarkStatsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserMarksMonthlyActivity",
 			Handler:    _MarkStatsService_GetUserMarksMonthlyActivity_Handler,
+		},
+		{
+			MethodName: "GetUserMarksHeatMap",
+			Handler:    _MarkStatsService_GetUserMarksHeatMap_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

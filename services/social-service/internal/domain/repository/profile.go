@@ -13,4 +13,5 @@ type ProfileRepository interface {
 	GetProfilesByIDs(ctx context.Context, ids []uint) ([]*model.Profile, error)
 	Create(ctx context.Context, profile *model.Profile) (*model.Profile, error)
 	Update(ctx context.Context, userID uint, fields map[string]any) (*model.Profile, error)
+	Exist(ctx context.Context, id uint) (bool, error)
 }

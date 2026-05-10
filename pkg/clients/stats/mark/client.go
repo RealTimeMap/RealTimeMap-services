@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Config struct {
@@ -61,6 +62,17 @@ func (c *Client) GetUserMarksMonthlyActivity(ctx context.Context, userID uint, y
 	return toMonthlyActivityResponse(res), nil
 }
 
+func (c *Client) GetUserMarksHeatMap(ctx context.Context, userID uint, start, end time.Time) ([]*HeatMapItem, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	res, err := c.api.GetUserMarksHeatMap(ctx, &markstat.MarksHeatMapRequest{UserId: uint64(userID), StartDate: timestamppb.New(start), EndDate: timestamppb.New(end)})
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+	return toHeatMapResponse(res), nil
+}
+
 func wrapErr(err error) error {
 	if isUnavailable(err) {
 		return fmt.Errorf("%w: %v", ErrServiceUnavailable, err)
@@ -79,6 +91,20 @@ func isUnavailable(err error) bool {
 	default:
 		return false
 	}
+}
+
+func toHeatMapResponse(data *markstat.MarksHeatMapResponse) []*HeatMapItem {
+	if data == nil {
+		return nil
+	}
+	res := make([]*HeatMapItem, 0, len(data.GetActivity()))
+	for _, activity := range data.GetActivity() {
+		res = append(res, &HeatMapItem{
+			Day:   activity.Day.AsTime(),
+			Count: activity.Count,
+		})
+	}
+	return res
 }
 
 func toMonthlyActivityResponse(data *markstat.UserMarksActivityResponse) []*MonthlyActivity {

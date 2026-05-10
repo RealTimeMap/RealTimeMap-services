@@ -10,10 +10,19 @@ import (
 func RegisterRoutes(g *gin.Engine, container *app.Container) {
 	api := g.Group("/api/v2")
 
-	handlers.RegisterProfileHandler(api, handlers.ProfileDeps{
+	profile := api.Group("/profile")
+	// Основные роуты под профиль
+	handlers.RegisterProfileHandler(profile, handlers.ProfileDeps{
 		Service: container.ProfileService,
 		Logger:  container.Logger,
 	})
+	// Вспомогательные роуты для статистики профиля
+	handlers.RegisterStatHandler(profile, handlers.StatDeps{
+		ProfileRepo: container.ProfileRepo,
+		Logger:      container.Logger,
+		Service:     container.ProfileStatService,
+	})
+
 	handlers.RegisterBlockedUserHandler(api, handlers.BlockedDeps{
 		Service: container.BlockedUserService,
 		Logger:  container.Logger,

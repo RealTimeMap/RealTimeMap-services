@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"time"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
 )
@@ -45,4 +47,56 @@ func NewMultipleMonthlyActivity(data []*mark.MonthlyActivity) []MonthActivity {
 		res = append(res, NewMonthActivity(m))
 	}
 	return res
+}
+
+type HeatmapItem struct {
+	Day   time.Time `json:"day"`
+	Count int64     `json:"count"`
+}
+
+func NewHeatmapItem(item *mark.HeatMapItem) HeatmapItem {
+	if item == nil {
+		return HeatmapItem{}
+	}
+	return HeatmapItem{
+		Day:   item.Day,
+		Count: item.Count,
+	}
+}
+
+type Range struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+}
+
+func NewRange(start, end time.Time) Range {
+	return Range{
+		Start: start,
+		End:   end,
+	}
+}
+
+type HeatmapResponse struct {
+	Items []HeatmapItem `json:"items"`
+	Range Range         `json:"range"`
+}
+
+func NewHeatmapResponse(items []*mark.HeatMapItem, start, end time.Time) HeatmapResponse {
+	res := make([]HeatmapItem, 0, len(items))
+	for _, item := range items {
+		res = append(res, NewHeatmapItem(item))
+	}
+	return HeatmapResponse{
+		Items: res,
+		Range: NewRange(start, end),
+	}
+}
+
+type DateRangeParam struct {
+	Start time.Time `json:"start" form:"start" query:"start" binding:"required"`
+	End   time.Time `json:"end" form:"end" query:"end" binding:"-"`
+}
+
+func (p DateRangeParam) Defaults() {
+	p.End = time.Now()
 }
