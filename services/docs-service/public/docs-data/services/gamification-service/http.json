@@ -26,6 +26,284 @@
       "errors": ["internal-error"]
     },
     {
+      "id": "create-achievement",
+      "method": "POST",
+      "path": "/api/v2/achievement/create",
+      "summary": "Создать достижение",
+      "description": "Создаёт новое достижение в системе. Достижение привязывается к типу события (triggerEvent) и активируется, когда счётчик действий пользователя достигает порога (threshold). Опционально может быть звеном цепочки прогрессий через nextId. Требуется роль администратора.",
+      "tags": ["Достижения"],
+      "auth": true,
+      "requestBody": {
+        "description": "Параметры достижения в формате multipart/form-data (вместе с файлом иконки)",
+        "contentType": "multipart/form-data",
+        "schema": [
+          { "name": "code", "type": "string", "required": true, "description": "Уникальный машинный код достижения" },
+          { "name": "title", "type": "string", "required": true, "description": "Название достижения (отображается пользователю)" },
+          { "name": "desc", "type": "string", "required": true, "description": "Описание достижения" },
+          { "name": "triggerEvent", "type": "string", "required": true, "description": "Тип события, по которому считается прогресс (например, mark.created)" },
+          { "name": "threshold", "type": "integer", "required": true, "description": "Количество событий для получения достижения" },
+          { "name": "rewardId", "type": "integer", "required": true, "description": "ID награды XP, выдаваемой за получение достижения" },
+          { "name": "nextId", "type": "integer", "required": false, "description": "ID следующего достижения в цепочке прогрессии (если есть)" },
+          { "name": "icon", "type": "file", "required": true, "description": "Изображение иконки достижения (JPG/PNG, до 5 МБ)" }
+        ],
+        "example": {
+          "code": "map_explorer_bronze",
+          "title": "Картограф (бронза)",
+          "desc": "Создайте 10 меток на карте",
+          "triggerEvent": "mark.created",
+          "threshold": 10,
+          "rewardId": 2,
+          "nextId": 16,
+          "icon": "<binary>"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Достижение создано",
+          "schema": [
+            {
+              "name": "achievement",
+              "type": "object",
+              "required": true,
+              "description": "Созданное достижение",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID достижения" },
+                { "name": "code", "type": "string", "required": true, "description": "Машинный код" },
+                { "name": "title", "type": "string", "required": true, "description": "Название" },
+                { "name": "desc", "type": "string", "required": true, "description": "Описание" },
+                { "name": "triggerEventType", "type": "string", "required": true, "description": "Тип триггерного события" },
+                { "name": "threshold", "type": "integer", "required": true, "description": "Порог получения" },
+                { "name": "icon", "type": "string", "required": true, "description": "URL иконки" },
+                {
+                  "name": "reward",
+                  "type": "object",
+                  "required": false,
+                  "description": "XP-награда (опционально)",
+                  "children": [
+                    { "name": "id", "type": "integer", "required": true, "description": "ID награды" },
+                    { "name": "code", "type": "string", "required": true, "description": "Код награды" },
+                    { "name": "amount", "type": "integer", "required": true, "description": "Количество XP" }
+                  ]
+                },
+                {
+                  "name": "next",
+                  "type": "object",
+                  "required": false,
+                  "description": "Следующая ступень в цепочке прогрессий (если есть)"
+                }
+              ]
+            }
+          ],
+          "example": {
+            "achievement": {
+              "id": 15,
+              "code": "map_explorer_bronze",
+              "title": "Картограф (бронза)",
+              "desc": "Создайте 10 меток на карте",
+              "triggerEventType": "mark.created",
+              "threshold": 10,
+              "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+              "reward": { "id": 2, "code": "mark.created", "amount": 100 },
+              "next": {
+                "id": 16,
+                "code": "map_explorer_silver",
+                "title": "Картограф (серебро)",
+                "desc": "Создайте 50 меток",
+                "triggerEventType": "mark.created",
+                "threshold": 50,
+                "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon2.jpg"
+              }
+            }
+          }
+        }
+      ],
+      "errors": ["unauthorized", "forbidden", "validation-error", "not-found", "conflict"]
+    },
+    {
+      "id": "get-user-achievements",
+      "method": "GET",
+      "path": "/api/v2/achievement/{userID}",
+      "summary": "Получить достижения пользователя",
+      "description": "Возвращает список полученных пользователем достижений с пагинацией. Прогрессии (цепочки достижений Bronze → Silver → Gold) схлопываются — возвращается только верхняя достигнутая ступень с информацией о следующей цели через поле next. Одиночные достижения (без цепочки) возвращаются как есть с next: null.",
+      "tags": ["Достижения"],
+      "pagination": "page",
+      "parameters": [
+        { "name": "userID", "type": "integer", "required": true, "description": "ID пользователя", "location": "path", "example": "1" },
+        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы (по умолчанию 1)", "location": "query", "example": "1" },
+        { "name": "limit", "type": "integer", "required": false, "description": "Размер страницы (по умолчанию 20)", "location": "query", "example": "20" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список полученных достижений пользователя",
+          "schema": [
+            {
+              "name": "items",
+              "type": "object[]",
+              "required": true,
+              "description": "Массив полученных достижений",
+              "children": [
+                {
+                  "name": "achievement",
+                  "type": "object",
+                  "required": true,
+                  "description": "Данные достижения",
+                  "children": [
+                    { "name": "id", "type": "integer", "required": true, "description": "ID достижения" },
+                    { "name": "code", "type": "string", "required": true, "description": "Машинный код" },
+                    { "name": "title", "type": "string", "required": true, "description": "Название" },
+                    { "name": "desc", "type": "string", "required": true, "description": "Описание" },
+                    { "name": "triggerEventType", "type": "string", "required": true, "description": "Тип триггерного события" },
+                    { "name": "threshold", "type": "integer", "required": true, "description": "Порог получения" },
+                    { "name": "icon", "type": "string", "required": true, "description": "URL иконки" },
+                    {
+                      "name": "reward",
+                      "type": "object",
+                      "required": false,
+                      "description": "XP-награда",
+                      "children": [
+                        { "name": "id", "type": "integer", "required": true, "description": "ID награды" },
+                        { "name": "code", "type": "string", "required": true, "description": "Код награды" },
+                        { "name": "amount", "type": "integer", "required": true, "description": "Количество XP" }
+                      ]
+                    },
+                    {
+                      "name": "next",
+                      "type": "object",
+                      "required": false,
+                      "description": "Следующая ступень прогрессии (если у юзера есть прогресс к ней)"
+                    }
+                  ]
+                },
+                { "name": "unlockedAt", "type": "string", "required": true, "description": "Дата получения достижения (ISO 8601)" }
+              ]
+            }
+          ],
+          "example": {
+            "items": [
+              {
+                "achievement": {
+                  "id": 15,
+                  "code": "map_explorer_silver",
+                  "title": "Картограф (серебро)",
+                  "desc": "Создайте 50 меток",
+                  "triggerEventType": "mark.created",
+                  "threshold": 50,
+                  "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+                  "reward": { "id": 2, "code": "mark.created", "amount": 100 },
+                  "next": {
+                    "id": 17,
+                    "code": "map_explorer_gold",
+                    "title": "Картограф (золото)",
+                    "desc": "Создайте 1000 меток",
+                    "triggerEventType": "mark.created",
+                    "threshold": 1000,
+                    "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg"
+                  }
+                },
+                "unlockedAt": "2026-05-15T12:00:00Z"
+              },
+              {
+                "achievement": {
+                  "id": 7,
+                  "code": "first_comment",
+                  "title": "Первый комментарий",
+                  "desc": "Оставьте первый комментарий",
+                  "triggerEventType": "comment.created",
+                  "threshold": 1,
+                  "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/cmt.jpg",
+                  "reward": { "id": 3, "code": "comment.created", "amount": 50 }
+                },
+                "unlockedAt": "2026-05-10T09:30:00Z"
+              }
+            ]
+          }
+        }
+      ],
+      "errors": ["validation-error"]
+    },
+    {
+      "id": "get-user-nearest-achievements",
+      "method": "GET",
+      "path": "/api/v2/achievement/{userID}/nearest",
+      "summary": "Ближайшие достижения пользователя",
+      "description": "Возвращает топ-5 достижений, к получению которых пользователь ближе всего, отсортированных по проценту прогресса (current/threshold) по убыванию. Учитываются только начатые (с count > 0) и ещё не полученные достижения. Для цепочек прогрессий возвращается только самая близкая ступень — следующие видны через поле next. Лимит фиксирован константой на стороне сервиса и не настраивается через параметры.",
+      "tags": ["Достижения"],
+      "parameters": [
+        { "name": "userID", "type": "integer", "required": true, "description": "ID пользователя", "location": "path", "example": "1" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список ближайших к получению достижений (до 5 штук)",
+          "schema": [
+            {
+              "name": "items",
+              "type": "object[]",
+              "required": true,
+              "description": "Массив прогресса по достижениям",
+              "children": [
+                {
+                  "name": "achievement",
+                  "type": "object",
+                  "required": true,
+                  "description": "Данные достижения (структура как в /achievement/{userID})"
+                },
+                { "name": "current", "type": "integer", "required": true, "description": "Текущее значение счётчика действий пользователя" },
+                { "name": "threshold", "type": "integer", "required": true, "description": "Порог для получения достижения" },
+                { "name": "progress", "type": "number", "required": true, "description": "Процент выполнения (current/threshold * 100)" }
+              ]
+            }
+          ],
+          "example": {
+            "items": [
+              {
+                "achievement": {
+                  "id": 15,
+                  "code": "map_explorer_bronze",
+                  "title": "Картограф (бронза)",
+                  "desc": "Создайте 10 меток",
+                  "triggerEventType": "mark.created",
+                  "threshold": 10,
+                  "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+                  "reward": { "id": 2, "code": "mark.created", "amount": 100 },
+                  "next": {
+                    "id": 16,
+                    "code": "map_explorer_silver",
+                    "title": "Картограф (серебро)",
+                    "desc": "Создайте 50 меток",
+                    "triggerEventType": "mark.created",
+                    "threshold": 50,
+                    "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon2.jpg"
+                  }
+                },
+                "current": 8,
+                "threshold": 10,
+                "progress": 80
+              },
+              {
+                "achievement": {
+                  "id": 22,
+                  "code": "friend_finder",
+                  "title": "Друзья",
+                  "desc": "Добавьте 5 друзей",
+                  "triggerEventType": "friend.added",
+                  "threshold": 5,
+                  "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/friend.jpg",
+                  "reward": { "id": 4, "code": "friend.added", "amount": 30 }
+                },
+                "current": 3,
+                "threshold": 5,
+                "progress": 60
+              }
+            ]
+          }
+        }
+      ],
+      "errors": ["validation-error"]
+    },
+    {
       "id": "health",
       "method": "GET",
       "path": "/gamification/health",
