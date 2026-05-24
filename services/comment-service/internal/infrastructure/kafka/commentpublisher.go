@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/events"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/service"
 	"go.uber.org/zap"
