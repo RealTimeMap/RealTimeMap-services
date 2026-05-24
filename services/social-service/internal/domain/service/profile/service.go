@@ -86,6 +86,7 @@ func (s *Service) checkProfileExists(ctx context.Context, userId uint) error {
 	return nil
 }
 
+// UpdateProfile TODO почистить функцию и разбить на методы
 func (s *Service) UpdateProfile(ctx context.Context, in UpdateProfileInput) (*model.Profile, error) {
 	s.logger.Info("ProfileService.UpdateProfile", zap.Uint("user_id", in.UserID))
 

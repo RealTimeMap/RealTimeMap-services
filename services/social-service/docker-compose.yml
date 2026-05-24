@@ -56,6 +56,14 @@ services:
       - "traefik.http.routers.social-detail.middlewares=cors-headers@file"
       - "traefik.http.routers.social-detail.tls=true"
 
+      # GET /api/v2/profile/:profileID/statistics/{summary,monthly,heatmap} - статистика профиля (публичный)
+      - "traefik.http.routers.social-statistics.rule=Host(`realtimemap.ru`) && PathRegexp(`/api/v2/profile/[0-9]+/statistics/(summary|monthly|heatmap)$`) && Method(`GET`)"
+      - "traefik.http.routers.social-statistics.entrypoints=websecure"
+      - "traefik.http.routers.social-statistics.priority=95"
+      - "traefik.http.routers.social-statistics.service=social"
+      - "traefik.http.routers.social-statistics.middlewares=cors-headers@file"
+      - "traefik.http.routers.social-statistics.tls=true"
+
       # Static files (store) — только фотографии social-service
       - "traefik.http.routers.social-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store/photos/avatars`)"
       - "traefik.http.routers.social-store.entrypoints=websecure"
@@ -90,4 +98,7 @@ volumes:
 networks:
   web:
     external: true
+  redis-network:
+    external: true
+    name: redis-network
   internal-social:
