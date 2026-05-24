@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/events"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"

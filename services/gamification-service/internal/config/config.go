@@ -5,6 +5,7 @@ import (
 
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	servergrpc "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/grpc"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 )
@@ -27,13 +28,14 @@ type Kafka struct {
 }
 
 type Config struct {
-	Env           string            `env:"ENV" env-default:"local"`
-	CacheStrategy string            ` yaml:"cacheStrategy" env:"CACHE_STRATEGY" env-required:"true"`
-	Database      Database          `yaml:"database"`
-	Kafka         Kafka             `yaml:"kafka"`
-	GRPC          servergrpc.Config `yaml:"grpc"`
-	HTTP          http.Config       `yaml:"http"`
-	Redis         redis.Config      `yaml:"redis"`
+	Env           string                `env:"ENV" env-default:"local"`
+	CacheStrategy string                ` yaml:"cacheStrategy" env:"CACHE_STRATEGY" env-required:"true"`
+	Database      Database              `yaml:"database"`
+	Kafka         Kafka                 `yaml:"kafka"`
+	GRPC          servergrpc.Config     `yaml:"grpc"`
+	HTTP          http.Config           `yaml:"http"`
+	Redis         redis.Config          `yaml:"redis"`
+	Storage       storage.StorageConfig `yaml:"storage"`
 }
 
 func MustLoad() *Config {

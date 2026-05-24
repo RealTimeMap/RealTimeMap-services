@@ -12,14 +12,6 @@ services:
     networks:
       - internal-gamification
 
-  gamification-redis:
-    image: redis:7-alpine
-    container_name: gamification-redis
-    restart: always
-    volumes:
-      - gamification_redis_data:/data
-    networks:
-      - internal-gamification
 
   gamification-service:
     build:
@@ -29,27 +21,51 @@ services:
     restart: always
     depends_on:
       - gamification-postgres
-      - gamification-redis
+
     labels:
       - "traefik.enable=true"
 
-      # CORS preflight OPTIONS для /api/v2/gamification/*
-      - "traefik.http.routers.gamification-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/gamification/`) && Method(`OPTIONS`)"
+      # CORS preflight OPTIONS для /api/v2/level/* и /api/v2/achievement/*
+      - "traefik.http.routers.gamification-options.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/(level|achievement)(/.*)?$`) && Method(`OPTIONS`)"
       - "traefik.http.routers.gamification-options.entrypoints=websecure"
       - "traefik.http.routers.gamification-options.priority=200"
       - "traefik.http.routers.gamification-options.service=gamification"
       - "traefik.http.routers.gamification-options.middlewares=cors-headers@file"
       - "traefik.http.routers.gamification-options.tls=true"
 
-      # GET /api/v2/gamification/levels - список уровней (публичный)
-      - "traefik.http.routers.gamification-levels.rule=Host(`realtimemap.ru`) && Path(`/api/v2/gamification/levels`) && Method(`GET`)"
+      # GET /api/v2/level/ - список уровней (публичный)
+      - "traefik.http.routers.gamification-levels.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/level/?$`) && Method(`GET`)"
       - "traefik.http.routers.gamification-levels.entrypoints=websecure"
       - "traefik.http.routers.gamification-levels.priority=100"
       - "traefik.http.routers.gamification-levels.service=gamification"
-      - "traefik.http.routers.gamification-levels.middlewares=cors-headers@file,strip-gamification"
+      - "traefik.http.routers.gamification-levels.middlewares=cors-headers@file"
       - "traefik.http.routers.gamification-levels.tls=true"
 
-      # GET /gamification/health
+      # POST /api/v2/achievement/create - создание достижения (с auth, admin only)
+      - "traefik.http.routers.gamification-achievement-create.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/create/?$`) && Method(`POST`)"
+      - "traefik.http.routers.gamification-achievement-create.entrypoints=websecure"
+      - "traefik.http.routers.gamification-achievement-create.priority=110"
+      - "traefik.http.routers.gamification-achievement-create.service=gamification"
+      - "traefik.http.routers.gamification-achievement-create.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.gamification-achievement-create.tls=true"
+
+      # GET /api/v2/achievement/:userID/nearest - ближайшие достижения (публичный)
+      - "traefik.http.routers.gamification-achievement-nearest.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/[^/]+/nearest/?$`) && Method(`GET`)"
+      - "traefik.http.routers.gamification-achievement-nearest.entrypoints=websecure"
+      - "traefik.http.routers.gamification-achievement-nearest.priority=105"
+      - "traefik.http.routers.gamification-achievement-nearest.service=gamification"
+      - "traefik.http.routers.gamification-achievement-nearest.middlewares=cors-headers@file"
+      - "traefik.http.routers.gamification-achievement-nearest.tls=true"
+
+      # GET /api/v2/achievement/:userID - полученные достижения пользователя (публичный)
+      - "traefik.http.routers.gamification-achievement-list.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/[^/]+/?$`) && Method(`GET`)"
+      - "traefik.http.routers.gamification-achievement-list.entrypoints=websecure"
+      - "traefik.http.routers.gamification-achievement-list.priority=100"
+      - "traefik.http.routers.gamification-achievement-list.service=gamification"
+      - "traefik.http.routers.gamification-achievement-list.middlewares=cors-headers@file"
+      - "traefik.http.routers.gamification-achievement-list.tls=true"
+
+      # GET /gamification/health - health check (публичный)
       - "traefik.http.routers.gamification-health.rule=Host(`realtimemap.ru`) && Path(`/gamification/health`) && Method(`GET`)"
       - "traefik.http.routers.gamification-health.entrypoints=websecure"
       - "traefik.http.routers.gamification-health.priority=10"
@@ -58,18 +74,19 @@ services:
       - "traefik.http.routers.gamification-health.tls=true"
 
       # Service configuration
-      - "traefik.http.services.gamification.loadbalancer.server.port=8081"
+      - "traefik.http.services.gamification.loadbalancer.server.port=8080"
 
     networks:
       - web
-      - internal-gamification
+      - service-network
       - kafka-network
+      - internal-gamification
 
-volumes:
-  gamification_postgres_data:
-  gamification_redis_data:
 
 networks:
   web:
     external: true
+  service-network:
+    external: true
+    name: service-network
   internal-gamification:

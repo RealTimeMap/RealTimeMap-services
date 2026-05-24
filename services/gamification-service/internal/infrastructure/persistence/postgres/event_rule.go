@@ -11,26 +11,25 @@ import (
 	"gorm.io/gorm"
 )
 
-type PgEventConfigRepository struct {
+type PgEventRuleRepository struct {
 	db     *gorm.DB
 	logger *zap.Logger
 }
 
-func NewPgEventConfigRepository(db *gorm.DB, logger *zap.Logger) repository.EventConfigRepository {
-	return &PgEventConfigRepository{
+func NewPPgEventRuleRepository(db *gorm.DB, logger *zap.Logger) repository.EventRuleRepository {
+	return &PgEventRuleRepository{
 		db:     db,
 		logger: logger,
 	}
 }
 
-func (r *PgEventConfigRepository) GetEventConfigByKafkaType(ctx context.Context, eventType string) (*model.EventConfig, error) {
-	var eventConfig *model.EventConfig
-	err := r.db.WithContext(ctx).First(&eventConfig, "kafka_event_type = ?", eventType).Error
+func (r *PgEventRuleRepository) GetEventRuleByType(ctx context.Context, eventType string) (*model.EventRule, error) {
+	var eventRule *model.EventRule
+	err := r.db.WithContext(ctx).Preload("Reward").First(&eventRule, "event_type = ?", eventType).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, domainerrors.ErrConfigNotFount(eventType)
+			return nil, domainerrors.ErrRuleNotFount(eventType)
 		}
-		return nil, err
 	}
-	return eventConfig, nil
+	return eventRule, nil
 }

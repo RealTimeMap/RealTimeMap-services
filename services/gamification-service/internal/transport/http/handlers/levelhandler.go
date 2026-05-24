@@ -7,18 +7,18 @@ import (
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/app/dto"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/levelservice"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/level"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
 type Handler struct {
-	service *levelservice.LevelService
+	service *level.Service
 
 	logger *zap.Logger
 }
 type LevelDeps struct {
-	Service *levelservice.LevelService
+	Service *level.Service
 	Cache   cache.Cache
 	Logger  *zap.Logger
 }

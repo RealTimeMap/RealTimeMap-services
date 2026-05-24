@@ -2,7 +2,7 @@ package app
 
 import (
 	pkgprofile "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/profile"
-	producer2 "github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
+	producer2 "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/service"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/service/comment"

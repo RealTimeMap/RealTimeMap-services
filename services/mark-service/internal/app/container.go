@@ -2,9 +2,9 @@ package app
 
 import (
 	pkgprofile "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/profile"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"

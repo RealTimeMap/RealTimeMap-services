@@ -55,7 +55,7 @@ func (r *Router[T]) Route(ctx context.Context, event T) error {
 	return handler.Handle(ctx, event)
 }
 
-// MessageHandler возвращает функцию для использования с Consumer.Run.
+// MessageHandler возвращает функцию для использования с Consumer.
 // Парсит JSON и маршрутизирует событие.
 func (r *Router[T]) MessageHandler() MessageHandler {
 	return func(ctx context.Context, msg kafka.Message) error {

@@ -44,10 +44,14 @@ type Header struct {
 }
 
 // Producer отправляет события в Kafka.
+// Реализует интерфейс runner.Server: Run() error / Shutdown(ctx) error.
 type Producer struct {
 	writer       *kafka.Writer
 	logger       *zap.Logger
 	defaultTopic string // топик по умолчанию из конфига
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // New создаёт новый Producer.
@@ -61,10 +65,13 @@ func New(cfg Config, opts ...Option) *Producer {
 		Async:        cfg.Async,
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	p := &Producer{
 		writer:       writer,
 		logger:       zap.NewNop(),
 		defaultTopic: cfg.Topic,
+		ctx:          ctx,
+		cancel:       cancel,
 	}
 
 	for _, opt := range opts {
@@ -94,6 +101,36 @@ func (c Config) WithBrokers(brokers ...string) Config {
 func (c Config) WithTopic(topic string) Config {
 	c.Topic = topic
 	return c
+}
+
+// Run блокируется до вызова Shutdown.
+// Сам writer работает по требованию (Publish/PublishTo); Run нужен, чтобы Producer
+// можно было передать в runner.Run наравне с HTTP/gRPC серверами.
+func (p *Producer) Run() error {
+	p.logger.Info("kafka producer ready",
+		zap.String("default_topic", p.defaultTopic),
+	)
+	<-p.ctx.Done()
+	p.logger.Info("kafka producer stopped")
+	return nil
+}
+
+// Shutdown сигналит Run завершиться и закрывает writer.
+// Возвращает ctx.Err() если ctx истёк до завершения закрытия.
+func (p *Producer) Shutdown(ctx context.Context) error {
+	p.logger.Info("kafka producer stopping")
+	p.cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- p.writer.Close()
+	}()
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // Publish отправляет событие в топик по умолчанию.
@@ -214,7 +251,10 @@ func (m EventMeta) ToHeaders() []Header {
 	return headers
 }
 
-// Close закрывает producer.
+// Close закрывает producer. Сохранён для обратной совместимости с местами,
+// где producer закрывается явно (например, в Container.Close).
+// Если producer уже запущен через runner, предпочтительнее использовать Shutdown.
 func (p *Producer) Close() error {
+	p.cancel()
 	return p.writer.Close()
 }

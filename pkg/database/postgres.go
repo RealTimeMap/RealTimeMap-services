@@ -31,7 +31,9 @@ func New(cfg Config, log *zap.Logger, opts ...Option) (*gorm.DB, error) {
 		opt(options)
 	}
 
-	gormConfig := &gorm.Config{}
+	gormConfig := &gorm.Config{
+		TranslateError: true,
+	}
 	if log != nil {
 		gormConfig.Logger = newGormLogger(log, options.LogLevel, options.SlowThreshold)
 	}

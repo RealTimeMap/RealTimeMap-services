@@ -1,8 +1,9 @@
 package model
 
 import (
-	"math"
 	"time"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
 )
 
 // Level представляет уровень в системе геймификации.
@@ -16,9 +17,9 @@ type Level struct {
 
 // Percent вычисляет процент прогресса достяжения до достяжения нового уровня
 func (l *Level) Percent(xp float64) float64 {
-	p := (xp / float64(l.XPRequired)) * 100
+	p := utils.Percent(int64(xp), int64(l.XPRequired))
 	if p > 100 {
 		p = 100
 	}
-	return math.Round(p)
+	return p
 }

@@ -38,6 +38,7 @@ const (
 	CategoryTemp          CategoryStorage = "temp"
 	CategoryCategories    CategoryStorage = "categories"
 	CategoryProfileAvatar CategoryStorage = "avatars"
+	CategoryAchievement   CategoryStorage = "achievements"
 )
 
 // String строковое представление
@@ -48,7 +49,7 @@ func (c CategoryStorage) String() string {
 // Validate проверяет валидность категории, если вашей нет, добавить выше
 func (c CategoryStorage) Validate() error {
 	switch c {
-	case CategoryMarkPhoto, CategoryCommentPhoto, CategoryTemp, CategoryCategories, CategoryProfileAvatar:
+	case CategoryMarkPhoto, CategoryCommentPhoto, CategoryTemp, CategoryCategories, CategoryProfileAvatar, CategoryAchievement:
 		return nil
 	default:
 		return ErrInvalidCategory

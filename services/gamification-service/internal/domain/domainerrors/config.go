@@ -6,7 +6,9 @@ var (
 	ErrConfigNotFount = func(event string) error {
 		return apperror.NewNotFoundError("config", "event", event)
 	}
-
+	ErrRuleNotFount = func(event string) error {
+		return apperror.NewNotFoundError("event_rule", "event_type", event)
+	}
 	ErrConfigNotActive = func(event string) error {
 		return apperror.NewFieldValidationError("event", "eventConfig is not active", "value_error.event.inactive", event)
 	}
