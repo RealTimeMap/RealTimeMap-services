@@ -15,6 +15,10 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 		Cache:   container.CacheStrategy,
 		Logger:  container.Logger,
 	})
+	handlers.InitAchievementHandler(api, handlers.AchievementDeps{
+		Service: container.AchievementService,
+		Logger:  container.Logger,
+	})
 
 	health := http.HealthHandler("gamification-service", container.DB)
 	g.GET("/gamification/health", health)

@@ -1,8 +1,8 @@
 include:
-  - services/mark-service/docker-compose.yml
+#  - services/mark-service/docker-compose.yml
   - services/gamification-service/docker-compose.yml
-  - services/social-service/docker-compose.yml
-  - docker-compose.kafka.yml
+#  - services/social-service/docker-compose.yml
+#  - docker-compose.kafka.yml
 
 services:
   traefik:
@@ -35,14 +35,28 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - redis-network
+      - service-network
+
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - service-network
 
 volumes:
   redis_data:
+  postgres_data:
 
 networks:
   web:
     external: true
-  redis-network:
+  service-network:
     external: true
-    name: redis-network
+    name: service-network

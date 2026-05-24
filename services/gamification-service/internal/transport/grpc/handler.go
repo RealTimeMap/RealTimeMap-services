@@ -8,7 +8,7 @@ import (
 	pb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/proto/gamification"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/levelservice"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/level"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,13 +19,13 @@ type Handler struct {
 	pb.UnimplementedProgressServiceServer
 
 	progressRepo repository.UserProgressRepository
-	levelService *levelservice.LevelService
+	levelService *level.Service
 	logger       *zap.Logger
 }
 
 func NewHandler(
 	progressRepo repository.UserProgressRepository,
-	levelService *levelservice.LevelService,
+	levelService *level.Service,
 	logger *zap.Logger,
 ) *Handler {
 	return &Handler{

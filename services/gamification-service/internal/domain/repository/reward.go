@@ -6,6 +6,6 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 )
 
-type EventRuleRepository interface {
-	GetEventRuleByType(ctx context.Context, eventType string) (*model.EventRule, error)
+type XPRewardRepository interface {
+	GetByID(ctx context.Context, id uint) (*model.XPReward, error)
 }

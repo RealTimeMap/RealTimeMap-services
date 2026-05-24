@@ -1,4 +1,4 @@
-package progressservice
+package progress
 
 import (
 	"context"

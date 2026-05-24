@@ -4,22 +4,25 @@ import (
 	"context"
 	"strconv"
 
-	pkgkafka "github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/kafka/consumer"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/gamificationservice"
+	pkgkafka "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/consumer"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/achievement"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/event"
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
 
 type Handler struct {
-	gamificationService *gamificationservice.GamificationService
-	logger              *zap.Logger
+	service    *event.Service
+	achService achievement.Service
+	logger     *zap.Logger
 }
 
-func NewHandler(gamificationService *gamificationservice.GamificationService, logger *zap.Logger) *Handler {
+func NewHandler(service *event.Service, achService achievement.Service, logger *zap.Logger) *Handler {
 	return &Handler{
-		gamificationService: gamificationService,
-		logger:              logger,
+		service:    service,
+		achService: achService,
+		logger:     logger,
 	}
 }
 
@@ -55,7 +58,13 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 		return consumer.Skip(err)
 	}
 
-	h.gamificationService.GreatUserExp(ctx, uint(userID), meta.EventType, sourceID)
+	err = h.service.GreatUserExp(ctx, uint(userID), meta.EventType, sourceID)
+	if err != nil {
+		h.logger.Warn("error in gamification service", zap.Error(err))
+		return consumer.Skip(err)
+	}
+
+	h.achService.OnEvent(ctx, uint(userID), meta.EventType)
 
 	return nil
 }

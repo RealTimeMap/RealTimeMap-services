@@ -1,14 +1,19 @@
 package app
 
 import (
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	redispkg "github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/gamificationservice"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/levelgenerator"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/levelservice"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/progressservice"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/achievement"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/event"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/level"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/level/generator"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/progress"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/xp"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/infrastructure/persistence/postgres"
 	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/grpc"
 	"github.com/redis/go-redis/v9"
@@ -17,10 +22,12 @@ import (
 )
 
 type Container struct {
-	GamificationService *gamificationservice.GamificationService
-	LevelService        *levelservice.LevelService
-	ProgressRepo        repository.UserProgressRepository
-	ProgressService     *progressservice.ProgressService
+	LevelService    *level.Service
+	ProgressRepo    repository.UserProgressRepository
+	ProgressService *progress.ProgressService
+
+	EventGamificationService *event.Service
+	AchievementService       achievement.Service
 
 	ProgressGrpcHandler *grpctransport.Handler
 
@@ -32,26 +39,41 @@ type Container struct {
 func NewContainer(config *config.Config, db *gorm.DB, logger *zap.Logger) *Container {
 	progressRepo := postgres.NewPgUserProgressRepository(db, logger)
 	levelRepo := postgres.NewPgLevelRepository(db, logger)
-	configRepo := postgres.NewPgEventConfigRepository(db, logger)
-	userHistoryRepo := postgres.NewPgUserExpHistoryRepository(db, logger)
 
 	cli := redispkg.NewRedisCli(config.Redis)
 
 	cacheStrategy := getCacheStrategy(config.CacheStrategy, logger, cli)
 	strategy := levelgenerator.NewLinearGenerator()
 
-	progressService := progressservice.NewProgressService(progressRepo, logger)
-	levelService := levelservice.NewLevelService(levelRepo, strategy, logger)
-	gamificationService := gamificationservice.NewGamificationService(levelService, configRepo, progressRepo, userHistoryRepo, logger)
+	progressService := progress.NewProgressService(progressRepo, logger)
+	levelService := level.NewLevelService(levelRepo, strategy, logger)
+	opRepo := postgres.NewPgXPOperation(db, logger)
+	txManager := txmanager.NewTxManager(db)
+	op := xp.NewXPOperator(opRepo, progressRepo, levelService, txManager, logger)
 
+	eventRepo := postgres.NewPPgEventRuleRepository(db, logger)
+	userAchCountRepo := postgres.NewPgUserAchievementCountRepository(db, logger)
+	eventService := event.NewEventGamificationService(eventRepo, opRepo, userAchCountRepo, op, logger)
+
+	achievementRepo := postgres.NewPgAchievementRepository(db, logger)
+	xpRewardRepo := postgres.NewPgXPRewardRepository(db, logger)
+	userAchRepo := postgres.NewPgUserAchievementRepository(db, logger)
+	store, err := storage.NewLocalStorage(config.Storage.BasePath, config.Storage.BaseURL, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	s := achievement.New(achievementRepo, xpRewardRepo, userAchRepo, op, store, mediavalidator.NewPhotoValidator(), logger)
 	grpcHandler := grpctransport.NewHandler(progressRepo, levelService, logger)
 
 	return &Container{
-		GamificationService: gamificationService,
-		LevelService:        levelService,
-		ProgressRepo:        progressRepo,
+		LevelService: levelService,
+		ProgressRepo: progressRepo,
 
 		ProgressService: progressService,
+
+		EventGamificationService: eventService,
+		AchievementService:       s,
 
 		ProgressGrpcHandler: grpcHandler,
 
