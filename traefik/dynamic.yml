@@ -1,7 +1,7 @@
 http:
   routers:
     auth-public:
-      rule: "Host(`realtimemap.ru`) && (PathPrefix(`/api/v2/auth/`) || PathPrefix(`/api/v2/user/`) || PathPrefix(`/docs/`) || PathPrefix(`/admin/`) || PathPrefix(`/static/`))"
+      rule: "Host(`realtimemap.ru`) && (PathPrefix(`/api/v2/auth/`) || PathPrefix(`/api/v2/user/`) || PathPrefix(`/admin/`) || PathPrefix(`/static/`))"
       entryPoints:
         - websecure
       service: auth-service
@@ -43,14 +43,16 @@ http:
           - "HEAD"
           - "OPTIONS"
         accessControlAllowOriginList:
-          - "https://rt-task-frontend.vercel.app"
+          - "https://real-time-map-frontend.vercel.app"
           - "https://realtimemap.ru"
           - "http://localhost:5173"
           - "http://localhost:1420"
           - "http://localhost:8080"
+          - "http://localhost:9003"
         accessControlAllowHeaders:
           - "Origin"
           - "Content-Type"
+          - "Access-Control-Allow-Origin"
           - "Accept"
           - "Authorization"
           - "X-User-Id"
@@ -84,11 +86,11 @@ http:
           - "/rttask"
 tls:
   certificates:
-    - certFile: /certs/fullchain.pem
-      keyFile: /certs/privkey.pem
+    - certFile: /etc/letsencrypt/live/realtimemap.ru/fullchain.pem
+      keyFile: /etc/letsencrypt/live/realtimemap.ru/privkey.pem
 
   stores:
     default:
       defaultCertificate:
-        certFile: /certs/fullchain.pem
-        keyFile: /certs/privkey.pem
+        certFile: /etc/letsencrypt/live/realtimemap.ru/fullchain.pem
+        keyFile: /etc/letsencrypt/live/real

@@ -1,6 +1,6 @@
-include:
+#include:
 #  - services/mark-service/docker-compose.yml
-  - services/gamification-service/docker-compose.yml
+#  - services/gamification-service/docker-compose.yml
 #  - services/social-service/docker-compose.yml
 #  - docker-compose.kafka.yml
 
@@ -39,8 +39,10 @@ services:
 
   postgres:
     image: postgis/postgis:16-3.4-alpine
-    container_name: postgres
-    restart: always
+    container_name: rtm_postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -49,6 +51,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - service-network
+
+
 
 volumes:
   redis_data:

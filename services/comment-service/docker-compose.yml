@@ -1,16 +1,4 @@
 services:
-  comment-postgres:
-    image: postgres:16-alpine
-    container_name: comment-postgres
-    restart: always
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - comment_postgres_data:/var/lib/postgresql/data
-    networks:
-      - internal-comment
 
   comment-service:
     build:
@@ -18,8 +6,6 @@ services:
       dockerfile: services/comment-service/Dockerfile
     container_name: comment-service
     restart: always
-    depends_on:
-      - comment-postgres
     labels:
       - "traefik.enable=true"
 
@@ -93,11 +79,12 @@ services:
     networks:
       - web
       - internal-comment
+      - service-network
 
-volumes:
-  comment_postgres_data:
 
 networks:
   web:
+    external: true
+  service-network:
     external: true
   internal-comment:
