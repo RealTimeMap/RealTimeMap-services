@@ -41,7 +41,6 @@ func (s *StatService) GetProfileSummaryStat(ctx context.Context, userID uint) (i
 		s.logger.Warn("failed to get marks count")
 	}
 	return marksCount, rand.Int63(), rand.Int63(), nil
-
 }
 
 // GetUserMonthlyActivity Формирует данные для предоставления графика активности по месяцам в течении текущего года
