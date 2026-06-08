@@ -1,10 +1,12 @@
 # RealTimeMap Backend
 
-[![Go](https://img.shields.io/badge/Go-1.23-00ADD8?style=flat&logo=go)](https://go.dev/)
-[![Gin](https://img.shields.io/badge/Gin-1.10-00ADD8?style=flat&logo=go)](https://gin-gonic.com/)
-[![gRPC](https://img.shields.io/badge/gRPC-1.68-244c5a?style=flat&logo=google)](https://grpc.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat&logo=postgresql)](https://www.postgresql.org/)
+[![Go](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Gin](https://img.shields.io/badge/Gin-1.11-00ADD8?style=flat&logo=go)](https://gin-gonic.com/)
+[![gRPC](https://img.shields.io/badge/gRPC-1.78-244c5a?style=flat&logo=google)](https://grpc.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL%20%2B%20PostGIS-16-336791?style=flat&logo=postgresql)](https://postgis.net/)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat&logo=redis)](https://redis.io/)
+[![Kafka](https://img.shields.io/badge/Kafka-segmentio-231F20?style=flat&logo=apachekafka)](https://kafka.apache.org/)
+[![Traefik](https://img.shields.io/badge/Traefik-3.6-24A1C1?style=flat&logo=traefikproxy)](https://traefik.io/)
 
 ---
 
@@ -15,8 +17,9 @@
 - [3. Технологический стек](#3-технологический-стек)
 - [4. Структура репозитория](#4-структура-репозитория)
 - [5. Микросервисы](#5-микросервисы)
-- [6. Быстрый старт](#6-быстрый-старт)
-- [7. Разработка](#7-разработка)
+- [6. Общие пакеты и инструменты](#6-общие-пакеты-и-инструменты)
+- [7. Быстрый старт](#7-быстрый-старт)
+- [8. Разработка](#8-разработка)
 
 ---
 
@@ -26,75 +29,79 @@
 
 ### Что это такое?
 
-Платформа позволяет оставить "цифровой след" в любом месте — отметить событие, встречу, находку или предупреждение, видимое другим пользователям поблизости:
+Платформа позволяет оставить «цифровой след» в любом месте — отметить событие, встречу, находку или предупреждение, видимое другим пользователям поблизости:
 
 - Спонтанные мероприятия и встречи
 - Интересные места и находки
 - Важные уведомления для района
 - Точки для общения с людьми рядом
 
-Каждая метка существует ограниченное время (от 12 часов до недели), что делает платформу живой и актуальной.
+Каждая метка существует ограниченное время, что делает платформу живой и актуальной.
 
 ### Как это работает?
 
 1. Откройте карту и посмотрите, что происходит вокруг
 2. Создайте метку с фото, категорией и длительностью
 3. Общайтесь через комментарии и реакции
-4. Зарабатывайте опыт за активность
-5. Получайте уведомления о новых метках в реальном времени
+4. Зарабатывайте опыт и достижения за активность
+5. Получайте обновления о новых метках в реальном времени
 
 ### Возможности платформы
 
 | Модуль | Описание |
 |--------|----------|
-| **Метки** | Геолокационные метки с фото, категориями, автоудалением |
-| **Пользователи** | Аутентификация, профили, настройки |
-| **Real-time** | Мгновенные уведомления через WebSocket |
-| **Комментарии** | Вложенные ответы и реакции |
-| **Чат** | Личные сообщения между пользователями |
-| **Gamification** | Опыт, уровни, награды за активность |
-| **Подписки** | Премиум-возможности, интеграция с YooKassa |
-| **Модерация** | Управление контентом, система банов |
-| **Админ-панель** | Управление платформой |
+| **Метки** | Геолокационные метки с фото, категориями, пространственной фильтрацией и автоудалением |
+| **Социальный профиль** | Профили, друзья, блокировки, агрегированная статистика |
+| **Real-time** | Мгновенные обновления карты через Socket.IO |
+| **Комментарии** | Вложенные ответы и реакции к меткам |
+| **Геймификация** | Опыт, уровни, достижения за активность |
+| **Уведомления** | Доставка уведомлений пользователям |
+| **Аутентификация** | Регистрация, вход, валидация токенов (ForwardAuth) |
+| **Подписки** | Премиум-возможности, платежи |
+| **Документация** | Внутренний веб-портал с описанием API всех сервисов |
 
 ---
 
 ## 2. Архитектура
 
-Проект построен на **микросервисной архитектуре** с применением принципов **Domain-Driven Design (DDD)**.
+Проект построен на **микросервисной архитектуре** с применением принципов **Domain-Driven Design (DDD)**. Каждый сервис автономен: имеет собственную БД, конфигурацию и свой `Dockerfile`.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Clients                               │
-│                  (Mobile, Web, Admin)                        │
+│                  (Web, Mobile, Admin)                        │
 └──────────────────────────┬──────────────────────────────────┘
-                           │ HTTP/WebSocket
+                           │ HTTPS / WebSocket
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      API Gateway                             │
-│                    (Gin, REST API)                           │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ gRPC
-        ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ user-service │   │marker-service│   │ chat-service │
-└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-       │                  │                  │
-       ▼                  ▼                  ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│  PostgreSQL  │   │PostgreSQL    │   │  PostgreSQL  │
-│              │   │  + PostGIS   │   │              │
-└──────────────┘   └──────────────┘   └──────────────┘
+│                         Traefik                              │
+│         (reverse proxy, TLS, CORS, ForwardAuth)              │
+│   маршрутизация по PathPrefix → нужный сервис, проверка       │
+│   Bearer-токена через auth-service (X-User-* заголовки)       │
+└───────┬───────────────┬───────────────┬──────────────┬───────┘
+        │ HTTP/Socket.IO│               │              │
+        ▼               ▼               ▼              ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ mark-service │ │social-service│ │ gamification │ │   comment    │
+└──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
+       │   gRPC ◄───────┘                │                │
+       │   между сервисами               │                │
+       ▼                                 ▼                ▼
+┌──────────────┐                  ┌──────────────────────────────┐
+│  PostgreSQL  │                  │            Kafka              │
+│  + PostGIS   │  ◄── Redis ──►   │   (событийная интеграция:     │
+│  (на сервис) │                  │   xp-начисления, статистика)  │
+└──────────────┘                  └──────────────────────────────┘
 ```
 
 ### Принципы
 
-- **Независимость сервисов** — каждый микросервис имеет собственную БД и может деплоиться отдельно
-- **gRPC для внутренней коммуникации** — типизированные контракты, высокая производительность
-- **REST API для клиентов** — через API Gateway на Gin
-- **Event-driven** — асинхронное взаимодействие через Redis Pub/Sub / Kafka
-- **DDD** — чёткие границы bounded contexts
+- **Независимость сервисов** — у каждого микросервиса своя БД, конфиг и независимый деплой
+- **DDD-слои** — внутри сервиса: `domain` → `app` → `infrastructure` → `transport`
+- **Traefik как точка входа** — TLS, CORS и аутентификация (ForwardAuth) вынесены на прокси; сервисы не дублируют эту логику
+- **gRPC для внутренней коммуникации** — типизированные контракты между сервисами (например, mark-service запрашивает профиль у social-service)
+- **Event-driven через Kafka** — асинхронная интеграция (начисление опыта, обновление статистики) на базе `segmentio/kafka-go`
+- **Real-time через Socket.IO** — обновления карты доставляются клиентам в реальном времени
 
 ---
 
@@ -102,301 +109,268 @@
 
 | Категория | Технологии |
 |-----------|------------|
-| **Язык** | Go 1.23 |
+| **Язык** | Go 1.25 |
 | **HTTP Framework** | Gin |
 | **Межсервисная связь** | gRPC + Protocol Buffers |
-| **База данных** | PostgreSQL 16 + PostGIS |
+| **База данных** | PostgreSQL 16 + PostGIS, доступ через `pgx` и GORM |
 | **Кеширование** | Redis 7 |
-| **Очереди сообщений** | Redis Pub/Sub / Kafka |
-| **Real-time** | WebSocket (gorilla/websocket) |
+| **Событийная шина** | Kafka (`segmentio/kafka-go`) |
+| **Real-time** | Socket.IO (`doquangtan/socketio`) |
+| **Reverse Proxy / Gateway** | Traefik 3.6 (TLS, CORS, ForwardAuth) |
+| **Логирование** | zap |
+| **Обработка изображений** | `disintegration/imaging` |
 | **Контейнеризация** | Docker, Docker Compose |
-| **Оркестрация** | Kubernetes (production) |
 
 ---
 
 ## 4. Структура репозитория
 
 ```
-realtimemap-backend/
-├── proto/                          # gRPC контракты
+RealTimeMap-services/
+├── proto/                          # gRPC контракты (.proto)
 │   ├── user/
-│   │   └── user.proto
-│   ├── marker/
-│   │   └── marker.proto
-│   ├── geo/
-│   │   └── geo.proto
-│   ├── notification/
-│   │   └── notification.proto
+│   ├── profile/
+│   ├── mark/
 │   ├── comment/
-│   │   └── comment.proto
-│   ├── chat/
-│   │   └── chat.proto
-│   ├── gamification/
-│   │   └── gamification.proto
-│   ├── subscription/
-│   │   └── subscription.proto
-│   └── moderation/
-│       └── moderation.proto
+│   └── gamification/
 │
-├── pkg/                            # Общие пакеты
-│   ├── pb/                         # Сгенерированные protobuf файлы
+├── pkg/                            # Общие переиспользуемые пакеты
+│   ├── pb/                         # Сгенерированный protobuf-код
 │   ├── logger/                     # Структурированное логирование (zap)
 │   ├── config/                     # Загрузка конфигурации
 │   ├── database/                   # Подключение к PostgreSQL
-│   ├── redis/                      # Redis клиент
-│   ├── middleware/                 # Общие middleware (auth, logging, recovery)
-│   └── errors/                     # Стандартизированные ошибки
+│   ├── redis/                      # Redis-клиент
+│   ├── transport/                  # Общие транспортные хелперы
+│   ├── middleware/                 # Общие middleware
+│   ├── apperror/                   # Стандартизированные ошибки приложения
+│   ├── clients/                    # gRPC-клиенты к другим сервисам
+│   ├── storage/                    # Абстракция хранилища файлов
+│   ├── imageprocessor/             # Обработка/ресайз изображений
+│   ├── mediavalidator/             # Валидация загружаемых медиа
+│   ├── pagination/                 # Пагинация
+│   ├── validation/                 # Валидация входных данных
+│   ├── helpers/ utils/ date/ types/ runner/   # Прочие утилиты
 │
 ├── services/
-│   ├── gateway/                    # API Gateway (HTTP → gRPC)
-│   ├── user-service/               # Пользователи, аутентификация
-│   ├── marker-service/             # Метки на карте
-│   ├── geo-service/                # Геопространственные запросы
-│   ├── notification-service/       # Real-time уведомления
+│   ├── auth-service/               # Аутентификация (переносится извне)
+│   ├── mark-service/               # Метки на карте (ядро платформы)
+│   ├── social-service/             # Профили, друзья, блокировки, статистика
+│   ├── gamification-service/       # Опыт, уровни, достижения
 │   ├── comment-service/            # Комментарии и реакции
-│   ├── chat-service/               # Личные сообщения
-│   ├── gamification-service/       # Опыт, уровни, награды
-│   ├── subscription-service/       # Подписки, платежи
-│   └── moderation-service/         # Модерация контента
+│   ├── notification-service/       # Уведомления (в разработке)
+│   ├── subsriptions-service/       # Подписки и платежи (в планах)
+│   └── docs-service/               # Веб-портал документации API (Vue)
 │
-├── deployments/
-│   ├── docker-compose.yml          # Локальный запуск
-│   ├── docker-compose.dev.yml      # Разработка с hot reload
-│   └── k8s/                        # Kubernetes манифесты
+├── tools/
+│   ├── docgen/                     # Генератор документации из YAML-описаний
+│   └── profile-stub/               # Заглушка profile gRPC для локальной разработки
 │
-├── scripts/
-│   ├── generate-proto.sh           # Генерация pb файлов
-│   └── migrate.sh                  # Запуск миграций
+├── traefik/
+│   ├── traefik.yml                 # Статическая конфигурация прокси
+│   └── dynamic.yml                 # Роутеры, middleware (CORS, auth), TLS
 │
+├── scripts/                        # Общие и сервис-специфичные скрипты
+├── docker-compose.yml              # Инфраструктура: Traefik, Postgres, Redis
+├── docker-compose.kafka.yml        # Kafka-стек
+├── Dockerfile                      # Базовый образ
 ├── go.mod
-├── go.sum
-├── Makefile
 └── README.md
 ```
+
+> Каждый сервис содержит собственный `docker-compose.yml` (с label-конфигурацией Traefik), `Dockerfile` и `config/`. Корневой `docker-compose.yml` отвечает за общую инфраструктуру.
 
 ---
 
 ## 5. Микросервисы
 
-### user-service
+### mark-service
 
-Управление пользователями и аутентификация.
+Ядро платформы — управление метками на карте.
 
-- Регистрация и авторизация (JWT)
+- CRUD операций с метками и категориями
+- Пространственная фильтрация и работа с геоданными (PostGIS)
+- Загрузка и хранение фотографий
+- Автоудаление меток по истечении срока жизни
+- Real-time обновления карты через Socket.IO
+- gRPC-клиент к профилям пользователей
+
+### social-service
+
+Социальный слой платформы.
+
 - Профили пользователей
-- Настройки и предпочтения
-- OAuth интеграции
-
-### marker-service
-
-Управление метками на карте.
-
-- CRUD операции с метками
-- Загрузка и хранение фото
-- Категоризация
-- Автоматическое удаление по TTL
-
-### geo-service
-
-Геопространственные операции.
-
-- Поиск меток в радиусе
-- Геохеширование для оптимизации
-- Кластеризация меток
-- Работа с PostGIS
-
-### notification-service
-
-Real-time уведомления.
-
-- WebSocket соединения
-- Push-уведомления
-- Уведомления о новых метках поблизости
-- Email-уведомления
-
-### comment-service
-
-Комментарии и реакции.
-
-- Вложенные комментарии
-- Реакции (лайки, эмодзи)
-- Модерация комментариев
-
-### chat-service
-
-Личные сообщения.
-
-- Диалоги между пользователями
-- История сообщений
-- Статусы прочтения
+- Друзья и связи между пользователями
+- Блокировки пользователей
+- Агрегированная статистика и прогресс
+- gRPC-сервер профилей для других сервисов
 
 ### gamification-service
 
 Система геймификации.
 
-- Начисление опыта
+- Начисление опыта (XP) по правилам событий
 - Уровни пользователей
-- Достижения и награды
-- Лидерборды
+- Достижения
+- Интеграция через Kafka (потребление событий активности)
 
-### subscription-service
+### comment-service
 
-Подписки и платежи.
+Комментарии и реакции.
 
-- Тарифные планы
-- Интеграция с YooKassa
-- Управление подписками
-- История платежей
+- Комментарии к меткам (с поддержкой вложенности)
+- Реакции (лайки/эмодзи)
+- Фильтрация контента
+- Опциональная интеграция через Kafka
 
-### moderation-service
+### notification-service
 
-Модерация контента.
+Доставка уведомлений пользователям.
 
-- Жалобы на контент
-- Система банов
-- Автомодерация
-- Админ-панель
+> **Статус:** в разработке — каркас сервиса (`cmd/`) создан, доменная логика переносится.
+
+### auth-service
+
+Аутентификация и авторизация: регистрация, вход, валидация токенов. Используется Traefik через `ForwardAuth` — прокси обращается к `/api/v2/auth/token-validate` и прокидывает заголовки `X-User-Id`, `X-User-Name`, `X-User-Ban`, `X-User-Admin` в нижестоящие сервисы.
+
+> **Статус:** существует и работает как отдельный сервис, **ещё не перенесён в этот монорепозиторий**.
+
+### subsriptions-service
+
+Подписки и платежи: тарифные планы, премиум-возможности, история платежей.
+
+> **Статус:** в планах — директория зарезервирована.
+
+### docs-service
+
+Внутренний веб-портал документации API (Vue + Vite). Документация ведётся вручную в YAML-файлах внутри каждого сервиса (`docs/`) и поддерживает описание четырёх типов протоколов: **HTTP/REST**, **Kafka**, **gRPC** и **Socket.IO**. Также отображает статус доступности сервисов.
 
 ---
 
-## 6. Быстрый старт
+## 6. Общие пакеты и инструменты
+
+### pkg/
+
+Переиспользуемые между сервисами пакеты: логирование (`logger`), конфигурация (`config`), доступ к БД (`database`) и Redis (`redis`), gRPC-клиенты (`clients`), обработка ошибок (`apperror`), хранилище и обработка медиа (`storage`, `imageprocessor`, `mediavalidator`), пагинация, валидация и прочие утилиты. Сгенерированный protobuf-код лежит в `pkg/pb`.
+
+### tools/
+
+- **docgen** — генерирует документацию из YAML-описаний сервисов для docs-service.
+- **profile-stub** — лёгкая gRPC-заглушка профилей, чтобы поднимать сервисы локально без полного social-service.
+
+---
+
+## 7. Быстрый старт
 
 ### Требования
 
 - [Docker](https://www.docker.com/get-started) и Docker Compose
-- [Go 1.23+](https://go.dev/dl/) (для локальной разработки)
+- [Go 1.25+](https://go.dev/dl/) (для локальной разработки)
 - [protoc](https://grpc.io/docs/protoc-installation/) (для генерации proto)
-- [Make](https://www.gnu.org/software/make/)
 
 ### Настройка
 
 1. **Клонируйте репозиторий**
 
 ```bash
-git clone https://github.com/RealTimeMap/RealTimeMap-backend.git
-cd RealTimeMap-backend
+git clone <repo-url>
+cd RealTimeMap-services
 ```
 
-2. **Создайте файл конфигурации**
-
-```bash
-cp .env.example .env
-```
-
-3. **Настройте переменные окружения**
+2. **Создайте `.env`** в корне с переменными инфраструктуры:
 
 ```env
-# Database
-DB_HOST=postgres
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=your_secure_password
-DB_NAME=realtimemap
-
-# Redis
-REDIS_URL=redis://redis:6379
-
-# JWT
-JWT_SECRET=your_jwt_secret_key
-
-# YooKassa (payments)
-YOOKASSA_SHOP_ID=your_shop_id
-YOOKASSA_SECRET_KEY=your_secret_key
+POSTGRES_DB=realtimemap
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_secure_password
 ```
 
-> ⚠️ **Важно:** Никогда не коммитьте `.env` файл с реальными секретами в репозиторий.
+> ⚠️ Никогда не коммитьте `.env` с реальными секретами.
 
-4. **Сгенерируйте protobuf файлы**
+3. **Создайте внешние Docker-сети** (используются всеми сервисами):
 
 ```bash
-make proto
+docker network create web
+docker network create service-network
+docker network create kafka-network   # если используете Kafka
 ```
 
 ### Запуск
 
 ```bash
-# Запуск всех сервисов
-docker-compose up -d --build
+# Инфраструктура (Traefik, Postgres, Redis)
+docker-compose up -d
 
-# Просмотр логов
-docker-compose logs -f
+# Kafka (при необходимости)
+docker-compose -f docker-compose.kafka.yml up -d
 
-# Остановка
-docker-compose down
+# Запуск конкретного сервиса (на примере mark-service)
+docker-compose -f services/mark-service/docker-compose.yml up -d --build
 ```
 
-API Gateway будет доступен по адресу: **http://localhost:8080**
+Каждый сервис маршрутизируется Traefik по своему `PathPrefix` (см. `traefik/dynamic.yml` и label'ы в `docker-compose.yml` сервиса).
 
-### Документация API
+### Запуск сервиса локально (без Docker)
 
-- **Swagger UI:** http://localhost:8080/swagger/index.html
+Настройте `config/config.yaml` сервиса (хосты БД/Redis/Kafka, gRPC-адреса) и запустите:
+
+```bash
+cd services/mark-service && go run ./cmd
+```
 
 ---
 
-## 7. Разработка
-
-### Полезные команды
-
-```bash
-# Генерация protobuf
-make proto
-
-# Сборка всех сервисов
-make build-all
-
-# Запуск тестов
-make test
-
-# Линтер
-make lint
-
-# Миграции
-make migrate-up
-make migrate-down
-
-# Запуск конкретного сервиса локально
-cd services/user-service && go run cmd/main.go
-```
-
-### Добавление нового сервиса
-
-1. Создайте proto-контракт в `proto/`
-2. Сгенерируйте Go код: `make proto`
-3. Создайте структуру сервиса в `services/`
-4. Добавьте сервис в `docker-compose.yml`
-5. Обновите API Gateway для проксирования запросов
-
-Подробнее см. [services/README.md](services/README.md)
+## 8. Разработка
 
 ### Структура сервиса (DDD)
 
 ```
 service-name/
-├── cmd/
-│   └── main.go
+├── cmd/                    # Точка входа
+├── config/                 # config.yaml + загрузка конфигурации
 ├── internal/
+│   ├── app/                # Сборка зависимостей, use-cases, DTO приложения
 │   ├── domain/
-│   │   ├── entity/
-│   │   ├── valueobject/
-│   │   ├── repository/
-│   │   └── service/
-│   ├── application/
-│   │   ├── command/
-│   │   ├── query/
-│   │   └── dto/
+│   │   ├── model/          # Доменные сущности
+│   │   ├── valueobject/    # Value objects
+│   │   ├── repository/     # Интерфейсы репозиториев
+│   │   ├── service/        # Доменные сервисы
+│   │   ├── events/         # Доменные события
+│   │   └── domainerrors/   # Доменные ошибки
 │   ├── infrastructure/
-│   │   ├── persistence/
-│   │   └── grpc/
-│   └── interfaces/
-│       ├── http/
-│       └── grpc/
-├── migrations/
+│   │   ├── persistence/    # Реализация репозиториев (БД)
+│   │   ├── grpc/           # gRPC-клиенты к другим сервисам
+│   │   └── kafka/          # Kafka producer/consumer
+│   ├── transport/
+│   │   ├── http/           # HTTP-хендлеры (Gin) + DTO + роуты
+│   │   ├── grpc/           # gRPC-сервер
+│   │   ├── socket/         # Socket.IO-хендлеры
+│   │   └── kafka/          # Обработчики Kafka-сообщений
+│   └── mocks/              # Сгенерированные моки (mockery)
+├── docs/                   # YAML-описания API для docs-service
+├── config.yaml
 ├── Dockerfile
-└── Makefile
+└── docker-compose.yml      # Traefik-роутеры через labels
 ```
+
+### gRPC-контракты
+
+`.proto`-файлы лежат в `proto/`, сгенерированный код — в `pkg/pb/`. После изменения контрактов перегенерируйте код через `protoc`.
+
+### Тесты и моки
+
+Моки генерируются через [mockery](https://github.com/vektra/mockery) (конфигурация — `.mockery.yaml`). Тесты — рядом с тестируемым кодом:
+
+```bash
+# Тесты конкретного сервиса
+cd services/mark-service && go test ./...
+```
+
+### Документация API
+
+Описания endpoints ведутся вручную в `docs/*.yaml` каждого сервиса, собираются `tools/docgen` и отображаются в **docs-service**.
 
 ---
 
 ## Лицензия
 
-MIT License. См. [LICENSE](LICENSE) для подробностей.
+См. [LICENSE](LICENSE).

@@ -56,3 +56,19 @@ func (r *PgFriendshipRepository) CountFriends(ctx context.Context, userID uint, 
 		Count(&count).Error
 	return count, err
 }
+
+func (r *PgFriendshipRepository) CountFriendAndSubs(ctx context.Context, userID uint) (int64, int64, error) {
+	var friendCount, subsCount int64
+	err := r.db.WithContext(ctx).Model(&model.Friendship{}).
+		Where("user_id = ?", userID).
+		Select(
+			"COUNT(*) FILTER (WHERE status = ?) AS friend_count, "+
+				"COUNT(*) FILTER (WHERE status = ?) AS subs_count",
+			model.Accepted,
+			model.Waiting,
+		).
+		Row().
+		Scan(&friendCount, &subsCount)
+
+	return friendCount, subsCount, err
+}

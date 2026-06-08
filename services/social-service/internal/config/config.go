@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/progress"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	pkgconfig "github.com/RealTimeMap/RealTimeMap-backend/pkg/config"
@@ -19,11 +21,20 @@ type Database struct {
 	SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE" env-default:"disable"`
 }
 
+type Kafka struct {
+	Brokers        []string      `yaml:"brokers" env:"KAFKA_BROKERS" env-default:"localhost:9092"`
+	Topics         []string      `yaml:"topics"`
+	GroupID        string        `yaml:"group_id" env:"KAFKA_GROUP_ID" env-default:"gamification-service"`
+	MaxWait        time.Duration `yaml:"max_wait" env-default:"500ms"`
+	CommitInterval time.Duration `yaml:"commit_interval" env-default:"0"`
+}
+
 type Config struct {
 	Env          string                `env:"ENV" env-default:"local"`
 	Database     Database              `yaml:"database"`
 	Http         http.Config           `yaml:"http_server"`
 	GRPC         servergrpc.Config     `yaml:"grpc"`
+	Kafka        Kafka                 `yaml:"kafka"`
 	Storage      storage.StorageConfig `yaml:"storage"`
 	Gamification progress.Config       `yaml:"gamification"`
 	MarkStat     mark.Config           `yaml:"mark_stat"`

@@ -82,7 +82,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	profileRepo := postgres.NewPgProfileRepository(db, logger)
 	profileService := profile.NewProfileService(profileRepo, store, photoValidator, progressPort, logger)
-	profileStatService := profile.NewStatService(markStatPort, logger)
+	friendRepo := postgres.NewPgFriendshipRepository(db, logger)
+	profileStatService := profile.NewStatService(markStatPort, friendRepo, logger)
 	profileHandler := profilegrpc.NewHandler(profileService, logger)
 
 	redisCli := getRedisCli(cfg.Redis)
