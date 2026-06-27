@@ -6,6 +6,7 @@ type BaseProfileResponse struct {
 	UserID    uint   `json:"userId"`
 	Username  string `json:"username"`
 	Avatar    string `json:"avatar"`
+	Tag       string `json:"tag"`
 	IsPrivate bool   `json:"isPrivate"`
 }
 
@@ -15,6 +16,7 @@ func NewBaseProfileResponse(data *model.Profile) BaseProfileResponse {
 		Username:  data.Username,
 		Avatar:    data.Avatar.URL,
 		IsPrivate: data.IsPrivate,
+		Tag:       data.Tag,
 	}
 }
 

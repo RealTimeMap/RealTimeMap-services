@@ -38,6 +38,18 @@ func (r *PgBlockedUserRepository) GetByID(ctx context.Context, userID uint, bloc
 	return user, nil
 }
 
+func (r *PgBlockedUserRepository) ExistsBetween(ctx context.Context, userID, otherID uint) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.BlockedUser{}).
+		Where("(user_id = ? AND blocked_user_id = ?) OR (user_id = ? AND blocked_user_id = ?)",
+			userID, otherID, otherID, userID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (r *PgBlockedUserRepository) Block(ctx context.Context, userID, blockedUserID uint) (bool, error) {
 	payload := &model.BlockedUser{
 		UserID:        userID,
