@@ -7,10 +7,12 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/runner"
 	grpctransport "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/grpc"
 	httpserver "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/consumer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
 	httptransport "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/kafka"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -47,7 +49,17 @@ func main() {
 		log.Fatal("failed to init gRPC server", zap.Error(err))
 	}
 
-	if err := runner.Run(log, httpServer, grpcServer); err != nil {
+	kafkaHandler := kafka.NewHandler(container.ProfileService, log)
+	kafkaConsumer := consumer.New(
+		consumer.DefaultConfig().
+			WithBrokers(cfg.Kafka.Brokers...).
+			WithTopics(cfg.Kafka.Topics...).
+			WithGroupID(cfg.Kafka.GroupID),
+		kafkaHandler.HandleMessage,
+		log,
+	)
+
+	if err := runner.Run(log, httpServer, grpcServer, kafkaConsumer); err != nil {
 		log.Error("Server error", zap.Error(err))
 	}
 

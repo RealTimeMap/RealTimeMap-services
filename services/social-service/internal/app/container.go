@@ -9,6 +9,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/blockeduser"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/friendship"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
 	progressadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/progress"
 	markstatadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/stats"
@@ -27,6 +28,9 @@ type Container struct {
 
 	BlockedUserRepo    repository.BlockedUserRepository
 	BlockedUserService *blockeduser.Service
+
+	FriendshipRepo    repository.FriendShipRepository
+	FriendshipService *friendship.Service
 
 	Storage storage.Storage
 
@@ -82,13 +86,16 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	profileRepo := postgres.NewPgProfileRepository(db, logger)
 	profileService := profile.NewProfileService(profileRepo, store, photoValidator, progressPort, logger)
-	profileStatService := profile.NewStatService(markStatPort, logger)
+	friendRepo := postgres.NewPgFriendshipRepository(db, logger)
+	profileStatService := profile.NewStatService(markStatPort, friendRepo, logger)
 	profileHandler := profilegrpc.NewHandler(profileService, logger)
 
 	redisCli := getRedisCli(cfg.Redis)
 
 	blockedUserRepo := postgres.NewPgBlockedUserRepository(db, logger)
 	blockedUserService := blockeduser.NewService(blockedUserRepo, profileRepo, logger)
+
+	friendshipService := friendship.NewService(friendRepo, profileRepo, blockedUserRepo, logger)
 
 	return &Container{
 		ProfileRepo:        profileRepo,
@@ -98,6 +105,9 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 		BlockedUserRepo:    blockedUserRepo,
 		BlockedUserService: blockedUserService,
+
+		FriendshipRepo:    friendRepo,
+		FriendshipService: friendshipService,
 
 		Storage: store,
 

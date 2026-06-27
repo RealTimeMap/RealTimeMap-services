@@ -8,16 +8,16 @@ import (
 )
 
 type SummaryProfileStat struct {
-	MarkCount        float64 `json:"markCount"`
-	FriendsCount     float64 `json:"friendsCount"`
-	SubscribersCount float64 `json:"subscribersCount"`
+	MarkCount        string `json:"markCount"`
+	FriendsCount     string `json:"friendsCount"`
+	SubscribersCount string `json:"subscribersCount"`
 }
 
 func NewSummaryProfileStat(marks, friends, subs int64) SummaryProfileStat {
 	return SummaryProfileStat{
-		MarkCount:        utils.Threshold(marks),
-		FriendsCount:     utils.Threshold(friends),
-		SubscribersCount: utils.Threshold(subs),
+		MarkCount:        utils.FormatNumber(marks),
+		FriendsCount:     utils.FormatNumber(friends),
+		SubscribersCount: utils.FormatNumber(subs),
 	}
 }
 

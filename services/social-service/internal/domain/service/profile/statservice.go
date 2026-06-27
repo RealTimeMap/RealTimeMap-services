@@ -2,11 +2,11 @@ package profile
 
 import (
 	"context"
-	"math/rand"
 	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"go.uber.org/zap"
 )
 
@@ -20,15 +20,16 @@ type MarkStatGetter interface {
 }
 
 type StatService struct {
-	markStat MarkStatGetter
-
-	logger *zap.Logger
+	markStat   MarkStatGetter
+	friendRepo repository.FriendShipRepository
+	logger     *zap.Logger
 }
 
-func NewStatService(markStat MarkStatGetter, logger *zap.Logger) *StatService {
+func NewStatService(markStat MarkStatGetter, friendRepo repository.FriendShipRepository, logger *zap.Logger) *StatService {
 	return &StatService{
-		markStat: markStat,
-		logger:   logger,
+		markStat:   markStat,
+		friendRepo: friendRepo,
+		logger:     logger,
 	}
 }
 
@@ -40,8 +41,13 @@ func (s *StatService) GetProfileSummaryStat(ctx context.Context, userID uint) (i
 	if err != nil {
 		s.logger.Warn("failed to get marks count")
 	}
-	return marksCount, rand.Int63(), rand.Int63(), nil
 
+	friendCount, subsCount, err := s.friendRepo.CountFriendAndSubs(ctx, userID)
+	if err != nil {
+		s.logger.Warn("failed to get marks count")
+	}
+
+	return marksCount, friendCount, subsCount, nil
 }
 
 // GetUserMonthlyActivity Формирует данные для предоставления графика активности по месяцам в течении текущего года
@@ -56,7 +62,7 @@ func (s *StatService) GetUserMonthlyActivity(ctx context.Context, userID uint) (
 	return activities, nil
 }
 
-// GetUserMarksHeatMap делает запрос к gRPC сервису для получение данных используемых для формирования Тепловой карты активности
+// GetUserMarksHeatMap делает запрос к gRPC сервису для получения данных используемых для формирования Тепловой карты активности
 func (s *StatService) GetUserMarksHeatMap(ctx context.Context, userID uint, start, end time.Time) ([]*mark.HeatMapItem, error) {
 	s.logger.Info("StatService.GetUserMarksHeatMap", zap.Uint("user_id", userID))
 

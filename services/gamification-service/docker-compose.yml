@@ -1,17 +1,4 @@
 services:
-  gamification-postgres:
-    image: postgres:16-alpine
-    container_name: gamification-postgres
-    restart: always
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - gamification_postgres_data:/var/lib/postgresql/data
-    networks:
-      - internal-gamification
-
 
   gamification-service:
     build:
@@ -19,8 +6,6 @@ services:
       dockerfile: services/gamification-service/Dockerfile
     container_name: gamification-service
     restart: always
-    depends_on:
-      - gamification-postgres
 
     labels:
       - "traefik.enable=true"
@@ -76,15 +61,21 @@ services:
       # Service configuration
       - "traefik.http.services.gamification.loadbalancer.server.port=8080"
 
+    volumes:
+      - gamification_store_data:/app/store
     networks:
       - web
       - service-network
       - kafka-network
       - internal-gamification
 
+volumes:
+  gamification_store_data:
 
 networks:
   web:
+    external: true
+  kafka-network:
     external: true
   service-network:
     external: true

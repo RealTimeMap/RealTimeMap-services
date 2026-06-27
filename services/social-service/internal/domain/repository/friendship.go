@@ -7,6 +7,8 @@ import (
 )
 
 type FriendShipRepository interface {
+	// GetRelation возвращает связь между двумя пользователями в любом направлении (nil если связи нет)
+	GetRelation(ctx context.Context, userID, friendID uint) (*model.Friendship, error)
 	// SendRequest отправка запроса в друзья
 	SendRequest(ctx context.Context, userID, friendID uint) error
 	// AcceptRequest Принять запрос в друзья
@@ -19,4 +21,6 @@ type FriendShipRepository interface {
 	GetFriends(ctx context.Context, userID uint) ([]uint, error)
 	// CountFriends число друзей
 	CountFriends(ctx context.Context, userID uint, status model.FriendshipStatus) (int64, error)
+	// CountFriendAndSubs количество друзей и подписчиков
+	CountFriendAndSubs(ctx context.Context, userID uint) (int64, int64, error)
 }

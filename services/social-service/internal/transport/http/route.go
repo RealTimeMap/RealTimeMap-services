@@ -29,6 +29,11 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 		Logger:  container.Logger,
 	})
 
+	handlers.RegisterFriendshipHandler(api, handlers.FriendshipDeps{
+		Service: container.FriendshipService,
+		Logger:  container.Logger,
+	})
+
 	health := http.HealthHandler("social-service", container.DB)
 	g.GET("/social/health", health)
 }

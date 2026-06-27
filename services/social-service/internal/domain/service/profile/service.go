@@ -61,6 +61,7 @@ func (s *Service) CreateProfile(ctx context.Context, input CreateProfileInput) (
 		Username:        input.Username,
 		IsPrivate:       false,
 		PrivacySettings: model.DefaultPrivacySettings(),
+		Tag:             "@" + input.Username,
 	}
 
 	profile, err := s.profileRepo.Create(ctx, payload)
@@ -74,7 +75,8 @@ func (s *Service) CreateProfile(ctx context.Context, input CreateProfileInput) (
 func (s *Service) checkProfileExists(ctx context.Context, userId uint) error {
 	profile, err := s.profileRepo.GetProfile(ctx, userId)
 	if err != nil {
-		if errors.Is(err, domainerrors.ProfileNotFound(userId)) {
+		var notFoundErr *apperror.NotFoundError
+		if errors.As(err, &notFoundErr) {
 			return nil
 		}
 

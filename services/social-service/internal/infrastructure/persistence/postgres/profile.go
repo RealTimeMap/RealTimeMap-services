@@ -131,7 +131,7 @@ func (r *PgProfileRepository) GetProfilesByIDs(ctx context.Context, ids []uint) 
 
 	var profiles []*model.Profile
 
-	err := r.db.WithContext(ctx).Where("user_id IN (?)", ids).Find(&profiles).Error
+	err := r.db.WithContext(ctx).Model(&model.Profile{}).Where("user_id IN (?)", ids).Find(&profiles).Error
 	if err != nil {
 		return nil, err
 	}

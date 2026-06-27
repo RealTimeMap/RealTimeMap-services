@@ -37,11 +37,31 @@ func RegisterStatHandler(g *gin.RouterGroup, deps StatDeps) {
 	}
 	c := cache.NewRedisCache(deps.Redis, deps.Logger)
 	statGroup := g.Group("/:profileID")
+	//statGroup.Use(
+	//	cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "stat_cache"}),
+	//	middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"),
+	//)
 	{
-		statGroup.GET("/statistics/summary", cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "summary_cache"}), middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetProfileSummaryStat))
-		statGroup.GET("/statistics/monthly", cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "monthly_cache"}), middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetProfileMonthlyActivity))
-		statGroup.GET("/statistics/heatmap", cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "heatmap_cache"}), middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetHeatMap))
-		statGroup.GET("/statistics/categories", cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "categories_cache"}), middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"), handler.withProfileID(handler.GetPopularUserCategories))
+		statGroup.GET("/statistics/summary",
+			cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "summary_cache"}),
+			middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"),
+			handler.withProfileID(handler.GetProfileSummaryStat),
+		)
+		statGroup.GET("/statistics/monthly",
+			cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "monthly_cache"}),
+			middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"),
+			handler.withProfileID(handler.GetProfileMonthlyActivity),
+		)
+		statGroup.GET("/statistics/heatmap",
+			cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "heatmap_cache"}),
+			middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"),
+			handler.withProfileID(handler.GetHeatMap),
+		)
+		statGroup.GET("/statistics/categories",
+			cache.Middleware(c, cache.Options{TTL: time.Minute * 5, Prefix: "categories_cache"}),
+			middleware.Exist(deps.ProfileRepo.Exist, handler.logger, "profileID"),
+			handler.withProfileID(handler.GetPopularUserCategories),
+		)
 	}
 }
 

@@ -1,26 +1,10 @@
 services:
-  social-postgres:
-    image: postgres:16-alpine
-    container_name: social-postgres
-    restart: always
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - social_postgres_data:/var/lib/postgresql/data
-    networks:
-      - internal-social
-
   social-service:
     build:
       context: ../..
       dockerfile: services/social-service/Dockerfile
     container_name: social-service
     restart: always
-    depends_on:
-      - social-postgres
-      - redis
     labels:
       - "traefik.enable=true"
 
@@ -86,19 +70,18 @@ services:
 
     networks:
       - web
-      - redis-network
+      - service-network
       - internal-social
     volumes:
       - social_store_data:/app/store
 
 volumes:
-  social_postgres_data:
   social_store_data:
 
 networks:
   web:
     external: true
-  redis-network:
+  service-network:
     external: true
-    name: redis-network
+    name: service-network
   internal-social:

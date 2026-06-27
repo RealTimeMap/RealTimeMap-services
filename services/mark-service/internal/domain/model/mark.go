@@ -75,26 +75,35 @@ func (m *Mark) ProgressPercent() float64 {
 }
 
 func (m *Mark) DaysLeft() int {
-	now := time.Now()
-	if now.Before(m.StartAt) {
+	now := time.Now().UTC()
+	start := m.StartAt.UTC()
+	end := m.EndAt.UTC()
+
+	if now.Before(start) {
+		return int(end.Sub(start).Hours() / 24) // Сколько всего дней
+	}
+	if now.After(end) {
 		return 0
 	}
-	if now.After(m.EndAt) {
-		return 0
-	}
-	diff := m.EndAt.Sub(m.StartAt)
+
+	diff := end.Sub(now) // Осталось от текущего момента
 	return int(diff.Hours() / 24)
 }
 
 func (m *Mark) DaysSinceStart() int {
-	now := time.Now()
-	if now.Before(m.StartAt) {
+	now := time.Now().UTC()
+	start := m.StartAt.UTC()
+	end := m.EndAt.UTC()
+
+	if now.Before(start) {
 		return 0
 	}
-	if now.After(m.EndAt) {
-		return 0
+	if now.After(end) {
+		// Если закончилось
+		return int(end.Sub(start).Hours() / 24)
 	}
-	diff := now.Sub(m.StartAt)
+
+	diff := now.Sub(start)
 	return int(diff.Hours() / 24)
 }
 
