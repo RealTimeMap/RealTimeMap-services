@@ -14,7 +14,6 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/input"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/grpc/profile"
-
 	_ "golang.org/x/image/webp"
 
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"

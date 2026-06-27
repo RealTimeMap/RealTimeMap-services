@@ -21,7 +21,7 @@ type Filter struct {
 type MarkRepository interface {
 	Create(ctx context.Context, data *model.Mark) (*model.Mark, error)
 	TodayCreated(ctx context.Context, userID int) (int64, error)
-	GetMarksInArea(ctx context.Context, filter Filter) ([]*model.Mark, error) // TODO перенести фильтры куда то...
+	GetMarksInArea(ctx context.Context, filter Filter) ([]*model.Mark, error)
 	GetUserMarks(ctx context.Context, userID uint, params pagination.Params) ([]*model.Mark, int64, error)
 	GetMarksInCluster(ctx context.Context, filter Filter) ([]*model.Cluster, error)
 	Exist(ctx context.Context, id int) (bool, error)
@@ -37,7 +37,7 @@ type MarkRepository interface {
 type MarkStatsRepository interface {
 	// GetMarkCount получение общего количества меток пользователя
 	GetMarkCount(ctx context.Context, userID uint) (int64, error)
-	// GetCountForMonths метод получен счетчика по месяцам в течении года
+	// GetCountForMonths метод получен счетчика по месяцам в течение года
 	GetCountForMonths(ctx context.Context, userID uint, year int) ([]model.MonthlyActivity, error)
 	// GetCountPerPeriod метод получения счетчика по дням в течении определенного периода
 	GetCountPerPeriod(ctx context.Context, userID uint, start, end time.Time) ([]model.DayActivity, error)
