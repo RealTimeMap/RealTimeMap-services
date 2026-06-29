@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
-	pb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/proto/gamification"
+	pb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/gamification"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/level"
@@ -50,7 +50,7 @@ func (h *Handler) GetUserProgress(ctx context.Context, req *pb.GetUserProgressRe
 		return nil, status.Errorf(codes.Internal, "failed to get user progress: %v", err)
 	}
 
-	nextLevel, xpForNext, percent, err := h.calculateLevelMeta(ctx, progress)
+	nextLevel, xpForNext, percent, nLevelName, err := h.calculateLevelMeta(ctx, progress)
 	if err != nil {
 		h.logger.Error("failed to get user progress meta", zap.Error(err))
 		return nil, status.Errorf(codes.Internal, "failed to get user progress meta: %v", err)
@@ -58,24 +58,25 @@ func (h *Handler) GetUserProgress(ctx context.Context, req *pb.GetUserProgressRe
 
 	// Собираем ответ
 	return &pb.UserProgressResponse{
-		UserId:          req.GetUserId(),
-		CurrentLevel:    uint64(progress.CurrentLevel),
-		CurrentXp:       uint64(progress.CurrentXP),
-		NextLevel:       nextLevel,
-		XpForNextLevel:  xpForNext,
-		ProgressPercent: percent,
+		UserId:           req.GetUserId(),
+		CurrentLevel:     uint64(progress.CurrentLevel),
+		CurrentLevelName: progress.Level.Title,
+		CurrentXp:        uint64(progress.CurrentXP),
+		NextLevel:        &pb.LevelInfo{Level: nextLevel, LevelName: nLevelName},
+		XpForNextLevel:   xpForNext,
+		ProgressPercent:  percent,
 	}, nil
 }
 
 // calculateLevelMeta вычисляет информацию для следующего уровня
-func (h *Handler) calculateLevelMeta(ctx context.Context, progress *model.UserProgress) (nextLevel, XpForNextLevel uint64, percent float64, err error) {
+func (h *Handler) calculateLevelMeta(ctx context.Context, progress *model.UserProgress) (nextLevel, XpForNextLevel uint64, percent float64, nextLevelName string, err error) {
 	nLevel, err := h.levelService.GetNextLevel(ctx, progress.CurrentLevel)
 	if err != nil {
 		h.logger.Error("failed to get next level", zap.Error(err))
-		return 0, 0, 0, err
+		return 0, 0, 0, "", err
 	}
 
 	progressPercent := nLevel.Percent(float64(progress.CurrentXP))
 
-	return uint64(nLevel.Level), uint64(nLevel.XPRequired), progressPercent, nil
+	return uint64(nLevel.Level), uint64(nLevel.XPRequired), progressPercent, nLevel.Title, nil
 }

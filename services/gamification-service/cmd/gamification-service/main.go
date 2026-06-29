@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/proto/gamification"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/gamification"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/runner"
 	grpcserver "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/grpc"
 	httpserver "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"

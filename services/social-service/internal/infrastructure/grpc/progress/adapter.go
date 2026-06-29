@@ -36,9 +36,14 @@ func mapError(err error) error {
 
 func toProgress(p *pkgprogress.UserExpProgress) *model.Progress {
 	return &model.Progress{
-		CurrentLevel:    p.CurrentLevel,
-		CurrentXP:       p.CurrentXP,
-		XPForNextLevel:  p.XPForNextLevel,
-		ProgressPercent: p.ProgressPercent,
+		CurrentLevel:     p.CurrentLevel,
+		CurrentLevelName: p.CurrentLevelName,
+		CurrentXP:        p.CurrentXP,
+		XPForNextLevel:   p.XPForNextLevel,
+		ProgressPercent:  p.ProgressPercent,
+		NextLevel: model.NextLevel{
+			Level:     p.NextLevel.Level,
+			LevelName: p.NextLevel.LevelName,
+		},
 	}
 }

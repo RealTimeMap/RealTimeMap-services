@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	pb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/proto/gamification"
+	pb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/gamification"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
