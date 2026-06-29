@@ -15,6 +15,7 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 	handlers.InitCategoryHandler(api, container.CategoryService, container.Logger)
 	handlers.InitMarkHandler(api, container.MarkService, container.Logger)
 	handlers.InitAdminMarkHandler(api, container.AdminMarkService, container.Logger)
+	handlers.RegisterAccrualHandler(api, handlers.AccrualDeps{Service: container.AccrualService, Logger: container.Logger})
 
 	// Health
 	health := http.HealthHandler("mark-service", container.DB)
