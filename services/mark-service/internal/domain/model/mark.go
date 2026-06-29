@@ -46,6 +46,11 @@ type Mark struct {
 	Geohash string       `gorm:"not null"`
 	Photos  types.Photos `gorm:"type:jsonb"`
 
+	// Метрики
+	SharedCount int64 `gorm:"default:0"`
+	LikesCount  int64 `gorm:"-"`
+	IsLiked     bool  `gorm:"-"`
+
 	Owner *UserProfile `gorm:"-" json:"-"`
 }
 

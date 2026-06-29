@@ -162,4 +162,10 @@ function handleLogout() {
   width: 18px;
   height: 18px;
 }
+
+@media screen and (max-width: 550px) {
+  .logo {
+    display: none;
+  }
+}
 </style>

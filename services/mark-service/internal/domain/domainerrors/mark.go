@@ -94,6 +94,9 @@ var (
 			categoryId,
 		)
 	}
+	ErrLikeAlreadySet = func() error {
+		return apperror.NewConflictError("like", "like for this mark already set", "")
+	}
 )
 
 // Mark business errors

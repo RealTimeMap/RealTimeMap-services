@@ -27,7 +27,7 @@ func FormatNumber(val int64) string {
 		return fmt.Sprintf("%.1f M", float64(val)/1_000_000.0)
 
 	case val >= 1000:
-		return fmt.Sprintf("%.1f G", float64(val)/1000.0)
+		return fmt.Sprintf("%.1f K", float64(val)/1000.0)
 	default:
 		return fmt.Sprintf("%d", val)
 	}

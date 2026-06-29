@@ -571,6 +571,55 @@
       "errors": ["unauthorized", "forbidden"]
     },
     {
+      "id": "share-mark",
+      "method": "POST",
+      "path": "/api/v2/marks/{markID}/share",
+      "summary": "Поделиться меткой",
+      "description": "Увеличивает счётчик «поделились» (sharedCount) для метки на 1 и возвращает актуальное значение. Авторизация не требуется. Инкремент выполняется атомарно на стороне БД.",
+      "tags": ["Метки"],
+      "parameters": [
+        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Счётчик увеличен. Возвращается новое значение счётчика",
+          "schema": [
+            { "name": "count", "type": "integer", "required": true, "description": "Актуальное количество «поделились» после инкремента" }
+          ],
+          "example": {
+            "count": 17
+          }
+        }
+      ],
+      "errors": ["not-found"]
+    },
+    {
+      "id": "like-mark",
+      "method": "POST",
+      "path": "/api/v2/marks/{markID}/like",
+      "summary": "Поставить лайк метке",
+      "description": "Ставит лайк текущего пользователя на метку. Требуется авторизация. Операция идемпотентна — повторный лайк той же метки тем же пользователем не приводит к ошибке и не создаёт дубликат.",
+      "tags": ["Метки"],
+      "auth": true,
+      "parameters": [
+        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Лайк поставлен",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Результат операции", "enum": ["ok"] }
+          ],
+          "example": {
+            "status": "ok"
+          }
+        }
+      ],
+      "errors": ["unauthorized", "not-found"]
+    },
+    {
       "id": "create-category",
       "method": "POST",
       "path": "/api/v2/category",

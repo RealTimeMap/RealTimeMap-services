@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/proto/gamification"
+	pb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/gamification"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -74,10 +74,15 @@ func isUnavailable(err error) bool {
 
 func toProgress(p *pb.UserProgressResponse) *UserExpProgress {
 	return &UserExpProgress{
-		UserID:          uint(p.GetUserId()),
-		CurrentLevel:    p.GetCurrentLevel(),
-		CurrentXP:       p.GetCurrentXp(),
-		ProgressPercent: p.GetProgressPercent(),
-		XPForNextLevel:  p.GetXpForNextLevel(),
+		UserID:           uint(p.GetUserId()),
+		CurrentLevel:     p.GetCurrentLevel(),
+		CurrentLevelName: p.GetCurrentLevelName(),
+		CurrentXP:        p.GetCurrentXp(),
+		ProgressPercent:  p.GetProgressPercent(),
+		XPForNextLevel:   p.GetXpForNextLevel(),
+		NextLevel: &NextLevel{
+			Level:     p.GetNextLevel().Level,
+			LevelName: p.GetNextLevel().LevelName,
+		},
 	}
 }

@@ -30,7 +30,7 @@ func main() {
 		DBName:   cfg.Database.DBName,
 	}, log)
 	defer database.Close(db)
-	db.AutoMigrate(&model.Mark{}, &model.Category{})
+	db.AutoMigrate(&model.Mark{}, &model.Category{}, &model.MarkReaction{})
 
 	container := app.MustContainer(cfg, db, log)
 

@@ -8,6 +8,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/accrual"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/grpc/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
@@ -23,11 +24,13 @@ type Container struct {
 	// Репозитории
 	CategoryRepo repository.CategoryRepository
 	MarkRepo     repository.MarkRepository
+	AccrualRepo  repository.AccrualRepository
 
 	// Сервисы для пользовательский кейсов
 	MarkService      *service.UserMarkService
 	MarkStatsService *stats.MarkStatsService
 	CategoryService  *service.CategoryService
+	AccrualService   *accrual.Service
 
 	// Сервисы для админских кейсов
 	AdminMarkService *service.AdminMarkService
@@ -47,6 +50,8 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	categoryRepo := postgres.NewCategoryRepository(db, log)
 	markRepo := postgres.NewMarkRepository(db, log)
 	markStatRepo := postgres.NewMarkStatRepository(db, log)
+	accrualRepo := postgres.NewPgAccrualRepository(db, log)
+
 	// Создание вспомогательных компонентов
 	imageValidator := mediavalidator.NewPhotoValidator()
 	store, err := storage.NewLocalStorage(cfg.Storage.BasePath, cfg.Storage.BaseURL, log)
@@ -78,6 +83,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	categoryService := service.NewCategoryService(categoryRepo, store)
 	markService := service.NewUserMarkService(markRepo, categoryRepo, store, p, imageValidator, profileAdapter)
 	markStatService := stats.NewMarkStatsService(markStatRepo, log)
+	accrualService := accrual.NewService(markRepo, accrualRepo, log)
 	// админские сервисы
 	adminMarkService := service.NewAdminMarkService(markRepo, categoryRepo, store, p, imageValidator)
 
@@ -93,10 +99,12 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 
 		CategoryRepo: categoryRepo,
 		MarkRepo:     markRepo,
+		AccrualRepo:  accrualRepo,
 
 		MarkService:      markService,
 		MarkStatsService: markStatService,
 		CategoryService:  categoryService,
+		AccrualService:   accrualService,
 
 		AdminMarkService: adminMarkService,
 

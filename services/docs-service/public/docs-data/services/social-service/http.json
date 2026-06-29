@@ -295,6 +295,148 @@
       "errors": ["unauthorized", "validation-error"]
     },
     {
+      "id": "send-friend-request",
+      "method": "POST",
+      "path": "/api/v2/friends/request",
+      "summary": "Отправить заявку в друзья",
+      "description": "Отправляет заявку в друзья от текущего пользователя указанному. Нельзя отправить заявку самому себе. Проверяется существование профиля получателя и отсутствие блокировки между пользователями. Если заявка или дружба уже существует — возвращается ошибка конфликта. Требуется авторизация.",
+      "tags": ["Дружба"],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "ID пользователя, которому отправляется заявка",
+        "contentType": "json",
+        "schema": [
+          { "name": "UserId", "type": "integer", "required": true, "description": "ID пользователя-получателя заявки" }
+        ],
+        "example": {
+          "UserId": 5
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Заявка в друзья успешно отправлена"
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "conflict", "forbidden", "not-found"]
+    },
+    {
+      "id": "accept-friend-request",
+      "method": "POST",
+      "path": "/api/v2/friends/accept",
+      "summary": "Принять заявку в друзья",
+      "description": "Принимает входящую заявку в друзья. Текущий пользователь выступает получателем заявки, в теле передаётся ID отправителя. Заявка должна существовать и находиться в статусе ожидания, иначе возвращается ошибка «не найдено». Требуется авторизация.",
+      "tags": ["Дружба"],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "ID пользователя, отправившего заявку",
+        "contentType": "json",
+        "schema": [
+          { "name": "UserId", "type": "integer", "required": true, "description": "ID пользователя-отправителя входящей заявки" }
+        ],
+        "example": {
+          "UserId": 5
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Заявка успешно принята, пользователи теперь друзья"
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "not-found"]
+    },
+    {
+      "id": "decline-friend-request",
+      "method": "POST",
+      "path": "/api/v2/friends/decline",
+      "summary": "Отклонить заявку в друзья",
+      "description": "Отклоняет входящую заявку в друзья. Текущий пользователь выступает получателем заявки, в теле передаётся ID отправителя. Заявка должна существовать и находиться в статусе ожидания, иначе возвращается ошибка «не найдено». Требуется авторизация.",
+      "tags": ["Дружба"],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "ID пользователя, отправившего заявку",
+        "contentType": "json",
+        "schema": [
+          { "name": "UserId", "type": "integer", "required": true, "description": "ID пользователя-отправителя входящей заявки" }
+        ],
+        "example": {
+          "UserId": 5
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Заявка успешно отклонена"
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "not-found"]
+    },
+    {
+      "id": "remove-friend",
+      "method": "POST",
+      "path": "/api/v2/friends/remove",
+      "summary": "Удалить из друзей",
+      "description": "Удаляет существующую дружбу между текущим пользователем и указанным. Если дружбы не существует — возвращается ошибка «не найдено». Требуется авторизация.",
+      "tags": ["Дружба"],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "ID пользователя, которого нужно удалить из друзей",
+        "contentType": "json",
+        "schema": [
+          { "name": "UserId", "type": "integer", "required": true, "description": "ID пользователя для удаления из друзей" }
+        ],
+        "example": {
+          "UserId": 5
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Пользователь успешно удалён из друзей"
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "not-found"]
+    },
+    {
+      "id": "get-friends",
+      "method": "GET",
+      "path": "/api/v2/friends",
+      "summary": "Список друзей",
+      "description": "Возвращает список профилей друзей текущего пользователя с пагинацией. Требуется авторизация.",
+      "tags": ["Дружба"],
+      "auth": true,
+      "pagination": "page",
+      "parameters": [
+        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы (по умолчанию 1)", "location": "query", "example": "1" },
+        { "name": "pageSize", "type": "integer", "required": false, "description": "Размер страницы (1–100, по умолчанию 10)", "location": "query", "example": "10" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список профилей друзей с пагинацией",
+          "schemaRef": "profile",
+          "example": {
+            "items": [
+              { "userId": 3, "username": "admin", "avatar": "", "isPrivate": false },
+              { "userId": 4, "username": "base", "avatar": "", "isPrivate": false }
+            ],
+            "page": 1,
+            "pageSize": 10,
+            "totalPages": 1,
+            "total": 2,
+            "hasNext": false,
+            "hasPrev": false
+          }
+        }
+      ],
+      "errors": ["unauthorized", "validation-error"]
+    },
+    {
       "id": "health",
       "method": "GET",
       "path": "/social/health",
@@ -345,13 +487,13 @@
           "description": "Сводная статистика",
           "schema": [
             { "name": "markCount", "type": "number", "required": true, "description": "Общее количество созданных меток (с пороговым округлением)" },
-            { "name": "friendsCount", "type": "number", "required": true, "description": "Общее количество друзей (с пороговым округлением)" },
-            { "name": "subscribersCount", "type": "number", "required": true, "description": "Общее количество подписчиков (с пороговым округлением)" }
+            { "name": "friendsCount", "type": "string", "required": true, "description": "Общее количество друзей (с пороговым округлением)" },
+            { "name": "subscribersCount", "type": "string", "required": true, "description": "Общее количество подписчиков (с пороговым округлением)" }
           ],
           "example": {
             "markCount": 27,
-            "friendsCount": 14,
-            "subscribersCount": 102
+            "friendsCount": "14",
+            "subscribersCount": "1.5 K"
           }
         }
       ],
@@ -452,6 +594,42 @@
               "end": "2026-05-10T23:59:59Z"
             }
           }
+        }
+      ],
+      "errors": ["validation-error", "not-found"]
+    },
+    {
+      "id": "get-popular-categories-stat",
+      "method": "GET",
+      "path": "/api/v2/profile/{profileID}/statistics/categories",
+      "summary": "Популярные категории меток профиля",
+      "description": "Возвращает список наиболее популярных категорий меток пользователя с количеством меток в каждой категории и её долей от общего числа меток (в процентах). Данные подтягиваются из mark-service по gRPC. Авторизация не требуется. Перед обработкой проверяется существование профиля по `profileID`.",
+      "tags": ["Профили", "Статистика"],
+      "parameters": [
+        { "name": "profileID", "type": "integer", "required": true, "description": "ID профиля", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Массив популярных категорий пользователя. Если у пользователя нет меток — возвращается пустой массив",
+          "schema": [
+            {
+              "name": "[]",
+              "type": "array",
+              "required": true,
+              "description": "Список популярных категорий",
+              "children": [
+                { "name": "categoryName", "type": "string", "required": true, "description": "Название категории" },
+                { "name": "count", "type": "integer", "required": true, "description": "Количество меток пользователя в этой категории" },
+                { "name": "percent", "type": "number", "required": true, "description": "Доля категории от общего числа меток пользователя, в процентах" }
+              ]
+            }
+          ],
+          "example": [
+            { "categoryName": "Мероприятия", "count": 18, "percent": 45.0 },
+            { "categoryName": "Спорт", "count": 12, "percent": 30.0 },
+            { "categoryName": "Еда", "count": 10, "percent": 25.0 }
+          ]
         }
       ],
       "errors": ["validation-error", "not-found"]
