@@ -31,10 +31,17 @@ func NewUserSettings(data model.PrivacySettings) UserSettings {
 }
 
 type GamificationResponse struct {
-	CurrentLevel    uint64  `json:"currentLevel"`
-	CurrentXP       uint64  `json:"currentXp"`
-	XPForNextLevel  uint64  `json:"xpForNextLevel"`
-	ProgressPercent float64 `json:"progressPercent"`
+	CurrentLevel     uint64            `json:"currentLevel"`
+	CurrentLevelName string            `json:"currentLevelName"`
+	CurrentXP        uint64            `json:"currentXp"`
+	XPForNextLevel   uint64            `json:"xpForNextLevel"`
+	ProgressPercent  float64           `json:"progressPercent"`
+	NextLevel        NextLevelResponse `json:"nextLevel"`
+}
+
+type NextLevelResponse struct {
+	Level     uint64 `json:"level"`
+	LevelName string `json:"levelName"`
 }
 
 func NewGamificationResponse(p *model.Progress) *GamificationResponse {
@@ -42,10 +49,12 @@ func NewGamificationResponse(p *model.Progress) *GamificationResponse {
 		return nil
 	}
 	return &GamificationResponse{
-		CurrentLevel:    p.CurrentLevel,
-		CurrentXP:       p.CurrentXP,
-		XPForNextLevel:  p.XPForNextLevel,
-		ProgressPercent: p.ProgressPercent,
+		CurrentLevel:     p.CurrentLevel,
+		CurrentLevelName: p.CurrentLevelName,
+		CurrentXP:        p.CurrentXP,
+		XPForNextLevel:   p.XPForNextLevel,
+		ProgressPercent:  p.ProgressPercent,
+		NextLevel:        NextLevelResponse{Level: p.NextLevel.Level, LevelName: p.NextLevel.LevelName},
 	}
 }
 

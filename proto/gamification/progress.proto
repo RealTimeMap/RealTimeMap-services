@@ -14,11 +14,20 @@ message GetUserProgressRequest {
   uint64 user_id = 1;
 }
 
+// TODO Оформить более правильно в будущем
 message UserProgressResponse {
   uint64 user_id = 1;
   uint64 current_level = 2;
-  uint64 current_xp = 3;
-  uint64 next_level = 4;
+  string current_level_name = 3;
+  uint64 current_xp = 4;
   uint64 xp_for_next_level = 5;     // XP до некст уровня
   double progress_percent = 6;      // Процентное отображение
+
+  optional LevelInfo next_level = 7;
+}
+
+
+message LevelInfo {
+  uint64 level = 1;
+  string level_name = 2;
 }

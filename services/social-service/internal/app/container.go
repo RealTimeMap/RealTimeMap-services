@@ -3,12 +3,14 @@ package app
 import (
 	pkgprogress "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/progress"
 	pkgmark "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	pkgredis "github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/blockeduser"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/chat"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/friendship"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
 	progressadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/progress"
@@ -31,6 +33,9 @@ type Container struct {
 
 	FriendshipRepo    repository.FriendShipRepository
 	FriendshipService *friendship.Service
+
+	ChatRepo    repository.ChatRepository
+	ChatService *chat.Service
 
 	Storage storage.Storage
 
@@ -57,6 +62,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 		panic(err)
 	}
 	photoValidator := mediavalidator.NewPhotoValidator()
+
+	txManager := txmanager.NewTxManager(db)
 
 	var (
 		progressClient *pkgprogress.Client
@@ -97,6 +104,9 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	friendshipService := friendship.NewService(friendRepo, profileRepo, blockedUserRepo, logger)
 
+	chatRepo := postgres.NewPgChatRepository(db, logger)
+	chatService := chat.NewService(chatRepo, txManager, logger)
+
 	return &Container{
 		ProfileRepo:        profileRepo,
 		ProfileService:     profileService,
@@ -108,6 +118,9 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 		FriendshipRepo:    friendRepo,
 		FriendshipService: friendshipService,
+
+		ChatRepo:    chatRepo,
+		ChatService: chatService,
 
 		Storage: store,
 

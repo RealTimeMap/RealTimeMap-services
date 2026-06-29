@@ -8,6 +8,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/achievement"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -51,7 +52,7 @@ type AchievementRequest struct {
 func (h *handler) CreateAchievement(c *gin.Context) {
 	var req AchievementRequest
 	if err := c.ShouldBind(&req); err != nil {
-		middleware.HandleError(c, err, h.logger)
+		validation.AbortWithBindingError(c, err)
 		return
 	}
 
