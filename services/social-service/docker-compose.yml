@@ -41,7 +41,7 @@ services:
       - "traefik.http.routers.social-detail.tls=true"
 
       # GET /api/v2/profile/:profileID/statistics/{summary,monthly,heatmap} - статистика профиля (публичный)
-      - "traefik.http.routers.social-statistics.rule=Host(`realtimemap.ru`) && PathRegexp(`/api/v2/profile/[0-9]+/statistics/(summary|monthly|heatmap)$`) && Method(`GET`)"
+      - "traefik.http.routers.social-statistics.rule=Host(`realtimemap.ru`) && PathRegexp(`/api/v2/profile/[0-9]+/statistics/(summary|monthly|heatmap|categories)$`) && Method(`GET`)"
       - "traefik.http.routers.social-statistics.entrypoints=websecure"
       - "traefik.http.routers.social-statistics.priority=95"
       - "traefik.http.routers.social-statistics.service=social"
