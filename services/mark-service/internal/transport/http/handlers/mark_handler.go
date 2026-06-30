@@ -8,6 +8,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
@@ -32,7 +33,7 @@ func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logge
 	markGroup := g.Group("/marks")
 	{
 		markGroup.POST("/", handler.GetMarks)
-		markGroup.GET("/my", auth.AuthRequired(), handler.GetUserMarks)
+		markGroup.GET("/:markID/list", handler.GetUserMarks) // markID потому что особенность путей, подразумевается userID
 		markGroup.GET("/create-data", handler.GetDataForCreate)
 		markGroup.POST("/create", auth.AuthRequired(), handler.CreateMark)
 		markGroup.GET("/:markID", handler.DetailMark)
@@ -219,7 +220,7 @@ func (h *MarkHandler) GetDataForCreate(c *gin.Context) {
 }
 
 func (h *MarkHandler) GetUserMarks(c *gin.Context) {
-	userInfo, err := helper.GetUserInfo(c)
+	userID, err := middleware.ParsePathParams(c, "markID")
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -229,7 +230,7 @@ func (h *MarkHandler) GetUserMarks(c *gin.Context) {
 		validation.AbortWithBindingError(c, err)
 	}
 
-	marks, count, err := h.service.GetUserMarks(c.Request.Context(), uint(userInfo.UserID), params)
+	marks, count, err := h.service.GetUserMarks(c.Request.Context(), userID, params)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return

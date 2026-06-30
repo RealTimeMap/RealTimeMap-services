@@ -39,6 +39,14 @@ services:
       - "traefik.http.routers.marks-detail.middlewares=cors-headers@file"
       - "traefik.http.routers.marks-detail.tls=true"
 
+      # POST /api/v2/marks/:markID/list - метки пользователя (публичный)
+      - "traefik.http.routers.marks-person.rule=Host(`realtimemap.ru`) && Path(`/api/v2/marks/[0-9]+/list`) && Method(`GET`)"
+      - "traefik.http.routers.marks-person.entrypoints=websecure"
+      - "traefik.http.routers.marks-person.priority=94"
+      - "traefik.http.routers.marks-person.service=mark"
+      - "traefik.http.routers.marks-person.middlewares=cors-headers@file"
+      - "traefik.http.routers.marks-person.tls=true"
+
       # POST /api/v2/marks/create - создание метки (с auth)
       - "traefik.http.routers.marks-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/marks/create`) && Method(`POST`)"
       - "traefik.http.routers.marks-create.entrypoints=websecure"
