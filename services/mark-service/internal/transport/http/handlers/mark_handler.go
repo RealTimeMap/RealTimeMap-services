@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"strconv"
 	"time"
 
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
@@ -11,10 +10,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/input"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/valueobject"
-	subdtocat "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/dto/category"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	subdto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/dto/mark"
 	dto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/mark"
 	"github.com/gin-gonic/gin"
@@ -23,18 +19,22 @@ import (
 	"go.uber.org/zap"
 )
 
-type MarkHandler struct {
-	service *service.UserMarkService
-	logger  *zap.Logger
+type markHandler struct {
+	useCases *mark_action.Application
+	logger   *zap.Logger
 }
 
-func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logger *zap.Logger) {
-	handler := &MarkHandler{service: service, logger: logger}
+type MarkDeps struct {
+	UseCases *mark_action.Application
+	Logger   *zap.Logger
+}
+
+func InitMarkHandler(g *gin.RouterGroup, deps MarkDeps) {
+	handler := &markHandler{logger: deps.Logger, useCases: deps.UseCases}
 	markGroup := g.Group("/marks")
 	{
 		markGroup.POST("/", handler.GetMarks)
 		markGroup.GET("/:markID/list", handler.GetUserMarks) // markID потому что особенность путей, подразумевается userID
-		markGroup.GET("/create-data", handler.GetDataForCreate)
 		markGroup.POST("/create", auth.AuthRequired(), handler.CreateMark)
 		markGroup.GET("/:markID", handler.DetailMark)
 		markGroup.DELETE("/:markID", auth.AuthRequired(), handler.DeleteMark)
@@ -42,7 +42,7 @@ func InitMarkHandler(g *gin.RouterGroup, service *service.UserMarkService, logge
 	}
 }
 
-func (h *MarkHandler) CreateMark(c *gin.Context) {
+func (h *markHandler) CreateMark(c *gin.Context) {
 	var request dto.RequestMark
 
 	userInfo, err := helper.GetUserInfo(c)
@@ -63,73 +63,71 @@ func (h *MarkHandler) CreateMark(c *gin.Context) {
 		return
 	}
 
-	markName, err := valueobject.NewMarkName(request.MarkName)
-	if err != nil {
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
-
 	// Маппинг в чистые данные для Service Layer (Clean Architecture)
-	validData := input.MarkInput{
-		MarkName:       markName,
+	cmd := mark_action.MarkCreateCommand{
+		MarkName:       request.MarkName,
 		AdditionalInfo: request.AdditionalInfo,
 		Geom:           types.Point{Point: orb.Point{request.Longitude, request.Latitude}},
 		Geohash:        geohash.EncodeWithPrecision(request.Latitude, request.Longitude, 5),
 		CategoryId:     request.CategoryId,
 		StartAt:        request.StartAt,
 		EndAt:          request.EndAt,
-		Photos:         photos, // Чистые данные []PhotoInput
-		UserInput:      userInfo,
+		Photos:         photos,
+		User:           userInfo,
 	}
-	res, err := h.service.CreateMark(c.Request.Context(), validData)
+
+	res, err := h.useCases.CreateMark.Handle(c.Request.Context(), cmd)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	c.JSON(201, dto.NewResponseMark(res))
+	c.JSON(201, dto.NewResponseMarkV2(res))
 }
 
-func (h *MarkHandler) GetMarks(c *gin.Context) {
+func (h *markHandler) GetMarks(c *gin.Context) {
 	var params subdto.FilterParams
 	params.ZoomLevel = 15
-	const zoomSelector = 12
 	params.EndAt = time.Now().UTC()
 
 	if err := c.ShouldBindBodyWithJSON(&params); err != nil {
 		validation.AbortWithBindingError(c, err)
 		return
 	}
-	validParams := subdto.ToInputFilter(params)
-	if validParams.ZoomLevel < zoomSelector {
-		clusters, err := h.service.GetMarksInCluster(c.Request.Context(), validParams)
-		if err != nil {
-			errorhandler.HandleError(c, err, h.logger)
-			return
-		}
-		c.JSON(200, dto.NewMultipleResponseCluster(clusters))
-	} else {
-		marks, err := h.service.GetMarksInArea(c.Request.Context(), validParams)
-		if err != nil {
-			errorhandler.HandleError(c, err, h.logger)
-			return
-		}
 
-		c.JSON(200, dto.NewMultipleResponseMark(marks))
+	validParams := subdto.ToInputFilterV2(params)
+	res, err := h.useCases.GetMark.Handle(c.Request.Context(), validParams)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	switch res.Mode {
+	case mark_action.ModeCluster:
+		c.JSON(200, gin.H{"marks": res.Marks})
+		return
+	default:
+		c.JSON(200, gin.H{"marks": res.Marks})
+		return
 	}
 }
 
-func (h *MarkHandler) DeleteMark(c *gin.Context) {
+func (h *markHandler) DeleteMark(c *gin.Context) {
 	userInfo, err := helper.GetUserInfo(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	markID, err := strconv.Atoi(c.Param("markID"))
+	markID, err := middleware.ParsePathParams(c, "markID")
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	err = h.service.DeleteMark(c.Request.Context(), markID, userInfo)
+
+	err = h.useCases.DeleteMark.Handle(c.Request.Context(), mark_action.DeleteMarkCommand{
+		MarkID: markID,
+		UserID: uint(userInfo.UserID),
+	})
+
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -137,15 +135,21 @@ func (h *MarkHandler) DeleteMark(c *gin.Context) {
 	c.Status(204)
 }
 
-func (h *MarkHandler) UpdateMark(c *gin.Context) {
+func (h *markHandler) UpdateMark(c *gin.Context) {
 	var req dto.RequestUpdateMark
 
-	markID, err := strconv.Atoi(c.Param("markID"))
+	markID, err := middleware.ParsePathParams(c, "markID")
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
 	userInfo, err := helper.GetUserInfo(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
+
 	if err := c.ShouldBind(&req); err != nil {
 		validation.AbortWithBindingError(c, err)
 		return
@@ -158,49 +162,38 @@ func (h *MarkHandler) UpdateMark(c *gin.Context) {
 		return
 	}
 
-	validData := input.MarkUpdateInput{
-		MarkID:         markID,
-		Photos:         photos, // Чистые данные []PhotoInput
-		CategoryId:     req.CategoryId,
-		AdditionalInfo: req.AdditionalInfo,
-		UserInput:      userInfo,
-		PhotosToDelete: req.PhotosToDelete,
-	}
+	var markName string
 	if req.MarkName != nil {
-		markName, err := valueobject.NewMarkName(*req.MarkName)
-		if err != nil {
-			validation.AbortWithBindingError(c, err)
-			return
-		}
-		validData.MarkName = &markName
-	}
-	if req.Duration != nil {
-		duration, err := valueobject.NewDuration(*req.Duration)
-		if err != nil {
-			validation.AbortWithBindingError(c, err)
-			return
-		}
-		validData.Duration = &duration
+		markName = *req.MarkName
 	}
 
-	updatedMark, err := h.service.UpdateMark(c.Request.Context(), validData)
+	updatedMark, err := h.useCases.UpdateMark.Handle(c.Request.Context(), mark_action.MarkUpdateCommand{
+		MarkID:         markID,
+		MarkName:       markName,
+		UserID:         uint(userInfo.UserID),
+		EndAt:          req.EndAt,
+		AdditionalInfo: req.AdditionalInfo,
+
+		PhotosToDelete: req.PhotosToDelete,
+		Photos:         photos,
+	})
 
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 
-	c.JSON(200, dto.NewResponseMark(updatedMark))
+	c.JSON(200, dto.NewResponseMarkV2(updatedMark))
 }
 
-func (h *MarkHandler) DetailMark(c *gin.Context) {
-	markID, err := strconv.Atoi(c.Param("markID"))
+func (h *markHandler) DetailMark(c *gin.Context) {
+	markID, err := middleware.ParsePathParams(c, "markID")
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 
-	mark, err := h.service.DetailMark(c.Request.Context(), markID)
+	mark, err := h.useCases.GetDetail.Handle(c.Request.Context(), markID)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -208,18 +201,7 @@ func (h *MarkHandler) DetailMark(c *gin.Context) {
 	c.JSON(200, dto.NewDetailMarkResponse(mark))
 }
 
-func (h *MarkHandler) GetDataForCreate(c *gin.Context) {
-
-	categories, durations, err := h.service.GetDataForCreate(c.Request.Context())
-	if err != nil {
-		errorhandler.HandleError(c, err, h.logger)
-		return
-	}
-	response := subdtocat.NewResponseCreateData(categories, durations)
-	c.JSON(200, response)
-}
-
-func (h *MarkHandler) GetUserMarks(c *gin.Context) {
+func (h *markHandler) GetUserMarks(c *gin.Context) {
 	userID, err := middleware.ParsePathParams(c, "markID")
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
@@ -230,11 +212,14 @@ func (h *MarkHandler) GetUserMarks(c *gin.Context) {
 		validation.AbortWithBindingError(c, err)
 	}
 
-	marks, count, err := h.service.GetUserMarks(c.Request.Context(), userID, params)
+	marks, count, err := h.useCases.GetUserMark.Handle(c.Request.Context(), mark_action.UserMarkGetterCommand{
+		UserID: userID,
+		Params: params,
+	})
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	response := dto.NewMultipleResponseMark(marks)
+	response := dto.NewMultipleResponseMarkV2(marks)
 	c.JSON(200, pagination.NewResponse(response, params, count))
 }

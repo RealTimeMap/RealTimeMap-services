@@ -9,6 +9,9 @@ import (
 	httpserver "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/accrual"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http"
 	"go.uber.org/zap"
@@ -17,7 +20,7 @@ import (
 
 func main() {
 	cfg := config.MustLoad()
-	log := logger.MustNewByEnv(cfg.Env, "mark-service")
+	log := logger.MustNewByEnv(cfg.Env, "mark_action-service")
 	defer log.Sync()
 
 	log.Info("Starting Mark Service", zap.String("env", cfg.Env))
@@ -30,7 +33,7 @@ func main() {
 		DBName:   cfg.Database.DBName,
 	}, log)
 	defer database.Close(db)
-	db.AutoMigrate(&model.Mark{}, &model.Category{}, &model.MarkReaction{})
+	db.AutoMigrate(&model.Mark{}, &model.Category{}, &accrual.MarkReaction{}, &mark.Mark{}, &category.Category{})
 
 	container := app.MustContainer(cfg, db, log)
 

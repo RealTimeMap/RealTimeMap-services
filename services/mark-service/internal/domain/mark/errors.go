@@ -1,4 +1,4 @@
-package domainerrors
+package mark
 
 import (
 	"fmt"
@@ -6,15 +6,10 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 )
 
-// Mark validation errors
 var (
-	ErrMarkNotFound = func(id int) error {
+	ErrMarkNotFound = func(id uint) error {
 		return apperror.NewNotFoundErrorByID("mark_action", id)
 	}
-	ErrMarkNameRequired = func() error {
-		return apperror.NewRequiredError("markName")
-	}
-
 	ErrMarkNameTooShort = func(name string) error {
 		return apperror.NewFieldValidationError(
 			"markName",
@@ -54,11 +49,9 @@ var (
 			nil,
 		)
 	}
+)
 
-	ErrPhotosRequired = func() error {
-		return apperror.NewRequiredError("photos")
-	}
-
+var (
 	ErrTooManyPhotos = func(count, max int) error {
 		return apperror.NewFieldValidationError(
 			"photos",
@@ -99,14 +92,19 @@ var (
 	}
 )
 
-// Mark business errors
-
+// Infrastructure domainerrors
 var (
-	ErrDailyMarkLimitExceeded = func(limit int) error {
-		return apperror.NewConflictError(
-			"userId",
-			fmt.Sprintf("daily mark_action creation limit exceeded (%d marks per day)", limit),
-			nil,
+	ErrDatabaseQuery = func(operation string, cause error) error {
+		return apperror.WrapInternalError(
+			fmt.Sprintf("database %s failed", operation),
+			cause,
+		)
+	}
+
+	ErrStorageOperation = func(operation string, cause error) error {
+		return apperror.WrapInternalError(
+			fmt.Sprintf("storage %s failed", operation),
+			cause,
 		)
 	}
 )

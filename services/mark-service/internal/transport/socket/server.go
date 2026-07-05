@@ -3,25 +3,30 @@ package socket
 import (
 	"net/http"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	"github.com/doquangtan/socketio/v4"
 	"go.uber.org/zap"
 )
 
 type SocketServer struct {
-	io     *socketio.Io
-	logger *zap.Logger
-
-	markService *service.UserMarkService
+	io      *socketio.Io
+	useCase *mark_action.Application
+	logger  *zap.Logger
 }
 
-func New(logger *zap.Logger, markService *service.UserMarkService) *SocketServer {
+type Deps struct {
+	MarkUseCases *mark_action.Application
+
+	Logger *zap.Logger
+}
+
+func New(deps Deps) *SocketServer {
 	io := socketio.New()
 
 	server := &SocketServer{
-		logger:      logger,
-		markService: markService,
-		io:          io,
+		io:      io,
+		useCase: deps.MarkUseCases,
+		logger:  deps.Logger,
 	}
 
 	InitMarkNamespace(server)

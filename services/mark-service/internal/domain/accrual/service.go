@@ -10,12 +10,12 @@ import (
 
 type Service struct {
 	markRepo    repository.MarkRepository
-	accrualRepo repository.AccrualRepository
+	accrualRepo Repository
 
 	logger *zap.Logger
 }
 
-func NewService(markRepo repository.MarkRepository, accrualRepo repository.AccrualRepository, logger *zap.Logger) *Service {
+func NewService(markRepo repository.MarkRepository, accrualRepo Repository, logger *zap.Logger) *Service {
 	return &Service{
 		markRepo:    markRepo,
 		accrualRepo: accrualRepo,

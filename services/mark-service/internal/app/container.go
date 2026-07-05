@@ -2,15 +2,17 @@ package app
 
 import (
 	pkgprofile "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/profile"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/category"
+	category2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/accrual"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/accrual"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/stats"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/grpc/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
 	grpcstat "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/socket"
@@ -24,20 +26,18 @@ type Container struct {
 	// Репозитории
 	CategoryRepo repository.CategoryRepository
 	MarkRepo     repository.MarkRepository
-	AccrualRepo  repository.AccrualRepository
+	AccrualRepo  accrual.Repository
 
 	// Сервисы для пользовательский кейсов
-	MarkService      *service.UserMarkService
 	MarkStatsService *stats.MarkStatsService
-	CategoryService  *service.CategoryService
 	AccrualService   *accrual.Service
-
-	// Сервисы для админских кейсов
-	AdminMarkService *service.AdminMarkService
 
 	// Сокет
 
 	Socket *socket.SocketServer
+
+	MarkUseCases     *mark_action.Application
+	CategoryUseCases *category.Application
 
 	// grpc
 	MarkStatServer *grpcstat.Handler
@@ -47,13 +47,12 @@ type Container struct {
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
 
 	// создание репозиториев
-	categoryRepo := postgres.NewCategoryRepository(db, log)
 	markRepo := postgres.NewMarkRepository(db, log)
 	markStatRepo := postgres.NewMarkStatRepository(db, log)
 	accrualRepo := postgres.NewPgAccrualRepository(db, log)
 
 	// Создание вспомогательных компонентов
-	imageValidator := mediavalidator.NewPhotoValidator()
+	//imageValidator := mediavalidator.NewPhotoValidator()
 	store, err := storage.NewLocalStorage(cfg.Storage.BasePath, cfg.Storage.BaseURL, log)
 	if err != nil {
 		panic(err)
@@ -71,6 +70,8 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		log.Info("Kafka producer disabled")
 	}
 
+	log.Debug("kafka producer initialized", zap.Any("topic", p))
+
 	profileGrpcHandler, err := pkgprofile.NewClient(&pkgprofile.Config{
 		Address: cfg.Profile.Address,
 		Timeout: cfg.Profile.Timeout,
@@ -78,17 +79,34 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	if err != nil {
 		log.Fatal("Profile client initialization failed", zap.Error(err))
 	}
-	profileAdapter := profile.NewAdapter(profileGrpcHandler)
 	// Создание сервисов
-	categoryService := service.NewCategoryService(categoryRepo, store)
-	markService := service.NewUserMarkService(markRepo, categoryRepo, store, p, imageValidator, profileAdapter)
 	markStatService := stats.NewMarkStatsService(markStatRepo, log)
 	accrualService := accrual.NewService(markRepo, accrualRepo, log)
 	// админские сервисы
-	adminMarkService := service.NewAdminMarkService(markRepo, categoryRepo, store, p, imageValidator)
 
+	// TODO После завершения переноса переименовать
+	v2MarkRepo := postgres.NewMarkRepositoryV2(db, log)
+	categoryRepo := postgres.NewCategoryRepositoryV2(db, log)
+
+	markService := mark.NewService(v2MarkRepo, categoryRepo, store, log)
+	categoryService := category2.NewService(categoryRepo)
+	// USE CASE
+
+	markUseCases := &mark_action.Application{
+		CreateMark:  mark_action.NewCreateMarkHandler(markService, log),
+		GetMark:     mark_action.NewMarkGetterHandler(markService, log),
+		GetDetail:   mark_action.NewDetailMarkHandler(markService, profileGrpcHandler, log),
+		DeleteMark:  mark_action.NewRemoverMarkHandler(markService, log),
+		GetUserMark: mark_action.NewUserMarkGetterHandler(markService, log),
+		UpdateMark:  mark_action.NewUpdateMarkHandler(markService, log),
+	}
+
+	categoryUseCases := &category.Application{
+		Create: category.NewCreateCategoryCommand(categoryService, log),
+		Get:    category.NewGetterCategoryHandler(categoryService, log),
+	}
 	// Сокеты
-	socketServer := socket.New(log, markService)
+	socketServer := socket.New(socket.Deps{MarkUseCases: markUseCases, Logger: log})
 
 	// grpc
 	markStatGrpc := grpcstat.NewHandler(markStatService, log)
@@ -97,20 +115,17 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	return &Container{
 		DB: db,
 
-		CategoryRepo: categoryRepo,
-		MarkRepo:     markRepo,
-		AccrualRepo:  accrualRepo,
+		AccrualRepo: accrualRepo,
 
-		MarkService:      markService,
 		MarkStatsService: markStatService,
-		CategoryService:  categoryService,
 		AccrualService:   accrualService,
-
-		AdminMarkService: adminMarkService,
 
 		Socket: socketServer,
 
 		MarkStatServer: markStatGrpc,
+
+		MarkUseCases:     markUseCases,
+		CategoryUseCases: categoryUseCases,
 
 		Logger: log,
 	}

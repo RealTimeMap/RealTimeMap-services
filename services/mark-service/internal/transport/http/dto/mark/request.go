@@ -17,10 +17,9 @@ type RequestMark struct {
 }
 
 type RequestUpdateMark struct {
-	MarkName       *string `form:"markName,omitempty" binding:"-"`
-	AdditionalInfo *string `form:"additionalInfo,omitempty" binding:"-"`
-	CategoryId     *int    `form:"categoryId,omitempty" binding:"-"`
-	Duration       *int    `form:"duration,omitempty" binding:"-"`
+	MarkName       *string    `form:"markName,omitempty" binding:"-"`
+	AdditionalInfo *string    `form:"additionalInfo,omitempty" binding:"-"`
+	EndAt          *time.Time `form:"endAt,omitempty" binding:"-"`
 	// Управление фотками
 	PhotosToDelete []string                `form:"photosToDelete" binding:"-"`
 	Photos         []*multipart.FileHeader `form:"photos" binding:"-"`

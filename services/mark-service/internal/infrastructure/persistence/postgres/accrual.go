@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/accrual"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -18,7 +18,7 @@ type PgAccrualRepository struct {
 	logger *zap.Logger
 }
 
-func NewPgAccrualRepository(db *gorm.DB, logger *zap.Logger) repository.AccrualRepository {
+func NewPgAccrualRepository(db *gorm.DB, logger *zap.Logger) accrual.Repository {
 	return &PgAccrualRepository{
 		db:     db,
 		logger: logger,
@@ -46,7 +46,7 @@ func (r *PgAccrualRepository) UnLike(ctx context.Context, markID, userID uint) e
 }
 
 func (r *PgAccrualRepository) Like(ctx context.Context, markID, userID uint) error {
-	payload := &model.MarkReaction{MarkID: markID, UserID: userID}
+	payload := &accrual.MarkReaction{MarkID: markID, UserID: userID}
 
 	err := r.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).
 		Create(payload).Error

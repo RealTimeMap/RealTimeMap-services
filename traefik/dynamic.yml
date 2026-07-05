@@ -5,6 +5,8 @@ http:
       entryPoints:
         - websecure
       service: auth-service
+      middlewares:
+        - cors-headers
       priority: 100
       tls: {}
 
@@ -42,13 +44,13 @@ http:
           - "DELETE"
           - "HEAD"
           - "OPTIONS"
+        accessControlAllowOriginListRegex:
+          - "^http://localhost:[0-9]+$"
         accessControlAllowOriginList:
           - "https://real-time-map-frontend.vercel.app"
           - "https://realtimemap.ru"
-          - "http://localhost:5173"
-          - "http://localhost:1420"
-          - "http://localhost:8080"
-          - "http://localhost:9003"
+          - "https://localhost"
+          - "capacitor://localhost"
         accessControlAllowHeaders:
           - "Origin"
           - "Content-Type"
@@ -62,6 +64,7 @@ http:
           - "X-Trace-Id"
         accessControlExposeHeaders:
           - "Content-Length"
+          - "Authorization"
         accessControlAllowCredentials: true
         accessControlMaxAge: 43200
         # Добавь это для preflight
