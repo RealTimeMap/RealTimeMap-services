@@ -9,30 +9,27 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/domainerrors"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
+	mark2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	"github.com/paulmach/orb"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-const clusterPixelThreshold = 60.0
-
-type MarkRepository struct {
+type MarkRepositoryV2 struct {
 	db    *gorm.DB
 	log   *zap.Logger
 	layer string
 }
 
-func NewMarkRepository(db *gorm.DB, logger *zap.Logger) repository.MarkRepository {
-	return &MarkRepository{
+func NewMarkRepositoryV2(db *gorm.DB, logger *zap.Logger) mark2.Repository {
+	return &MarkRepositoryV2{
 		db:    db,
 		log:   logger,
 		layer: "mark_repository",
 	}
 }
 
-func (r *MarkRepository) Create(ctx context.Context, data *model.Mark) (*model.Mark, error) {
+func (r *MarkRepositoryV2) Create(ctx context.Context, data *mark2.Mark) (*mark2.Mark, error) {
 	r.log.Info("create mark_action in: ", sl.String("layer", r.layer))
 
 	// Создаем запись
@@ -52,10 +49,10 @@ func (r *MarkRepository) Create(ctx context.Context, data *model.Mark) (*model.M
 	return data, nil
 }
 
-func (r *MarkRepository) Update(ctx context.Context, id int, mark *model.Mark) (*model.Mark, error) {
-	r.log.Info("MarkRepository.Update", zap.Int("id", id))
+func (r *MarkRepositoryV2) Update(ctx context.Context, id uint, mark *mark2.Mark) (*mark2.Mark, error) {
+	r.log.Info("MarkRepositoryV2.Update", zap.Uint("id", id))
 
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).Where("id = ?", id).Save(mark).Error
+	err := r.db.WithContext(ctx).Model(&mark2.Mark{}).Where("id = ?", id).Save(mark).Error
 	if err != nil {
 		r.log.Error("update_mark_by_id err: ", sl.String("layer", r.layer), zap.Error(err))
 		return nil, err
@@ -63,13 +60,13 @@ func (r *MarkRepository) Update(ctx context.Context, id int, mark *model.Mark) (
 	return mark, nil
 }
 
-func (r *MarkRepository) GetByID(ctx context.Context, id int) (*model.Mark, error) {
+func (r *MarkRepositoryV2) GetByID(ctx context.Context, id uint) (*mark2.Mark, error) {
 	r.log.Info("get_mark_by_id", sl.String("layer", r.layer))
-	var mark *model.Mark
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).Preload("Category").Where("id = ? AND deleted_at IS NULL", id).First(&mark).Error
+	var mark *mark2.Mark
+	err := r.db.WithContext(ctx).Model(&mark2.Mark{}).Preload("Category").Where("id = ? AND deleted_at IS NULL", id).First(&mark).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, domainerrors.ErrMarkNotFound(id)
+			return nil, mark2.ErrMarkNotFound(id)
 		}
 		r.log.Error("get_mark_by_id err: ", sl.String("layer", r.layer), zap.Error(err))
 		return nil, err
@@ -77,10 +74,10 @@ func (r *MarkRepository) GetByID(ctx context.Context, id int) (*model.Mark, erro
 	return mark, nil
 }
 
-func (r *MarkRepository) Delete(ctx context.Context, id int) error {
+func (r *MarkRepositoryV2) Delete(ctx context.Context, id uint) error {
 	r.log.Info("delete_mark_by_id", sl.String("layer", r.layer))
 
-	result := r.db.WithContext(ctx).Delete(&model.Mark{}, id)
+	result := r.db.WithContext(ctx).Delete(&mark2.Mark{}, id)
 	if result.Error != nil {
 		r.log.Error("delete_mark_by_id err: ", sl.String("layer", r.layer), zap.Error(result.Error))
 		return result.Error
@@ -88,16 +85,16 @@ func (r *MarkRepository) Delete(ctx context.Context, id int) error {
 
 	// Проверка, что запись существовала
 	if result.RowsAffected == 0 {
-		return domainerrors.ErrMarkNotFound(id)
+		return mark2.ErrMarkNotFound(id)
 	}
 
 	return nil
 }
 
-func (r *MarkRepository) TodayCreated(ctx context.Context, userID int) (int64, error) {
+func (r *MarkRepositoryV2) TodayCreated(ctx context.Context, userID uint) (int64, error) {
 	var count int64
 
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).Where("user_id = ? AND DATE(created_at) = CURRENT_DATE", userID).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&mark2.Mark{}).Where("user_id = ? AND DATE(created_at) = CURRENT_DATE", userID).Count(&count).Error
 	if err != nil {
 		r.log.Error("failed to get mark_action count", zap.Error(err))
 		return 0, err
@@ -105,24 +102,24 @@ func (r *MarkRepository) TodayCreated(ctx context.Context, userID int) (int64, e
 	return count, nil
 }
 
-func (r *MarkRepository) GetMarksInArea(ctx context.Context, filter repository.Filter) ([]*model.Mark, error) {
-	var marks []*model.Mark
+func (r *MarkRepositoryV2) GetMarksInArea(ctx context.Context, filter mark2.Filter) ([]*mark2.Mark, error) {
+	var marks []*mark2.Mark
 	bbox := filter.BoundingBox
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).
+	err := r.db.WithContext(ctx).Model(&mark2.Mark{}).
 		Joins("Category").
 		Where("geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)", bbox.LeftTop.Lon, bbox.RightBottom.Lat, bbox.RightBottom.Lon, bbox.LeftTop.Lat).
 		Where("start_at <= ? AND end_at >= ?", filter.EndAt, filter.StartAt).
 		Where("deleted_at IS NULL").
 		Find(&marks).Error
 	if err != nil {
-		r.log.Error("error MarkRepository.GetMarksInArea", zap.Error(err))
+		r.log.Error("error MarkRepositoryV2.GetMarksInArea", zap.Error(err))
 		return nil, err
 	}
 
 	return marks, nil
 }
 
-func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repository.Filter) ([]*model.Cluster, error) {
+func (r *MarkRepositoryV2) GetMarksInCluster(ctx context.Context, filter mark2.Filter) ([]*mark2.Cluster, error) {
 	type clusterResult struct {
 		ClusterID int     `gorm:"column:cluster_id"`
 		CenterLon float64 `gorm:"column:center_lon"`
@@ -163,9 +160,9 @@ func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repositor
 		r.log.Error("failed to get marks in cluster", zap.Error(err))
 		return nil, err
 	}
-	clusters := make([]*model.Cluster, len(results))
+	clusters := make([]*mark2.Cluster, len(results))
 	for i, result := range results {
-		clusters[i] = &model.Cluster{
+		clusters[i] = &mark2.Cluster{
 			Center: types.Point{
 				Point: orb.Point{result.CenterLon, result.CenterLat},
 			},
@@ -175,11 +172,11 @@ func (r *MarkRepository) GetMarksInCluster(ctx context.Context, filter repositor
 	return clusters, nil
 }
 
-func (r *MarkRepository) GetUserMarks(ctx context.Context, userID uint, params pagination.Params) ([]*model.Mark, int64, error) {
+func (r *MarkRepositoryV2) GetUserMarks(ctx context.Context, userID uint, params pagination.Params) ([]*mark2.Mark, int64, error) {
 	r.log.Info("GetUserMarks", zap.Uint("user_id", userID))
-	var marks []*model.Mark
+	var marks []*mark2.Mark
 	var count int64
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).
+	err := r.db.WithContext(ctx).Model(&mark2.Mark{}).
 		Where("user_id = ?", userID).
 		Order("created_at DESC").
 		Limit(params.Limit()).
@@ -189,11 +186,11 @@ func (r *MarkRepository) GetUserMarks(ctx context.Context, userID uint, params p
 	return marks, count, err
 }
 
-func (r *MarkRepository) Exist(ctx context.Context, id int) (bool, error) {
+func (r *MarkRepositoryV2) Exist(ctx context.Context, id int) (bool, error) {
 	r.log.Info("check_exist_mark_by_id", sl.String("layer", r.layer))
 	var exists bool
 	err := r.db.WithContext(ctx).
-		Model(&model.Mark{}).
+		Model(&mark2.Mark{}).
 		Select("1").
 		Where("id = ?", id).
 		Limit(1).
@@ -209,10 +206,10 @@ func (r *MarkRepository) Exist(ctx context.Context, id int) (bool, error) {
 	return exists, nil
 }
 
-func (r *MarkRepository) GetAll(ctx context.Context, params pagination.Params) ([]*model.Mark, int64, error) {
-	var marks []*model.Mark
+func (r *MarkRepositoryV2) GetAll(ctx context.Context, params pagination.Params) ([]*mark2.Mark, int64, error) {
+	var marks []*mark2.Mark
 	var count int64
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).Offset(params.Offset()).Limit(params.Limit()).Find(&marks).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&mark2.Mark{}).Offset(params.Offset()).Limit(params.Limit()).Find(&marks).Count(&count).Error
 	if err != nil {
 		r.log.Error("failed to get marks count", zap.Error(err))
 		return nil, 0, err

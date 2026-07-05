@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	subdto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/dto/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/mark"
 	"github.com/doquangtan/socketio/v4"
@@ -18,7 +19,7 @@ func init() {
 	validate = validator.New()
 }
 
-// InitMarkNamespace иницилизирует mark Namespace
+// InitMarkNamespace иницилизирует mark_action Namespace
 // Позволяет работать с метками в релаьном времени
 // Ивенты Client -> Server
 // message - дефолтный ивент для обработки новых параметров фильтрации
@@ -26,7 +27,7 @@ func init() {
 // markCreated - создание новой метки
 func InitMarkNamespace(s *SocketServer) {
 	ns := s.io.Of("/marks")
-	s.logger.Info("init mark namespace", zap.String("namespace", ns.Name))
+	s.logger.Info("init mark_action namespace", zap.String("namespace", ns.Name))
 
 	ns.OnConnection(func(socket *socketio.Socket) {
 		socket.On("message", func(event *socketio.EventPayload) {
@@ -49,39 +50,30 @@ func InitMarkNamespace(s *SocketServer) {
 				}
 				return
 			}
-			validParams := subdto.ToInputFilter(params)
+			validParams := subdto.ToInputFilterV2(params)
 
-			if validParams.ZoomLevel < 12 {
-				clusters, err := s.markService.GetMarksInCluster(ctx, validParams)
-				if err != nil {
-					s.logger.Warn("failed to get cluster", zap.Error(err))
-					if event.Ack != nil {
-						event.Ack(map[string]interface{}{
-							"success": false,
-							"error":   err.Error(),
-						})
-					}
-					return
+			res, err := s.useCase.GetMark.Handle(ctx, validParams)
+			if err != nil {
+				s.logger.Warn("failed to handle request", zap.Error(err))
+				if event.Ack != nil {
+					event.Ack(map[string]interface{}{
+						"success": false,
+						"error":   err.Error(),
+					})
 				}
-				clusterResponse := mark.NewMultipleResponseCluster(clusters)
+				return
+			}
+
+			switch res.Mode {
+			case mark_action.ModeCluster:
+				clusterResponse := mark.NewMultipleResponseCluster(res.Clusters)
 				event.Ack(map[string]interface{}{
 					"success": true,
 					"cluster": clusterResponse,
 				})
 				return
-			} else {
-				marks, err := s.markService.GetMarksInArea(ctx, validParams)
-				if err != nil {
-					s.logger.Warn("failed to get cluster", zap.Error(err))
-					if event.Ack != nil {
-						event.Ack(map[string]interface{}{
-							"success": false,
-							"error":   err,
-						})
-					}
-					return
-				}
-				marksResponse := mark.NewMultipleResponseMark(marks)
+			default:
+				marksResponse := mark.NewMultipleResponseMarkV2(res.Marks)
 				event.Ack(map[string]interface{}{
 					"success": true,
 					"marks":   marksResponse,

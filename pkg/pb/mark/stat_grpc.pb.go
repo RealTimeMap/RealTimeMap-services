@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v7.34.1
-// source: mark/stat.proto
+// source: mark_action/stat.proto
 
 package markstat
 
@@ -231,5 +231,5 @@ var MarkStatsService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "mark/stat.proto",
+	Metadata: "mark_action/stat.proto",
 }

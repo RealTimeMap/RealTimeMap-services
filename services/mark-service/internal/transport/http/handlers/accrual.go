@@ -6,7 +6,7 @@ import (
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/accrual"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/accrual"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )

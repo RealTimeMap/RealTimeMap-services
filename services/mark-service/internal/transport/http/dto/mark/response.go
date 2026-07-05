@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/category"
 )
@@ -43,7 +44,16 @@ func NewOwnerResponse(u *model.UserProfile) OwnerResponse {
 	}
 }
 
-// ResponseMark represents mark response
+func NewOwnerResponseV2(u mark_action.UserResult) OwnerResponse {
+	return OwnerResponse{
+		ID:       u.ID,
+		Username: u.Username,
+		Tag:      u.Tag,
+		Avatar:   u.Avatar,
+	}
+}
+
+// ResponseMark represents mark_action response
 // @name MarkResponse
 type ResponseMark struct {
 	ID       int          `json:"id"`
@@ -64,6 +74,24 @@ func NewResponseMark(data *model.Mark) *ResponseMark {
 	return response
 }
 
+func NewResponseMarkV2(data mark_action.MarkResult) ResponseMark {
+	response := ResponseMark{
+		ID:       int(data.ID),
+		MarKName: data.MarkName,
+		Geom:     NewFromPoint(data.Geom),
+		Photos:   data.Photos,
+	}
+	return response
+}
+
+func NewMultipleResponseMarkV2(data []mark_action.MarkResult) []ResponseMark {
+	response := make([]ResponseMark, len(data))
+	for i := range response {
+		response[i] = NewResponseMarkV2(data[i])
+	}
+	return response
+}
+
 func NewMultipleResponseMark(data []*model.Mark) []*ResponseMark {
 	response := make([]*ResponseMark, len(data))
 	for i := range response {
@@ -79,16 +107,16 @@ type ResponseCluster struct {
 	Count  int          `json:"count"`
 }
 
-func NewResponseCluster(data *model.Cluster) *ResponseCluster {
-	response := &ResponseCluster{
+func NewResponseCluster(data mark_action.ClusterResult) ResponseCluster {
+	response := ResponseCluster{
 		Center: NewFromPoint(data.Center),
 		Count:  data.Count,
 	}
 	return response
 }
 
-func NewMultipleResponseCluster(data []*model.Cluster) []*ResponseCluster {
-	response := make([]*ResponseCluster, len(data))
+func NewMultipleResponseCluster(data []mark_action.ClusterResult) []ResponseCluster {
+	response := make([]ResponseCluster, len(data))
 	for i := range response {
 		response[i] = NewResponseCluster(data[i])
 	}
@@ -103,13 +131,13 @@ type Date struct {
 	DaysLeft        int       `json:"daysLeft"`
 }
 
-func NewDate(m *model.Mark) Date {
+func NewDate(m mark_action.DateResult) Date {
 	return Date{
 		StartAt:         m.StartAt,
 		EndAt:           m.EndAt,
-		ProgressPercent: m.ProgressPercent(),
-		DaysLeft:        m.DaysLeft(),
-		DaysPassed:      m.DaysSinceStart(),
+		ProgressPercent: m.ProgressPercent,
+		DaysLeft:        m.DaysLeft,
+		DaysPassed:      m.DaysPassed,
 	}
 }
 
@@ -118,41 +146,40 @@ type Meta struct {
 	MarkType string `json:"markType"`
 }
 
-func NewMeta(m *model.Mark) Meta {
+func NewMeta(m mark_action.MetaResult) Meta {
 	return Meta{
-		Status:   m.Status(),
-		MarkType: string(m.GetMarkType()),
+		Status:   m.Status,
+		MarkType: m.MarkType,
 	}
 }
 
 type DetailMarkResponse struct {
-	ID             int                        `json:"id"`
-	MarKName       string                     `json:"markName"`
-	AdditionalInfo *string                    `json:"additionalInfo,omitempty"`
-	Category       *category.ResponseCategory `json:"category"`
-	Geom           *Coordinates               `json:"geom"`
-	User           OwnerResponse              `json:"owner"`
-	Photos         []string                   `json:"photos"`
-	Date           Date                       `json:"date"`
-	Meta           Meta                       `json:"meta"`
+	ID             uint                      `json:"id"`
+	MarKName       string                    `json:"markName"`
+	AdditionalInfo *string                   `json:"additionalInfo,omitempty"`
+	Category       category.ResponseCategory `json:"category"`
+	Geom           *Coordinates              `json:"geom"`
+	User           OwnerResponse             `json:"owner"`
+	Photos         []string                  `json:"photos"`
+	Date           Date                      `json:"date"`
+	Meta           Meta                      `json:"meta"`
 }
 
-func NewDetailMarkResponse(data *model.Mark) DetailMarkResponse {
-	date := NewDate(data)
+func NewDetailMarkResponse(data mark_action.DetailMarkResult) DetailMarkResponse {
+	date := NewDate(data.Date)
 	response := DetailMarkResponse{
 		ID:             data.ID,
 		MarKName:       data.MarkName,
 		AdditionalInfo: data.AdditionalInfo,
 		Geom:           NewFromPoint(data.Geom),
-		User:           NewOwnerResponse(data.Owner),
+		User:           NewOwnerResponseV2(data.Owner),
 		Date:           date,
-		Meta:           NewMeta(data),
+		Meta:           NewMeta(data.Meta),
+		Photos:         data.Photos,
 	}
 	if data.Category.ID != 0 {
-		response.Category = category.NewResponseCategory(&data.Category)
+		response.Category = category.NewResponseCategoryMark(data.Category)
 	}
-	for _, photo := range data.Photos {
-		response.Photos = append(response.Photos, photo.URL)
-	}
+
 	return response
 }

@@ -1,6 +1,8 @@
 package category
 
-import "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
+import (
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
+)
 
 type ResponseCategory struct {
 	ID           int    `json:"id"`
@@ -25,17 +27,4 @@ func NewMultiResponseCategory(data []*model.Category) []*ResponseCategory {
 		response[i] = NewResponseCategory(c)
 	}
 	return response
-}
-
-type ResponseCreateData struct {
-	Categories []*ResponseCategory `json:"allowedCategories"`
-	Duration   []int               `json:"allowedDuration"`
-}
-
-func NewResponseCreateData(categories []*model.Category, allowedDuration []int) *ResponseCreateData {
-	categoryResponse := NewMultiResponseCategory(categories)
-	return &ResponseCreateData{
-		Categories: categoryResponse,
-		Duration:   allowedDuration,
-	}
 }
