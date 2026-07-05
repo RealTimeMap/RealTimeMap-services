@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.34.1
-// source: mark/stat.proto
+// source: mark_action/stat.proto
 
 package markstat
 
