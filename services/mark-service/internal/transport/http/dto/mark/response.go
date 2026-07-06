@@ -5,7 +5,6 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/category"
 )
 
@@ -32,19 +31,7 @@ type OwnerResponse struct {
 	Tag      string `json:"tag"`
 }
 
-func NewOwnerResponse(u *model.UserProfile) OwnerResponse {
-	if u == nil {
-		return OwnerResponse{}
-	}
-	return OwnerResponse{
-		ID:       u.ID,
-		Username: u.Username,
-		Tag:      u.Tag,
-		Avatar:   u.Avatar,
-	}
-}
-
-func NewOwnerResponseV2(u mark_action.UserResult) OwnerResponse {
+func NewOwnerResponse(u mark_action.UserResult) OwnerResponse {
 	return OwnerResponse{
 		ID:       u.ID,
 		Username: u.Username,
@@ -62,19 +49,7 @@ type ResponseMark struct {
 	Photos   []string     `json:"photos"`
 }
 
-func NewResponseMark(data *model.Mark) *ResponseMark {
-	response := &ResponseMark{
-		ID:       data.ID,
-		MarKName: data.MarkName,
-		Geom:     NewFromPoint(data.Geom),
-	}
-	for _, photo := range data.Photos {
-		response.Photos = append(response.Photos, photo.URL)
-	}
-	return response
-}
-
-func NewResponseMarkV2(data mark_action.MarkResult) ResponseMark {
+func NewResponseMark(data mark_action.MarkResult) ResponseMark {
 	response := ResponseMark{
 		ID:       int(data.ID),
 		MarKName: data.MarkName,
@@ -86,14 +61,6 @@ func NewResponseMarkV2(data mark_action.MarkResult) ResponseMark {
 
 func NewMultipleResponseMarkV2(data []mark_action.MarkResult) []ResponseMark {
 	response := make([]ResponseMark, len(data))
-	for i := range response {
-		response[i] = NewResponseMarkV2(data[i])
-	}
-	return response
-}
-
-func NewMultipleResponseMark(data []*model.Mark) []*ResponseMark {
-	response := make([]*ResponseMark, len(data))
 	for i := range response {
 		response[i] = NewResponseMark(data[i])
 	}
@@ -172,7 +139,7 @@ func NewDetailMarkResponse(data mark_action.DetailMarkResult) DetailMarkResponse
 		MarKName:       data.MarkName,
 		AdditionalInfo: data.AdditionalInfo,
 		Geom:           NewFromPoint(data.Geom),
-		User:           NewOwnerResponseV2(data.Owner),
+		User:           NewOwnerResponse(data.Owner),
 		Date:           date,
 		Meta:           NewMeta(data.Meta),
 		Photos:         data.Photos,

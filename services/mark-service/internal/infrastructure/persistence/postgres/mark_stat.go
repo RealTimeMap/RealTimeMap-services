@@ -5,37 +5,36 @@ import (
 	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/date"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-type MarkStatRepository struct {
-	db    *gorm.DB
-	log   *zap.Logger
-	layer string
+type PgMarkStatRepository struct {
+	db *gorm.DB
+
+	logger *zap.Logger
 }
 
-func NewMarkStatRepository(db *gorm.DB, logger *zap.Logger) repository.MarkStatsRepository {
-	return &MarkStatRepository{
-		db:    db,
-		log:   logger,
-		layer: "MarkStatRepository",
+func NewPgMarkStatRepository(db *gorm.DB, logger *zap.Logger) mark.StatsRepository {
+	return &PgMarkStatRepository{
+		db:     db,
+		logger: logger,
 	}
 }
 
-func (r *MarkStatRepository) GetMarkCount(ctx context.Context, userID uint) (int64, error) {
+func (r *PgMarkStatRepository) GetMarkCount(ctx context.Context, userID uint) (int64, error) {
 	var count int64
 
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).
+	err := r.db.WithContext(ctx).Model(&mark.Mark{}).
 		Where("user_id = ?", userID).Count(&count).Error
 
 	return count, err
 }
 
-func (r *MarkStatRepository) GetCountForMonths(ctx context.Context, userID uint, year int) ([]model.MonthlyActivity, error) {
-	r.log.Info("start MarkStatRepository.GetCountForMonths", zap.Uint("user_id", userID))
+func (r *PgMarkStatRepository) GetCountForMonths(ctx context.Context, userID uint, year int) ([]mark.MonthlyActivity, error) {
+	r.logger.Info("start PgMarkStatRepository.GetCountForMonths", zap.Uint("user_id", userID))
 
 	type result struct {
 		Month int
@@ -44,7 +43,7 @@ func (r *MarkStatRepository) GetCountForMonths(ctx context.Context, userID uint,
 
 	var rows []result
 
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).
+	err := r.db.WithContext(ctx).Model(&mark.Mark{}).
 		Select("EXTRACT(MONTH FROM created_at)::int AS month, COUNT(*) AS count").
 		Where("user_id = ?", userID).
 		Where("EXTRACT(YEAR FROM created_at) = ?", year).
@@ -63,9 +62,9 @@ func (r *MarkStatRepository) GetCountForMonths(ctx context.Context, userID uint,
 
 	months := date.GetMonthsName()
 
-	activity := make([]model.MonthlyActivity, 12)
+	activity := make([]mark.MonthlyActivity, 12)
 	for i := 0; i < 12; i++ {
-		activity[i] = model.MonthlyActivity{
+		activity[i] = mark.MonthlyActivity{
 			Month: months[i],
 			Count: counts[i+1],
 		}
@@ -74,8 +73,8 @@ func (r *MarkStatRepository) GetCountForMonths(ctx context.Context, userID uint,
 
 }
 
-func (r *MarkStatRepository) GetCountPerPeriod(ctx context.Context, userID uint, start, end time.Time) ([]model.DayActivity, error) {
-	r.log.Info("start MarkStatRepository.GetCountPerPeriod", zap.Uint("user_id", userID))
+func (r *PgMarkStatRepository) GetCountPerPeriod(ctx context.Context, userID uint, start, end time.Time) ([]mark.DayActivity, error) {
+	r.logger.Info("start PgMarkStatRepository.GetCountPerPeriod", zap.Uint("user_id", userID))
 
 	loc := start.Location()
 	startDay := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, loc)
@@ -87,7 +86,7 @@ func (r *MarkStatRepository) GetCountPerPeriod(ctx context.Context, userID uint,
 	}
 	var rows []result
 
-	err := r.db.WithContext(ctx).Model(&model.Mark{}).
+	err := r.db.WithContext(ctx).Model(&mark.Mark{}).
 		Select("created_at::date AS day, COUNT(*) AS count").
 		Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, startDay, endDay.AddDate(0, 0, 1)).
 		Group("day").
@@ -104,9 +103,9 @@ func (r *MarkStatRepository) GetCountPerPeriod(ctx context.Context, userID uint,
 	}
 
 	days := int(endDay.Sub(startDay).Hours()/24) + 1
-	activity := make([]model.DayActivity, 0, days)
+	activity := make([]mark.DayActivity, 0, days)
 	for d := startDay; !d.After(endDay); d = d.AddDate(0, 0, 1) {
-		activity = append(activity, model.DayActivity{
+		activity = append(activity, mark.DayActivity{
 			Day:   d,
 			Count: counts[d],
 		})
@@ -114,8 +113,8 @@ func (r *MarkStatRepository) GetCountPerPeriod(ctx context.Context, userID uint,
 	return activity, nil
 }
 
-func (r *MarkStatRepository) GetPopularCategories(ctx context.Context, userID uint) ([]model.CategoryStat, error) {
-	var rows []model.CategoryStat
+func (r *PgMarkStatRepository) GetPopularCategories(ctx context.Context, userID uint) ([]category.CategoryStat, error) {
+	var rows []category.CategoryStat
 	err := r.db.WithContext(ctx).
 		Table("marks AS m").
 		Select("c.id AS category_id, c.category_name, COUNT(*) AS count").

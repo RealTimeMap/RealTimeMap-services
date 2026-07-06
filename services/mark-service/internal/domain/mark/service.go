@@ -20,7 +20,7 @@ const (
 type CreateMarkParams struct {
 	MarkName       string
 	AdditionalInfo *string
-	CategoryId     int
+	CategoryId     uint
 	StartAt        time.Time
 	EndAt          *time.Time
 	Geom           types.Point

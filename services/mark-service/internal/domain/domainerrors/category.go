@@ -60,20 +60,3 @@ var (
 		)
 	}
 )
-
-// Infrastructure domainerrors
-var (
-	ErrDatabaseQuery = func(operation string, cause error) error {
-		return apperror.WrapInternalError(
-			fmt.Sprintf("database %s failed", operation),
-			cause,
-		)
-	}
-
-	ErrStorageOperation = func(operation string, cause error) error {
-		return apperror.WrapInternalError(
-			fmt.Sprintf("storage %s failed", operation),
-			cause,
-		)
-	}
-)
