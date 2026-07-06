@@ -81,7 +81,7 @@ func (h *markHandler) CreateMark(c *gin.Context) {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	c.JSON(201, dto.NewResponseMarkV2(res))
+	c.JSON(201, dto.NewResponseMark(res))
 }
 
 func (h *markHandler) GetMarks(c *gin.Context) {
@@ -183,7 +183,7 @@ func (h *markHandler) UpdateMark(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, dto.NewResponseMarkV2(updatedMark))
+	c.JSON(200, dto.NewResponseMark(updatedMark))
 }
 
 func (h *markHandler) DetailMark(c *gin.Context) {

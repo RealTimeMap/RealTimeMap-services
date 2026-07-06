@@ -36,7 +36,7 @@ type Mark struct {
 	MarkName       string
 	UserID         uint
 	UserName       string `gorm:"not null"`
-	CategoryID     int
+	CategoryID     uint
 	Category       category.Category
 	AdditionalInfo *string
 

@@ -12,7 +12,6 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/accrual"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -33,7 +32,7 @@ func main() {
 		DBName:   cfg.Database.DBName,
 	}, log)
 	defer database.Close(db)
-	db.AutoMigrate(&model.Mark{}, &model.Category{}, &accrual.MarkReaction{}, &mark.Mark{}, &category.Category{})
+	db.AutoMigrate(&accrual.MarkReaction{}, &mark.Mark{}, &category.Category{})
 
 	container := app.MustContainer(cfg, db, log)
 

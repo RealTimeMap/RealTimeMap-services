@@ -48,8 +48,8 @@ func (r *CategoryRepositoryV2) GetByName(ctx context.Context, name string) (*cat
 	return &category, nil
 }
 
-func (r *CategoryRepositoryV2) GetByID(ctx context.Context, id int) (*category.Category, error) {
-	r.log.Info("get_category_by_id in: ", sl.String("layer", r.layer), sl.Int("id", id))
+func (r *CategoryRepositoryV2) GetByID(ctx context.Context, id uint) (*category.Category, error) {
+	r.log.Info("get_category_by_id in: ", sl.String("layer", r.layer), zap.Uint("id", id))
 
 	var category category.Category
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&category).Error

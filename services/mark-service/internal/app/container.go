@@ -5,14 +5,12 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/category"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_stat"
 	category2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/accrual"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/service/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
 	grpcstat "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/socket"
@@ -22,15 +20,6 @@ import (
 
 type Container struct {
 	DB *gorm.DB
-
-	// Репозитории
-	CategoryRepo repository.CategoryRepository
-	MarkRepo     repository.MarkRepository
-	AccrualRepo  accrual.Repository
-
-	// Сервисы для пользовательский кейсов
-	MarkStatsService *stats.MarkStatsService
-	AccrualService   *accrual.Service
 
 	// Сокет
 
@@ -45,12 +34,6 @@ type Container struct {
 }
 
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
-
-	// создание репозиториев
-	markRepo := postgres.NewMarkRepository(db, log)
-	markStatRepo := postgres.NewMarkStatRepository(db, log)
-	accrualRepo := postgres.NewPgAccrualRepository(db, log)
-
 	// Создание вспомогательных компонентов
 	//imageValidator := mediavalidator.NewPhotoValidator()
 	store, err := storage.NewLocalStorage(cfg.Storage.BasePath, cfg.Storage.BaseURL, log)
@@ -58,13 +41,18 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		panic(err)
 	}
 
-	// Kafka producer (только если включен)
+	// Kafka producer (только если включен).
+	// eventPublisher остаётся nil-интерфейсом, если Kafka выключена —
+	// use case это допускает и просто не публикует событие.
 	var p *producer.Producer
+	var eventPublisher mark_action.EventPublisher
 	if cfg.Kafka.Enabled {
 		p = producer.New(
 			producer.DefaultConfig().WithBrokers(cfg.Kafka.Brokers[0]).WithTopic(cfg.Kafka.ProducerTopic),
 			producer.WithLogger(log),
 		)
+
+		eventPublisher = p
 		log.Info("Kafka producer initialized", zap.String("topic", cfg.Kafka.ProducerTopic))
 	} else {
 		log.Info("Kafka producer disabled")
@@ -79,9 +67,12 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	if err != nil {
 		log.Fatal("Profile client initialization failed", zap.Error(err))
 	}
-	// Создание сервисов
-	markStatService := stats.NewMarkStatsService(markStatRepo, log)
-	accrualService := accrual.NewService(markRepo, accrualRepo, log)
+
+	// СОздание доменных репозиториев
+
+	// Создание доменных сервисов
+	statRepoV2 := postgres.NewPgMarkStatRepository(db, log)
+	statService := mark.NewStatService(statRepoV2, log)
 	// админские сервисы
 
 	// TODO После завершения переноса переименовать
@@ -93,12 +84,19 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	// USE CASE
 
 	markUseCases := &mark_action.Application{
-		CreateMark:  mark_action.NewCreateMarkHandler(markService, log),
+		CreateMark:  mark_action.NewCreateMarkHandler(markService, eventPublisher, log),
 		GetMark:     mark_action.NewMarkGetterHandler(markService, log),
 		GetDetail:   mark_action.NewDetailMarkHandler(markService, profileGrpcHandler, log),
 		DeleteMark:  mark_action.NewRemoverMarkHandler(markService, log),
 		GetUserMark: mark_action.NewUserMarkGetterHandler(markService, log),
 		UpdateMark:  mark_action.NewUpdateMarkHandler(markService, log),
+	}
+
+	markStatUseCases := &mark_stat.Application{
+		GetCategories:    mark_stat.NewMarkStatCategoryHandler(statService, log),
+		GetMonthActivity: mark_stat.NewMarkMonthHandler(statService, log),
+		GetHeatMap:       mark_stat.NewMarkHeatMapHandler(statService, log),
+		GetMarkCount:     mark_stat.NewMarkCountHandler(statService, log),
 	}
 
 	categoryUseCases := &category.Application{
@@ -109,16 +107,11 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	socketServer := socket.New(socket.Deps{MarkUseCases: markUseCases, Logger: log})
 
 	// grpc
-	markStatGrpc := grpcstat.NewHandler(markStatService, log)
+	markStatGrpc := grpcstat.NewHandler(markStatUseCases, log)
 
 	// добавление
 	return &Container{
 		DB: db,
-
-		AccrualRepo: accrualRepo,
-
-		MarkStatsService: markStatService,
-		AccrualService:   accrualService,
 
 		Socket: socketServer,
 

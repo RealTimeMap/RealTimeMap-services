@@ -15,6 +15,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const clusterPixelThreshold = 60.0
+
 type MarkRepositoryV2 struct {
 	db    *gorm.DB
 	log   *zap.Logger
@@ -204,15 +206,4 @@ func (r *MarkRepositoryV2) Exist(ctx context.Context, id int) (bool, error) {
 		return false, err
 	}
 	return exists, nil
-}
-
-func (r *MarkRepositoryV2) GetAll(ctx context.Context, params pagination.Params) ([]*mark2.Mark, int64, error) {
-	var marks []*mark2.Mark
-	var count int64
-	err := r.db.WithContext(ctx).Model(&mark2.Mark{}).Offset(params.Offset()).Limit(params.Limit()).Find(&marks).Count(&count).Error
-	if err != nil {
-		r.log.Error("failed to get marks count", zap.Error(err))
-		return nil, 0, err
-	}
-	return marks, count, nil
 }

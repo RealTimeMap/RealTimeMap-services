@@ -86,7 +86,7 @@ var (
 		)
 	}
 
-	ErrCategoryNotActive = func(categoryId int) error {
+	ErrCategoryNotActive = func(categoryId uint) error {
 		return apperror.NewFieldValidationError(
 			"categoryId",
 			"category is not active",

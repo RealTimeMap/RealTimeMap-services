@@ -33,7 +33,7 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 
 	handlers.InitCategoryHandler(api, container.CategoryUseCases, container.Logger)
 	handlers.InitMarkHandler(api, handlers.MarkDeps{UseCases: container.MarkUseCases, Logger: container.Logger})
-	handlers.RegisterAccrualHandler(api, handlers.AccrualDeps{Service: container.AccrualService, Logger: container.Logger})
+	//handlers.RegisterAccrualHandler(api, handlers.AccrualDeps{Service: container.AccrualService, Logger: container.Logger})
 
 	// Health
 	health := http.HealthHandler("mark_action-service", container.DB)
@@ -94,7 +94,7 @@ func (h *H) CreateV2(c *gin.Context) {
 		return
 	}
 	h.logger.Info("mark created", zap.Any("mark", mark))
-	c.JSON(201, dto.NewResponseMarkV2(mark))
+	c.JSON(201, dto.NewResponseMark(mark))
 }
 
 const (

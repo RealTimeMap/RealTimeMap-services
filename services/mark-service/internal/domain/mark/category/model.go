@@ -13,7 +13,3 @@ type CategoryStat struct {
 	Count        int64
 	Percent      float64
 }
-
-func (Category) TableName() string {
-	return "new_categories"
-}

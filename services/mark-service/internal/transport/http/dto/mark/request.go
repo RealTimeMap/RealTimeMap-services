@@ -8,7 +8,7 @@ import (
 type RequestMark struct {
 	MarkName       string                  `form:"markName" binding:"required"`
 	AdditionalInfo *string                 `form:"additionalInfo" binding:"-"`
-	CategoryId     int                     `form:"categoryId" binding:"required"`
+	CategoryId     uint                    `form:"categoryId" binding:"required"`
 	StartAt        time.Time               `form:"startAt" binding:"required"`
 	EndAt          *time.Time              `form:"endAt" binding:"-"`
 	Longitude      float64                 `form:"longitude" binding:"required,longitude"`

@@ -1,35 +1,34 @@
-package stats
+package mark
 
 import (
 	"context"
 	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/model"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/repository"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 	"go.uber.org/zap"
 )
 
 const OtherCategoryName string = "Other"
 
-type MarkStatsService struct {
-	statsRepo repository.MarkStatsRepository
+type StatsService struct {
+	statsRepo StatsRepository
 
 	logger *zap.Logger
 }
 
-func NewMarkStatsService(statsRepo repository.MarkStatsRepository, logger *zap.Logger) *MarkStatsService {
-	return &MarkStatsService{
+func NewStatService(statsRepo StatsRepository, logger *zap.Logger) *StatsService {
+	return &StatsService{
 		statsRepo: statsRepo,
 		logger:    logger,
 	}
 }
 
-func (s *MarkStatsService) GetMarkCount(ctx context.Context, userID uint) (int64, error) {
+func (s *StatsService) GetUserMarksCount(ctx context.Context, userID uint) (int64, error) {
 	return s.statsRepo.GetMarkCount(ctx, userID)
 }
 
-func (s *MarkStatsService) GetUserMonthlyActivity(ctx context.Context, userID uint, year int) ([]model.MonthlyActivity, error) {
+func (s *StatsService) GetUserMonthlyActivity(ctx context.Context, userID uint, year int) ([]MonthlyActivity, error) {
 	s.logger.Info("start MarkStatService.GetUserMonthlyActivity")
 
 	result, err := s.statsRepo.GetCountForMonths(ctx, userID, year)
@@ -40,12 +39,12 @@ func (s *MarkStatsService) GetUserMonthlyActivity(ctx context.Context, userID ui
 	return result, nil
 }
 
-func (s *MarkStatsService) GetCountsForPeriod(ctx context.Context, userID uint, start, end time.Time) ([]model.DayActivity, error) {
+func (s *StatsService) GetCountsForPeriod(ctx context.Context, userID uint, start, end time.Time) ([]DayActivity, error) {
 	s.logger.Info("start MarkStatService.GetCountsForPeriod")
 	return s.statsRepo.GetCountPerPeriod(ctx, userID, start, end)
 }
 
-func (s *MarkStatsService) GetPopularUserCategories(ctx context.Context, userID uint, topN int) ([]model.CategoryStat, error) {
+func (s *StatsService) GetPopularUserCategories(ctx context.Context, userID uint, topN int) ([]category.CategoryStat, error) {
 	s.logger.Info("start MarkStatService.GetPopularUserCategories")
 
 	counts, err := s.statsRepo.GetPopularCategories(ctx, userID)
@@ -57,22 +56,22 @@ func (s *MarkStatsService) GetPopularUserCategories(ctx context.Context, userID 
 
 }
 
-func buildCategoryStats(data []model.CategoryStat, topN int) []model.CategoryStat {
+func buildCategoryStats(data []category.CategoryStat, topN int) []category.CategoryStat {
 	var total int64
 
 	for _, i := range data {
 		total += i.Count
 	}
 	if total == 0 {
-		return []model.CategoryStat{}
+		return []category.CategoryStat{}
 	}
 
-	result := make([]model.CategoryStat, 0, topN+1)
+	result := make([]category.CategoryStat, 0, topN+1)
 	var otherCount int64
 
 	for i, c := range data {
 		if i < topN {
-			result = append(result, model.CategoryStat{
+			result = append(result, category.CategoryStat{
 				Count:        c.Count,
 				CategoryName: c.CategoryName,
 				Percent:      utils.Percent(c.Count, total),
@@ -82,7 +81,7 @@ func buildCategoryStats(data []model.CategoryStat, topN int) []model.CategorySta
 		}
 	}
 	if otherCount > 0 {
-		result = append(result, model.CategoryStat{
+		result = append(result, category.CategoryStat{
 			CategoryName: OtherCategoryName,
 			Count:        otherCount,
 			Percent:      utils.Percent(otherCount, total),
