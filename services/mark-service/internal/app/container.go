@@ -68,19 +68,16 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		log.Fatal("Profile client initialization failed", zap.Error(err))
 	}
 
-	// СОздание доменных репозиториев
-
-	// Создание доменных сервисов
-	statRepoV2 := postgres.NewPgMarkStatRepository(db, log)
-	statService := mark.NewStatService(statRepoV2, log)
-	// админские сервисы
-
-	// TODO После завершения переноса переименовать
-	v2MarkRepo := postgres.NewMarkRepositoryV2(db, log)
+	// Создание доменных репозиториев
+	statRepo := postgres.NewPgMarkStatRepository(db, log)
+	markRepo := postgres.NewMarkRepositoryV2(db, log)
 	categoryRepo := postgres.NewCategoryRepositoryV2(db, log)
 
-	markService := mark.NewService(v2MarkRepo, categoryRepo, store, log)
+	// Создание доменных сервисов
+	statService := mark.NewStatService(statRepo, log)
+	markService := mark.NewService(markRepo, categoryRepo, store, log)
 	categoryService := category2.NewService(categoryRepo)
+
 	// USE CASE
 
 	markUseCases := &mark_action.Application{

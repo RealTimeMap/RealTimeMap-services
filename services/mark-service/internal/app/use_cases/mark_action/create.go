@@ -9,6 +9,7 @@ import (
 	ctxHelper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	"go.uber.org/zap"
@@ -107,10 +108,16 @@ func (h *CreateMarkHandler) publishCreated(ctx context.Context, obj *mark.Mark, 
 		AdditionalInfo: obj.AdditionalInfo,
 		IsEnded:        obj.IsEnded,
 	}
+
 	event := events.NewMarkCreate(payload)
 
 	// key = ownerId для партиционирования: события одной метки/владельца в одну партицию.
-	if err := h.publisher.Publish(ctx, strconv.Itoa(userID), event, nil); err != nil {
+	if err := h.publisher.PublishWithMeta(ctx, producer.EventMeta{
+		EventType: "mark.created",
+		UserID:    strconv.Itoa(int(obj.UserID)),
+		SourceID:  strconv.Itoa(int(obj.ID)),
+		Timestamp: time.Now().Format(time.RFC3339)},
+		event); err != nil {
 		h.logger.Error("publish markCreated event failed", zap.Error(err))
 	}
 }
