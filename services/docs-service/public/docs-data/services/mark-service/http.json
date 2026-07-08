@@ -573,7 +573,7 @@
     {
       "id": "share-mark",
       "method": "POST",
-      "path": "/api/v2/marks/{markID}/share",
+      "path": "/api/v2/accrual/{markID}/share",
       "summary": "Поделиться меткой",
       "description": "Увеличивает счётчик «поделились» (sharedCount) для метки на 1 и возвращает актуальное значение. Авторизация не требуется. Инкремент выполняется атомарно на стороне БД.",
       "tags": ["Метки"],
@@ -597,9 +597,9 @@
     {
       "id": "like-mark",
       "method": "POST",
-      "path": "/api/v2/marks/{markID}/like",
+      "path": "/api/v2/accrual/{markID}/like",
       "summary": "Поставить лайк метке",
-      "description": "Ставит лайк текущего пользователя на метку. Требуется авторизация. Операция идемпотентна — повторный лайк той же метки тем же пользователем не приводит к ошибке и не создаёт дубликат.",
+      "description": "Ставит лайк текущего пользователя на метку. Требуется авторизация. Возвращает актуальное состояние реакций метки с метаданными для отрисовки на клиенте. Повторный лайк той же метки тем же пользователем не создаёт дубликат.",
       "tags": ["Метки"],
       "auth": true,
       "parameters": [
@@ -608,16 +608,80 @@
       "responses": [
         {
           "statusCode": 200,
-          "description": "Лайк поставлен",
+          "description": "Лайк поставлен. Возвращается актуальное состояние реакций",
           "schema": [
-            { "name": "status", "type": "string", "required": true, "description": "Результат операции", "enum": ["ok"] }
+            { "name": "count", "type": "integer", "required": true, "description": "Актуальное количество лайков метки" },
+            { "name": "isLiked", "type": "boolean", "required": true, "description": "Поставлен ли лайк текущим пользователем (после операции — true)" },
+            { "name": "canLike", "type": "boolean", "required": true, "description": "Может ли пользователь поставить лайк (= !isLiked)" }
           ],
           "example": {
-            "status": "ok"
+            "count": 42,
+            "isLiked": true,
+            "canLike": false
           }
         }
       ],
       "errors": ["unauthorized", "not-found"]
+    },
+    {
+      "id": "unlike-mark",
+      "method": "DELETE",
+      "path": "/api/v2/accrual/{markID}/like",
+      "summary": "Убрать лайк с метки",
+      "description": "Снимает лайк текущего пользователя с метки. Требуется авторизация. Операция идемпотентна — снятие отсутствующего лайка не приводит к ошибке. Возвращает актуальное состояние реакций метки.",
+      "tags": ["Метки"],
+      "auth": true,
+      "parameters": [
+        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Лайк снят. Возвращается актуальное состояние реакций",
+          "schema": [
+            { "name": "count", "type": "integer", "required": true, "description": "Актуальное количество лайков метки" },
+            { "name": "isLiked", "type": "boolean", "required": true, "description": "Поставлен ли лайк текущим пользователем (после операции — false)" },
+            { "name": "canLike", "type": "boolean", "required": true, "description": "Может ли пользователь поставить лайк (= !isLiked)" }
+          ],
+          "example": {
+            "count": 41,
+            "isLiked": false,
+            "canLike": true
+          }
+        }
+      ],
+      "errors": ["unauthorized", "not-found"]
+    },
+    {
+      "id": "mark-stat",
+      "method": "GET",
+      "path": "/api/v2/accrual/{markID}/stat",
+      "summary": "Статистика метки",
+      "description": "Возвращает агрегированную статистику метки: количество лайков и «поделились», отформатированные для отображения (напр. \"1.2 K\", \"3.4 M\"). Авторизация опциональна: при наличии токена в ответ добавляются метаданные для текущего пользователя (isLiked/canLike). Без токена isLiked всегда false, canLike — true.",
+      "tags": ["Метки"],
+      "auth": false,
+      "parameters": [
+        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Статистика метки",
+          "schema": [
+            { "name": "likes", "type": "string", "required": true, "description": "Количество лайков, отформатированное для отображения (напр. \"1.2 K\")" },
+            { "name": "shares", "type": "string", "required": true, "description": "Количество «поделились», отформатированное для отображения" },
+            { "name": "isLiked", "type": "boolean", "required": true, "description": "Поставлен ли лайк текущим пользователем. false для анонимного запроса" },
+            { "name": "canLike", "type": "boolean", "required": true, "description": "Может ли пользователь поставить лайк (= !isLiked)" }
+          ],
+          "example": {
+            "likes": "1.2 K",
+            "shares": "980",
+            "isLiked": true,
+            "canLike": false
+          }
+        }
+      ],
+      "errors": ["not-found"]
     },
     {
       "id": "create-category",

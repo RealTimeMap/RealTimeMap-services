@@ -1,4 +1,4 @@
-package accrual
+package like
 
 import "github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 

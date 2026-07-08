@@ -5,6 +5,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/category"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_interaction"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_stat"
 	category2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 
@@ -23,10 +24,10 @@ type Container struct {
 
 	// Сокет
 
-	Socket *socket.SocketServer
-
-	MarkUseCases     *mark_action.Application
-	CategoryUseCases *category.Application
+	Socket                  *socket.SocketServer
+	MarkUseCases            *mark_action.Application
+	MarkInteractionUseCases *mark_interaction.Application
+	CategoryUseCases        *category.Application
 
 	// grpc
 	MarkStatServer *grpcstat.Handler
@@ -72,12 +73,12 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	statRepo := postgres.NewPgMarkStatRepository(db, log)
 	markRepo := postgres.NewMarkRepositoryV2(db, log)
 	categoryRepo := postgres.NewCategoryRepositoryV2(db, log)
-
+	interactRepo := postgres.NewPgLikeRepository(db, log)
 	// Создание доменных сервисов
 	statService := mark.NewStatService(statRepo, log)
 	markService := mark.NewService(markRepo, categoryRepo, store, log)
 	categoryService := category2.NewService(categoryRepo)
-
+	accrualService := mark.NewAccrualService(markRepo, interactRepo, log)
 	// USE CASE
 
 	markUseCases := &mark_action.Application{
@@ -96,6 +97,13 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		GetMarkCount:     mark_stat.NewMarkCountHandler(statService, log),
 	}
 
+	markAccrualCases := &mark_interaction.Application{
+		CreateShare: mark_interaction.NewShareCreatorHandler(accrualService, log),
+		LikeMark:    mark_interaction.NewLikeMarkHandler(accrualService, log),
+		UnlikeMark:  mark_interaction.NewUnlikeMarkHandler(accrualService, log),
+		GetStat:     mark_interaction.NewGetStatHandler(accrualService, log),
+	}
+
 	categoryUseCases := &category.Application{
 		Create: category.NewCreateCategoryCommand(categoryService, log),
 		Get:    category.NewGetterCategoryHandler(categoryService, log),
@@ -112,10 +120,10 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 
 		Socket: socketServer,
 
-		MarkStatServer: markStatGrpc,
-
-		MarkUseCases:     markUseCases,
-		CategoryUseCases: categoryUseCases,
+		MarkUseCases:            markUseCases,
+		MarkStatServer:          markStatGrpc,
+		MarkInteractionUseCases: markAccrualCases,
+		CategoryUseCases:        categoryUseCases,
 
 		Logger: log,
 	}
