@@ -71,6 +71,40 @@ services:
       - "traefik.http.routers.marks-delete.service=mark"
       - "traefik.http.routers.marks-delete.tls=true"
 
+      # POST /api/v2/accrual/:markID/share - поделиться меткой (публичный)
+      - "traefik.http.routers.accrual-share.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/accrual/[0-9]+/share$`) && Method(`POST`)"
+      - "traefik.http.routers.accrual-share.entrypoints=websecure"
+      - "traefik.http.routers.accrual-share.priority=98"
+      - "traefik.http.routers.accrual-share.service=mark"
+      - "traefik.http.routers.accrual-share.middlewares=cors-headers@file"
+      - "traefik.http.routers.accrual-share.tls=true"
+
+      # POST /api/v2/accrual/:markID/like - поставить лайк (с auth)
+      - "traefik.http.routers.accrual-like.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/accrual/[0-9]+/like$`) && Method(`POST`)"
+      - "traefik.http.routers.accrual-like.entrypoints=websecure"
+      - "traefik.http.routers.accrual-like.priority=98"
+      - "traefik.http.routers.accrual-like.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.accrual-like.service=mark"
+      - "traefik.http.routers.accrual-like.tls=true"
+
+      # DELETE /api/v2/accrual/:markID/like - убрать лайк (с auth)
+      - "traefik.http.routers.accrual-unlike.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/accrual/[0-9]+/like$`) && Method(`DELETE`)"
+      - "traefik.http.routers.accrual-unlike.entrypoints=websecure"
+      - "traefik.http.routers.accrual-unlike.priority=98"
+      - "traefik.http.routers.accrual-unlike.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.accrual-unlike.service=mark"
+      - "traefik.http.routers.accrual-unlike.tls=true"
+
+      # GET /api/v2/accrual/:markID/stat - статистика метки (публичный, auth опционален)
+      # TODO: временно без ForwardAuth — isLiked для залогиненных вернётся false,
+      #       пока не появится optional-auth middleware, прокидывающий X-User-* без 401
+      - "traefik.http.routers.accrual-stat.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/accrual/[0-9]+/stat$`) && Method(`GET`)"
+      - "traefik.http.routers.accrual-stat.entrypoints=websecure"
+      - "traefik.http.routers.accrual-stat.priority=98"
+      - "traefik.http.routers.accrual-stat.service=mark"
+      - "traefik.http.routers.accrual-stat.middlewares=cors-headers@file"
+      - "traefik.http.routers.accrual-stat.tls=true"
+
       # POST /api/v2/category/ - создание категории (с auth)
       - "traefik.http.routers.category-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/category/`) && Method(`POST`)"
       - "traefik.http.routers.category-create.entrypoints=websecure"

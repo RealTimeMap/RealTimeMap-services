@@ -9,9 +9,9 @@ import (
 	httpserver "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/accrual"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/like"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -32,8 +32,10 @@ func main() {
 		DBName:   cfg.Database.DBName,
 	}, log)
 	defer database.Close(db)
-	db.AutoMigrate(&accrual.MarkReaction{}, &mark.Mark{}, &category.Category{})
-
+	err := db.AutoMigrate(&like.Reaction{}, &mark.Mark{}, &category.Category{})
+	if err != nil {
+		log.Fatal("Failed to migrate likes", zap.Error(err))
+	}
 	container := app.MustContainer(cfg, db, log)
 
 	httpServer := httpserver.NewServer(cfg.Http, log)

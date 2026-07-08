@@ -10,5 +10,5 @@ import (
 // Интерфейс объявлен на стороне потребителя; *producer.Producer удовлетворяет его напрямую.
 // event сериализуется целиком в тело сообщения (envelope + payload).
 type EventPublisher interface {
-	Publish(ctx context.Context, key string, event any, headers []producer.Header) error
+	PublishWithMeta(ctx context.Context, meta producer.EventMeta, payload any) error
 }
