@@ -34,6 +34,11 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 		Logger:  container.Logger,
 	})
 
+	handlers.InitChatHandler(api, handlers.ChatHandlerDeps{
+		UseCase: container.ChatCases,
+		Logger:  container.Logger,
+	})
+
 	health := http.HealthHandler("social-service", container.DB)
 	g.GET("/social/health", health)
 }
