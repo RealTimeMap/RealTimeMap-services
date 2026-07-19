@@ -32,3 +32,14 @@ func FormatNumber(val int64) string {
 		return fmt.Sprintf("%d", val)
 	}
 }
+
+func IsUniqueElement(arr []uint) bool {
+	seen := make(map[uint]struct{})
+	for _, item := range arr {
+		if _, ok := seen[item]; ok {
+			return false
+		}
+		seen[item] = struct{}{}
+	}
+	return true
+}
