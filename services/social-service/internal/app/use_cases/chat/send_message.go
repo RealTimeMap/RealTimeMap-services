@@ -10,21 +10,26 @@ import (
 
 type MessageSender interface {
 	SendMessage(ctx context.Context, params services.MessageCreateParams) (*message.Message, error)
+	// RecipientIDs — участники чата, кому доставить realtime-событие (кроме отправителя).
+	RecipientIDs(ctx context.Context, chatID, exceptUserID uint) ([]uint, error)
 }
 
 type MessageSenderHandler struct {
 	sender        MessageSender
 	profileGetter ProfileGetter
+	events        EventPublisher
 	logger        *zap.Logger
 }
 
 func NewMessageSenderHandler(
 	sender MessageSender,
 	profileGetter ProfileGetter,
+	events EventPublisher,
 	logger *zap.Logger) *MessageSenderHandler {
 	return &MessageSenderHandler{
 		sender:        sender,
 		profileGetter: profileGetter,
+		events:        events,
 		logger:        logger,
 	}
 }
@@ -58,6 +63,37 @@ func (h *MessageSenderHandler) Handle(ctx context.Context, cmd MessageCreateComm
 			zap.Error(err), zap.Uint("sender_id", cmd.SenderID))
 	}
 
+	result := toMessageResult(messObj, prof)
+
+	// Realtime-доставка остальным участникам чата. Best-effort: сообщение уже
+	// сохранено, поэтому ошибка публикации только логируется и не влияет на ответ
+	// (иначе клиент ретраит отправку → дубликат сообщения).
+	h.publishNewMessage(ctx, cmd.ChatID, cmd.SenderID, result)
+
 	h.logger.Info("message sent", zap.Uint("message_id", messObj.ID), zap.Uint("chat_id", cmd.ChatID))
-	return toMessageResult(messObj, prof), nil
+	return result, nil
+}
+
+// publishNewMessage рассылает событие message.new всем участникам чата, кроме
+// отправителя. Никогда не возвращает ошибку наверх — realtime не критичен для
+// успеха HTTP-запроса.
+func (h *MessageSenderHandler) publishNewMessage(ctx context.Context, chatID, senderID uint, payload MessageResult) {
+	recipientIDs, err := h.sender.RecipientIDs(ctx, chatID, senderID)
+	if err != nil {
+		h.logger.Warn("failed to resolve recipients for realtime event",
+			zap.Error(err), zap.Uint("chat_id", chatID))
+		return
+	}
+	if len(recipientIDs) == 0 {
+		return
+	}
+
+	if err := h.events.Publish(ctx, ChatEvent{
+		Type:         EventMessageNew,
+		RecipientIDs: recipientIDs,
+		Payload:      payload,
+	}); err != nil {
+		h.logger.Warn("failed to publish message.new event",
+			zap.Error(err), zap.Uint("chat_id", chatID))
+	}
 }

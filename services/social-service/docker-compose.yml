@@ -65,6 +65,25 @@ services:
       - "traefik.http.routers.social-health.middlewares=cors-headers@file"
       - "traefik.http.routers.social-health.tls=true"
 
+      # /api/v2/chats/* — HTTP чата (создание, отправка, история, список). Требует
+      # identity: auth-check валидирует Bearer и вклеивает X-User-Id/X-User-Name.
+      - "traefik.http.routers.social-chats.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/chats/`)"
+      - "traefik.http.routers.social-chats.entrypoints=websecure"
+      - "traefik.http.routers.social-chats.priority=100"
+      - "traefik.http.routers.social-chats.service=social"
+      - "traefik.http.routers.social-chats.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-chats.tls=true"
+
+      # /socket.io/* — WebSocket чата. auth-check валидирует Bearer на handshake и
+      # вклеивает X-User-Id/X-User-Name; socket-сервер читает их из Handshake().Headers.
+      # forwardAuth срабатывает на HTTP GET Upgrade — этого достаточно, дальше туннель.
+      - "traefik.http.routers.social-socket.rule=Host(`realtimemap.ru`) && PathPrefix(`/socket.io/`)"
+      - "traefik.http.routers.social-socket.entrypoints=websecure"
+      - "traefik.http.routers.social-socket.priority=100"
+      - "traefik.http.routers.social-socket.service=social"
+      - "traefik.http.routers.social-socket.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-socket.tls=true"
+
       # Service configuration
       - "traefik.http.services.social.loadbalancer.server.port=8080"
 

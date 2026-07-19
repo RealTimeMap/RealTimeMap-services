@@ -17,7 +17,9 @@ import (
 	progressadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/progress"
 	markstatadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/persistence/postgres"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/realtime/socketpub"
 	profilegrpc "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/grpc/profile"
+	chatsocket "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/socket"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -37,7 +39,8 @@ type Container struct {
 
 	Storage storage.Storage
 
-	ChatCases *chat.Application
+	ChatCases  *chat.Application
+	ChatSocket *chatsocket.SocketServer
 
 	ProgressClient *pkgprogress.Client
 	MarkStatClient *pkgmark.Client
@@ -49,6 +52,11 @@ type Container struct {
 }
 
 func (c *Container) Close() error {
+	// Закрываем Socket.IO: рвём соединения и подписки Redis adapter.
+	if c.ChatSocket != nil {
+		c.ChatSocket.Close()
+	}
+
 	if c.ProgressClient != nil {
 		return c.ProgressClient.Close()
 	}
@@ -112,10 +120,19 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	chatServiceV2 := services.NewChatService(chatRepoV2, chatParticipantRepoV2, &txm, logger)
 	messageServiceV2 := services.NewMessageService(messageRepoV2, chatRepoV2, chatParticipantRepoV2, &txm, logger)
 
+	// Socket.IO для realtime-событий чата. Redis adapter внутри обеспечивает
+	// доставку между инстансами. Publisher — реализация порта chat.EventPublisher.
+	chatSocket := chatsocket.New(chatsocket.Deps{
+		Redis:          redisCli,
+		AllowedOrigins: cfg.Http.AllowOrigins,
+		Logger:         logger,
+	})
+	chatEventPublisher := socketpub.NewPublisher(chatSocket.Namespace(), logger)
+
 	chatCases := &chat.Application{
 		Direct:      chat.NewDirectChatHandler(chatServiceV2, profileService, logger),
 		Group:       chat.NewGroupChatHandler(chatServiceV2, logger),
-		SendMessage: chat.NewMessageSenderHandler(messageServiceV2, profileService, logger),
+		SendMessage: chat.NewMessageSenderHandler(messageServiceV2, profileService, chatEventPublisher, logger),
 		History:     chat.NewChatHistoryHandler(messageServiceV2, profileService, logger),
 		ListChats:   chat.NewListUserChatsHandler(chatServiceV2, profileService, logger),
 	}
@@ -136,7 +153,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 		ProgressClient: progressClient,
 
-		ChatCases: chatCases,
+		ChatCases:  chatCases,
+		ChatSocket: chatSocket,
 
 		Redis:  redisCli,
 		Logger: logger,

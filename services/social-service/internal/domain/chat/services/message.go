@@ -91,6 +91,25 @@ func (s *MessageService) History(ctx context.Context, params MessageGetParams) (
 	})
 }
 
+// RecipientIDs возвращает id активных участников чата, кому нужно доставить
+// realtime-событие о новом сообщении, — все участники, кроме exceptUserID
+// (обычно отправителя). Используется useCase-слоем для адресации событий.
+func (s *MessageService) RecipientIDs(ctx context.Context, chatID, exceptUserID uint) ([]uint, error) {
+	participants, err := s.partRepo.ListByChat(ctx, chatID)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]uint, 0, len(participants))
+	for _, p := range participants {
+		if p.UserID == exceptUserID {
+			continue
+		}
+		ids = append(ids, p.UserID)
+	}
+	return ids, nil
+}
+
 // validateParticipant вспомогательная функция для проверки, что участник находится в чате
 func (s *MessageService) validateParticipant(ctx context.Context, chatID, userID uint) error {
 	obj, err := s.partRepo.Get(ctx, chatID, userID)

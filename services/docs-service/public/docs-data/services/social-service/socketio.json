@@ -1,0 +1,52 @@
+{
+  "transport": ["polling", "websocket"],
+  "namespaces": [
+    {
+      "path": "/chats",
+      "description": "Real-time доставка событий чата. Клиент держит одно соединение на всю сессию; сервер джойнит его в персональную комнату user:<id> и пушит события всех чатов пользователя.",
+      "auth": true
+    }
+  ],
+  "events": [
+    {
+      "id": "chats-message-new",
+      "name": "message.new",
+      "direction": "server-to-client",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Новое сообщение в чате пользователя",
+      "description": "Сервер пушит это событие всем активным участникам чата, КРОМЕ отправителя (он получает своё сообщение из HTTP-ответа POST /api/v2/chats/{chatID}/messages). Payload полностью совпадает с телом result из HTTP-ответа отправки сообщения. Одно соединение получает события из всех чатов пользователя — маршрутизацию по чатам клиент делает по полю chatId. Если получатель offline (нет сокета в комнате) — событие теряется; пропущенное клиент догоняет через GET /history с курсором lastMessageID.",
+      "tags": ["Чаты", "Real-time"],
+      "payload": {
+        "description": "Сообщение чата (тот же формат, что и HTTP-ответ отправки)",
+        "schema": [
+          { "name": "id", "type": "integer", "required": true, "description": "ID сообщения" },
+          { "name": "type", "type": "string", "required": true, "description": "Тип сообщения", "enum": ["text"] },
+          { "name": "content", "type": "string", "required": true, "description": "Текст сообщения" },
+          { "name": "createdAt", "type": "string", "required": true, "description": "Время создания (ISO 8601)" },
+          { "name": "chatId", "type": "integer", "required": true, "description": "ID чата, к которому относится сообщение — используется клиентом для маршрутизации" },
+          {
+            "name": "sender",
+            "type": "object",
+            "required": true,
+            "description": "Автор сообщения",
+            "children": [
+              { "name": "id", "type": "integer", "required": true, "description": "ID автора" },
+              { "name": "username", "type": "string", "required": true, "description": "Имя автора" },
+              { "name": "avatar", "type": "string", "required": false, "description": "URL аватара автора" }
+            ]
+          }
+        ],
+        "example": {
+          "id": 341,
+          "type": "text",
+          "content": "Привет! Как дела?",
+          "createdAt": "2026-07-19T10:31:00Z",
+          "chatId": 12,
+          "sender": { "id": 1, "username": "john_doe", "avatar": "" }
+        }
+      },
+      "codeExample": "import { io } from 'socket.io-client'\n\n// Аутентификация: Bearer-токен. Traefik forwardAuth валидирует его и вклеивает\n// X-User-Id/X-User-Name в handshake — сервер берёт identity оттуда, userId клиент\n// не передаёт. Заголовки в браузере проходят только через polling-транспорт,\n// поэтому polling ставим ПЕРВЫМ (дальше идёт upgrade на websocket).\nconst socket = io('https://realtimemap.ru/chats', {\n  transports: ['polling', 'websocket'],\n  withCredentials: true,\n  extraHeaders: { Authorization: `Bearer ${token}` },\n})\n\nsocket.on('connect', () => console.log('connected', socket.id))\n\n// Одно соединение — события из ВСЕХ чатов пользователя. Роутим по chatId.\nsocket.on('message.new', (msg) => {\n  // msg = { id, type, content, createdAt, chatId, sender:{ id, username, avatar } }\n  appendMessageToChat(msg.chatId, msg)\n})\n\nsocket.on('connect_error', (err) => {\n  // токен протух / не прошёл auth\n  console.error('socket auth failed:', err.message)\n})"
+    }
+  ]
+}
