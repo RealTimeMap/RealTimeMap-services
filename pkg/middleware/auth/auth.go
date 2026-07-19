@@ -31,3 +31,19 @@ func AuthRequired() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// AuthOptional проставляет userID/userName в контекст, если заголовки присутствуют,
+// но не прерывает запрос при их отсутствии. Используется для эндпоинтов,
+// доступных и анонимно, где данные пользователя лишь обогащают ответ.
+func AuthOptional() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userIDStr := c.GetHeader("X-User-ID")
+		userNameStr := c.GetHeader("X-User-Name")
+
+		if userID, err := strconv.Atoi(userIDStr); err == nil && userNameStr != "" {
+			c.Set(UserIDKey, userID)
+			c.Set(UsernameKey, userNameStr)
+		}
+		c.Next()
+	}
+}

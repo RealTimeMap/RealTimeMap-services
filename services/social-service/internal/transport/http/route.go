@@ -34,6 +34,17 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 		Logger:  container.Logger,
 	})
 
+	handlers.InitChatHandler(api, handlers.ChatHandlerDeps{
+		UseCase: container.ChatCases,
+		Logger:  container.Logger,
+	})
+
+	// Socket.IO endpoint для realtime-событий чата. Монтируется на корень движка
+	// (не под /api/v2), т.к. клиент Socket.IO по умолчанию ходит на /socket.io/.
+	socketHandler := gin.WrapH(container.ChatSocket.HttpHandler())
+	g.GET("/socket.io/*any", socketHandler)
+	g.POST("/socket.io/*any", socketHandler)
+
 	health := http.HealthHandler("social-service", container.DB)
 	g.GET("/social/health", health)
 }

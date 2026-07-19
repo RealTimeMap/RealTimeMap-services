@@ -437,6 +437,309 @@
       "errors": ["unauthorized", "validation-error"]
     },
     {
+      "id": "list-user-chats",
+      "method": "GET",
+      "path": "/api/v2/chats",
+      "summary": "Список чатов пользователя",
+      "description": "Возвращает все чаты текущего пользователя (личные и групповые в одном списке), отсортированные по времени последнего сообщения. Для личного чата title/avatar берутся из профиля собеседника, для группового — из данных чата. Профили подгружаются одним батчем. Требуется авторизация (identity через Traefik forwardAuth: X-User-Id/X-User-Name).",
+      "tags": ["Чаты"],
+      "auth": true,
+      "parameters": [],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список чатов, обёрнутый в поле result",
+          "schema": [
+            {
+              "name": "result",
+              "type": "array",
+              "required": true,
+              "description": "Массив чатов пользователя",
+              "children": [
+                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+                { "name": "type", "type": "string", "required": true, "description": "Тип чата", "enum": ["direct", "group"] },
+                { "name": "title", "type": "string", "required": true, "description": "Заголовок: для direct — username собеседника, для group — название чата" },
+                { "name": "avatar", "type": "string", "required": false, "description": "Аватар: для direct — аватар собеседника, для group — пустой (пока не реализован)" },
+                {
+                  "name": "lastMessage",
+                  "type": "object",
+                  "required": false,
+                  "description": "Превью последнего сообщения. null, если сообщений ещё нет",
+                  "children": [
+                    { "name": "messageId", "type": "integer", "required": true, "description": "ID последнего сообщения" },
+                    { "name": "username", "type": "string", "required": true, "description": "Имя автора последнего сообщения" },
+                    { "name": "content", "type": "string", "required": true, "description": "Текст последнего сообщения" }
+                  ]
+                },
+                { "name": "unreadCount", "type": "integer", "required": true, "description": "Количество непрочитанных сообщений" },
+                { "name": "updatedAt", "type": "string", "required": true, "description": "Время последнего обновления чата (ISO 8601)" }
+              ]
+            }
+          ],
+          "example": {
+            "result": [
+              {
+                "chatId": 12,
+                "type": "direct",
+                "title": "alice",
+                "avatar": "https://realtimemap.ru/store/profile-avatars/2026/06/alice.jpg",
+                "lastMessage": { "messageId": 340, "username": "alice", "content": "до встречи!" },
+                "unreadCount": 2,
+                "updatedAt": "2026-07-19T10:30:00Z"
+              },
+              {
+                "chatId": 8,
+                "type": "group",
+                "title": "Команда проекта",
+                "avatar": "",
+                "lastMessage": { "messageId": 331, "username": "bob", "content": "залил фикс" },
+                "unreadCount": 0,
+                "updatedAt": "2026-07-19T09:15:00Z"
+              }
+            ]
+          }
+        }
+      ],
+      "errors": ["unauthorized"]
+    },
+    {
+      "id": "create-direct-chat",
+      "method": "POST",
+      "path": "/api/v2/chats/direct",
+      "summary": "Создать/получить личный чат",
+      "description": "Создаёт личный (1-на-1) чат с указанным пользователем или возвращает существующий. Идемпотентно: повторный вызов с тем же собеседником возвращает тот же чат (дедупликация на уровне БД по direct-ключу). Нельзя создать чат с самим собой. Требуется авторизация.",
+      "tags": ["Чаты"],
+      "auth": true,
+      "requestBody": {
+        "description": "ID собеседника",
+        "contentType": "json",
+        "schema": [
+          { "name": "peerId", "type": "integer", "required": true, "description": "ID пользователя-собеседника" }
+        ],
+        "example": { "peerId": 5 }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Личный чат (созданный или существующий)",
+          "schema": [
+            {
+              "name": "result",
+              "type": "object",
+              "required": true,
+              "description": "Данные личного чата",
+              "children": [
+                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+                {
+                  "name": "peer",
+                  "type": "object",
+                  "required": true,
+                  "description": "Профиль собеседника",
+                  "children": [
+                    { "name": "id", "type": "integer", "required": true, "description": "ID собеседника" },
+                    { "name": "username", "type": "string", "required": true, "description": "Имя собеседника" },
+                    { "name": "avatar", "type": "string", "required": false, "description": "URL аватара собеседника" }
+                  ]
+                },
+                { "name": "createdAt", "type": "string", "required": true, "description": "Время создания чата (ISO 8601)" }
+              ]
+            }
+          ],
+          "example": {
+            "result": {
+              "chatId": 12,
+              "peer": { "id": 5, "username": "alice", "avatar": "https://realtimemap.ru/store/profile-avatars/2026/06/alice.jpg" },
+              "createdAt": "2026-07-19T10:00:00Z"
+            }
+          }
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "not-found"]
+    },
+    {
+      "id": "create-group-chat",
+      "method": "POST",
+      "path": "/api/v2/chats/group",
+      "summary": "Создать групповой чат",
+      "description": "Создаёт групповой чат с указанными участниками. Инициатор автоматически добавляется владельцем (роль owner), остальные — участниками (member). Дубликаты в списке участников отсеиваются. Минимальное число участников группы (с учётом владельца) — 3. Создание участников и чата происходит атомарно (в одной транзакции). Требуется авторизация.",
+      "tags": ["Чаты"],
+      "auth": true,
+      "requestBody": {
+        "description": "Участники и название группы",
+        "contentType": "json",
+        "schema": [
+          { "name": "peersIds", "type": "array", "required": true, "description": "ID участников (без инициатора; он добавляется автоматически владельцем)" },
+          { "name": "title", "type": "string", "required": false, "description": "Название группового чата" }
+        ],
+        "example": { "peersIds": [5, 7], "title": "Команда проекта" }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Созданный групповой чат",
+          "schema": [
+            {
+              "name": "result",
+              "type": "object",
+              "required": true,
+              "description": "Данные группового чата",
+              "children": [
+                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+                { "name": "title", "type": "string", "required": true, "description": "Название группы (пустая строка, если не задано)" },
+                { "name": "createdAt", "type": "string", "required": true, "description": "Время создания чата (ISO 8601)" }
+              ]
+            }
+          ],
+          "example": {
+            "result": { "chatId": 8, "title": "Команда проекта", "createdAt": "2026-07-19T09:00:00Z" }
+          }
+        }
+      ],
+      "errors": ["unauthorized", "validation-error"]
+    },
+    {
+      "id": "send-message",
+      "method": "POST",
+      "path": "/api/v2/chats/{chatID}/messages",
+      "summary": "Отправить сообщение",
+      "description": "Отправляет текстовое сообщение в чат. Отправитель должен быть активным участником чата (иначе 403). Текст обрезается по краям, не может быть пустым и длиннее 4000 символов. После сохранения сервер шлёт realtime-событие message.new всем остальным участникам чата через Socket.IO (best-effort). Требуется авторизация.",
+      "tags": ["Чаты"],
+      "auth": true,
+      "parameters": [
+        { "name": "chatID", "type": "integer", "required": true, "description": "ID чата", "location": "path", "example": "12" }
+      ],
+      "requestBody": {
+        "description": "Текст сообщения",
+        "contentType": "json",
+        "schema": [
+          { "name": "content", "type": "string", "required": true, "description": "Текст сообщения (1–4000 символов)" }
+        ],
+        "example": { "content": "Привет! Как дела?" }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Созданное сообщение (тот же формат, что и в событии message.new)",
+          "schema": [
+            {
+              "name": "result",
+              "type": "object",
+              "required": true,
+              "description": "Данные сообщения",
+              "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID сообщения" },
+                { "name": "type", "type": "string", "required": true, "description": "Тип сообщения", "enum": ["text"] },
+                { "name": "content", "type": "string", "required": true, "description": "Текст сообщения" },
+                { "name": "createdAt", "type": "string", "required": true, "description": "Время создания (ISO 8601)" },
+                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+                {
+                  "name": "sender",
+                  "type": "object",
+                  "required": true,
+                  "description": "Автор сообщения",
+                  "children": [
+                    { "name": "id", "type": "integer", "required": true, "description": "ID автора" },
+                    { "name": "username", "type": "string", "required": true, "description": "Имя автора" },
+                    { "name": "avatar", "type": "string", "required": false, "description": "URL аватара автора" }
+                  ]
+                }
+              ]
+            }
+          ],
+          "example": {
+            "result": {
+              "id": 341,
+              "type": "text",
+              "content": "Привет! Как дела?",
+              "createdAt": "2026-07-19T10:31:00Z",
+              "chatId": 12,
+              "sender": { "id": 1, "username": "john_doe", "avatar": "" }
+            }
+          }
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "forbidden"]
+    },
+    {
+      "id": "get-chat-history",
+      "method": "GET",
+      "path": "/api/v2/chats/{chatID}/history",
+      "summary": "История сообщений чата",
+      "description": "Возвращает страницу сообщений чата (по 15 штук) в порядке от новых к старым. Keyset-пагинация: для следующей страницы передайте lastMessageID из предыдущего ответа. Запрашивающий должен быть участником чата (иначе 403). Требуется авторизация.",
+      "tags": ["Чаты"],
+      "auth": true,
+      "pagination": "cursor",
+      "parameters": [
+        { "name": "chatID", "type": "integer", "required": true, "description": "ID чата", "location": "path", "example": "12" },
+        { "name": "lastMessageID", "type": "integer", "required": false, "description": "Курсор: ID последнего (самого старого) сообщения предыдущей страницы. На первой странице не передаётся", "location": "query", "example": "330" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Страница истории с курсором",
+          "schema": [
+            {
+              "name": "result",
+              "type": "object",
+              "required": true,
+              "description": "Страница сообщений",
+              "children": [
+                {
+                  "name": "messages",
+                  "type": "array",
+                  "required": true,
+                  "description": "Сообщения (от новых к старым)",
+                  "children": [
+                    { "name": "id", "type": "integer", "required": true, "description": "ID сообщения" },
+                    { "name": "type", "type": "string", "required": true, "description": "Тип сообщения", "enum": ["text"] },
+                    { "name": "content", "type": "string", "required": true, "description": "Текст сообщения" },
+                    { "name": "createdAt", "type": "string", "required": true, "description": "Время создания (ISO 8601)" },
+                    { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+                    {
+                      "name": "sender",
+                      "type": "object",
+                      "required": true,
+                      "description": "Автор сообщения",
+                      "children": [
+                        { "name": "id", "type": "integer", "required": true, "description": "ID автора" },
+                        { "name": "username", "type": "string", "required": true, "description": "Имя автора" },
+                        { "name": "avatar", "type": "string", "required": false, "description": "URL аватара автора" }
+                      ]
+                    }
+                  ]
+                },
+                { "name": "lastMessageId", "type": "integer", "required": false, "description": "Курсор для следующей страницы (ID самого старого сообщения на этой странице). null, если сообщений нет" }
+              ]
+            }
+          ],
+          "example": {
+            "result": {
+              "messages": [
+                {
+                  "id": 341,
+                  "type": "text",
+                  "content": "Привет! Как дела?",
+                  "createdAt": "2026-07-19T10:31:00Z",
+                  "chatId": 12,
+                  "sender": { "id": 1, "username": "john_doe", "avatar": "" }
+                },
+                {
+                  "id": 340,
+                  "type": "text",
+                  "content": "до встречи!",
+                  "createdAt": "2026-07-19T10:30:00Z",
+                  "chatId": 12,
+                  "sender": { "id": 5, "username": "alice", "avatar": "" }
+                }
+              ],
+              "lastMessageId": 340
+            }
+          }
+        }
+      ],
+      "errors": ["unauthorized", "validation-error", "forbidden"]
+    },
+    {
       "id": "health",
       "method": "GET",
       "path": "/social/health",

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
 	profilepb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/profile"
@@ -12,6 +10,8 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/consumer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat/message"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
 	httptransport "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/kafka"
@@ -35,12 +35,10 @@ func main() {
 	}, log)
 	defer database.Close(db)
 
-	db.AutoMigrate(&model.Profile{}, &model.Friendship{}, &model.BlockedUser{}, &model.Chat{}, &model.ChatParticipants{})
+	db.AutoMigrate(&model.Profile{}, &model.Friendship{}, &model.BlockedUser{}, &chat.Chat{}, &chat.ChatParticipant{}, &message.Message{})
 
 	container := app.NewContainer(cfg, db, log)
 	defer container.Close()
-
-	container.ChatService.CreateChatWithParticipants(context.Background(), nil, []uint{3, 5})
 
 	httpServer := httpserver.NewServer(cfg.Http, log)
 	httpServer.Router().Static("/store", cfg.Storage.BasePath)

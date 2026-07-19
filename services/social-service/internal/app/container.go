@@ -7,16 +7,19 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	pkgredis "github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app/use_cases/chat"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat/services"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/blockeduser"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/chat"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/friendship"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
 	progressadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/progress"
 	markstatadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/persistence/postgres"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/realtime/socketpub"
 	profilegrpc "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/grpc/profile"
+	chatsocket "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/socket"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -34,10 +37,10 @@ type Container struct {
 	FriendshipRepo    repository.FriendShipRepository
 	FriendshipService *friendship.Service
 
-	ChatRepo    repository.ChatRepository
-	ChatService *chat.Service
-
 	Storage storage.Storage
+
+	ChatCases  *chat.Application
+	ChatSocket *chatsocket.SocketServer
 
 	ProgressClient *pkgprogress.Client
 	MarkStatClient *pkgmark.Client
@@ -49,6 +52,11 @@ type Container struct {
 }
 
 func (c *Container) Close() error {
+	// Закрываем Socket.IO: рвём соединения и подписки Redis adapter.
+	if c.ChatSocket != nil {
+		c.ChatSocket.Close()
+	}
+
 	if c.ProgressClient != nil {
 		return c.ProgressClient.Close()
 	}
@@ -62,8 +70,6 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 		panic(err)
 	}
 	photoValidator := mediavalidator.NewPhotoValidator()
-
-	txManager := txmanager.NewTxManager(db)
 
 	var (
 		progressClient *pkgprogress.Client
@@ -84,7 +90,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	if cfg.MarkStat.Address != "" {
 		c, err := pkgmark.NewClient(cfg.MarkStat)
 		if err != nil {
-			logger.Warn("mark client init failed, continuing without progress", zap.Error(err))
+			logger.Warn("mark_action client init failed, continuing without progress", zap.Error(err))
 		} else {
 			markStatClient = c
 			markStatPort = markstatadapter.NewAdapter(markStatClient)
@@ -104,8 +110,32 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	friendshipService := friendship.NewService(friendRepo, profileRepo, blockedUserRepo, logger)
 
-	chatRepo := postgres.NewPgChatRepository(db, logger)
-	chatService := chat.NewService(chatRepo, txManager, logger)
+	// V2
+
+	txm := txmanager.NewTxManager(db)
+
+	chatRepoV2 := postgres.NewChatRepository(db, logger)
+	chatParticipantRepoV2 := postgres.NewChatParticipantRepository(db, logger)
+	messageRepoV2 := postgres.NewMessageRepository(db, logger)
+	chatServiceV2 := services.NewChatService(chatRepoV2, chatParticipantRepoV2, &txm, logger)
+	messageServiceV2 := services.NewMessageService(messageRepoV2, chatRepoV2, chatParticipantRepoV2, &txm, logger)
+
+	// Socket.IO для realtime-событий чата. Redis adapter внутри обеспечивает
+	// доставку между инстансами. Publisher — реализация порта chat.EventPublisher.
+	chatSocket := chatsocket.New(chatsocket.Deps{
+		Redis:          redisCli,
+		AllowedOrigins: cfg.Http.AllowOrigins,
+		Logger:         logger,
+	})
+	chatEventPublisher := socketpub.NewPublisher(chatSocket.Namespace(), logger)
+
+	chatCases := &chat.Application{
+		Direct:      chat.NewDirectChatHandler(chatServiceV2, profileService, logger),
+		Group:       chat.NewGroupChatHandler(chatServiceV2, logger),
+		SendMessage: chat.NewMessageSenderHandler(messageServiceV2, profileService, chatEventPublisher, logger),
+		History:     chat.NewChatHistoryHandler(messageServiceV2, profileService, logger),
+		ListChats:   chat.NewListUserChatsHandler(chatServiceV2, profileService, logger),
+	}
 
 	return &Container{
 		ProfileRepo:        profileRepo,
@@ -119,12 +149,12 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 		FriendshipRepo:    friendRepo,
 		FriendshipService: friendshipService,
 
-		ChatRepo:    chatRepo,
-		ChatService: chatService,
-
 		Storage: store,
 
 		ProgressClient: progressClient,
+
+		ChatCases:  chatCases,
+		ChatSocket: chatSocket,
 
 		Redis:  redisCli,
 		Logger: logger,

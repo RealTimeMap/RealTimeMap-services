@@ -47,6 +47,7 @@ func NewServer(cfg Config, logger *zap.Logger) *Server {
 	router := gin.Default()
 	router.HandleMethodNotAllowed = true
 	router.Use(cors.New(cors.Config{
+		CustomSchemas:    []string{"capacitor://", "ionic://"},
 		AllowOrigins:     cfg.AllowOrigins,
 		AllowMethods:     methods,
 		AllowHeaders:     headers,

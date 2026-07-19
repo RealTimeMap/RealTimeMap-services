@@ -1,9 +1,9 @@
 {
   "id": "social-service",
   "name": "social-service",
-  "description": "Социальный сервис: профили пользователей, блокировки, поиск пользователей.",
-  "fullDescription": "Управляет профилями пользователей (имя, тег, аватар, настройки приватности), поиском по username, блокировками. Подтягивает данные геймификации из gamification-service по gRPC. Раздаёт доменные события через Kafka.",
-  "protocols": ["http", "kafka"],
+  "description": "Социальный сервис: профили пользователей, блокировки, друзья, чаты.",
+  "fullDescription": "Управляет профилями пользователей (имя, тег, аватар, настройки приватности), поиском по username, блокировками, дружбой и чатами (личными и групповыми). Real-time доставка сообщений через Socket.IO с Redis adapter. Подтягивает данные геймификации из gamification-service по gRPC. Раздаёт доменные события через Kafka.",
+  "protocols": ["http", "socketio", "kafka"],
   "availableEnvs": ["dev", "staging", "prod"],
   "healthPath": "/social/health",
   "team": "Backend",

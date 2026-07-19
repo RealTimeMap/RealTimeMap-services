@@ -16,7 +16,7 @@ var (
 		return apperror.NewServiceUnavailableError("gamification-service", err)
 	}
 	MarkServiceUnavailable = func(err error) error {
-		return apperror.NewServiceUnavailableError("mark-service", err)
+		return apperror.NewServiceUnavailableError("mark_action-service", err)
 	}
 	DateValidationErr = func(field, message string, value interface{}) error {
 		return apperror.NewFieldValidationError(field, message, "value_error", value)
