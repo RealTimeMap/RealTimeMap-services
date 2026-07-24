@@ -15,13 +15,15 @@ type GroupManager interface {
 
 type GroupChatHandler struct {
 	manager GroupManager
+	rooms   EventPublisher
 
 	logger *zap.Logger
 }
 
-func NewGroupChatHandler(manager GroupManager, logger *zap.Logger) *GroupChatHandler {
+func NewGroupChatHandler(manager GroupManager, rooms EventPublisher, logger *zap.Logger) *GroupChatHandler {
 	return &GroupChatHandler{
 		manager: manager,
+		rooms:   rooms,
 		logger:  logger,
 	}
 }
@@ -60,6 +62,15 @@ func (h *GroupChatHandler) Handle(ctx context.Context, cmd GroupChatCreateComman
 	if err != nil {
 		h.logger.Warn("failed to open group chat", zap.Error(err))
 		return GroupChatResult{}, err
+	}
+
+	// Синхронизируем комнаты: онлайн-сокеты всех участников (инициатор + peers)
+	// заводим в chat:<id>. Best-effort — ошибка не влияет на ответ.
+	memberIDs := make([]uint, 0, len(cmd.PeersIds)+1)
+	memberIDs = append(memberIDs, cmd.InitiatorID)
+	memberIDs = append(memberIDs, cmd.PeersIds...)
+	if err := h.rooms.JoinUsers(ctx, obj.ID, memberIDs); err != nil {
+		h.logger.Warn("failed to sync group chat rooms", zap.Error(err), zap.Uint("chat_id", obj.ID))
 	}
 
 	h.logger.Info("opened group chat", zap.Uint("chat_id", obj.ID))

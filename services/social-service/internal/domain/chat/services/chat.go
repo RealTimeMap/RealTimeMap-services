@@ -6,14 +6,16 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"go.uber.org/zap"
 )
 
 type ChatService struct {
-	chatRepo chat.Repository
-	partRepo chat.ParticipantRepository
-	txm      *txmanager.TxManager
-	logger   *zap.Logger
+	chatRepo    chat.Repository
+	partRepo    chat.ParticipantRepository
+	blockedRepo repository.BlockedUserRepository
+	txm         *txmanager.TxManager
+	logger      *zap.Logger
 }
 
 type ChatCreateParams struct {
@@ -37,17 +39,21 @@ func (g *GroupChatCreateParams) getTitle() string {
 // minGroupMembers — минимальное итоговое число участников группы (owner + peers).
 const minGroupMembers = 3
 
-func NewChatService(chatRepo chat.Repository, partRepo chat.ParticipantRepository, txm *txmanager.TxManager, logger *zap.Logger) *ChatService {
+func NewChatService(chatRepo chat.Repository, partRepo chat.ParticipantRepository, blockedRepo repository.BlockedUserRepository, txm *txmanager.TxManager, logger *zap.Logger) *ChatService {
 	return &ChatService{
-		chatRepo: chatRepo,
-		partRepo: partRepo,
-		txm:      txm,
-		logger:   logger,
+		chatRepo:    chatRepo,
+		partRepo:    partRepo,
+		blockedRepo: blockedRepo,
+		txm:         txm,
+		logger:      logger,
 	}
 }
 
 func (s *ChatService) OpenDirectChat(ctx context.Context, params ChatCreateParams) (*chat.Chat, error) {
 	if err := checkID(params.UserID, params.PeerID); err != nil {
+		return nil, err
+	}
+	if err := s.checkNotBlocked(ctx, params.UserID, params.PeerID); err != nil {
 		return nil, err
 	}
 	obj, err := s.chatRepo.GetOrCreateDirect(ctx, params.UserID, params.PeerID)
@@ -118,10 +124,81 @@ func checkID(userA, userB uint) error {
 	return nil
 }
 
+// Leave помечает пользователя вышедшим из чата (soft-leave через left_at). Только
+// групповые чаты: из direct-чата выйти нельзя (нет продуктового смысла — чат на
+// двоих). Пользователь должен быть активным участником. Идемпотентно: повторный
+// выход не ошибка (Remove не заденет уже вышедшего).
+func (s *ChatService) Leave(ctx context.Context, chatID, userID uint) error {
+	part, err := s.partRepo.Get(ctx, chatID, userID)
+	if err != nil {
+		return err
+	}
+	if part == nil || part.LeftAt != nil {
+		return chat.ErrNotParticipant()
+	}
+
+	obj, err := s.chatRepo.GetByID(ctx, chatID)
+	if err != nil {
+		return err
+	}
+	if obj.Type == chat.DirectType {
+		return chat.ErrCantLeaveDirect()
+	}
+
+	return s.partRepo.Remove(ctx, chatID, userID)
+}
+
+// checkNotBlocked запрещает операцию, если между пользователями есть блок в любую
+// сторону. Открыть direct-чат или писать в него с заблокированным нельзя.
+func (s *ChatService) checkNotBlocked(ctx context.Context, userID, otherID uint) error {
+	blocked, err := s.blockedRepo.ExistsBetween(ctx, userID, otherID)
+	if err != nil {
+		return err
+	}
+	if blocked {
+		return chat.ErrBlocked()
+	}
+	return nil
+}
+
 func (s *ChatService) GetChat(ctx context.Context, chatID uint) (*chat.Chat, error) {
 	return s.chatRepo.GetByID(ctx, chatID)
 }
 
 func (s *ChatService) GetUsersChats(ctx context.Context, userID uint) ([]*chat.ChatListItem, error) {
 	return s.chatRepo.ListByUser(ctx, userID)
+}
+
+// MarkRead отмечает чат прочитанным для пользователя: двигает курсор
+// last_read_message_id участника на последнее сообщение чата. Пользователь
+// должен быть активным участником. Если сообщений в чате ещё нет — no-op.
+// Курсор монотонный (см. UpdateLastRead), поэтому повторный/устаревший вызов
+// безопасен.
+//
+// Возвращает lastReadMessageID — id сообщения, на которое встал курсор, — и
+// moved: было ли что двигать. moved=false означает, что в чате нет сообщений
+// (курсор не тронут); вызывающий useCase по этому флагу решает, публиковать ли
+// realtime-событие chat.read.
+func (s *ChatService) MarkRead(ctx context.Context, chatID, userID uint) (lastReadMessageID uint, moved bool, err error) {
+	part, err := s.partRepo.Get(ctx, chatID, userID)
+	if err != nil {
+		return 0, false, err
+	}
+	if part == nil || part.LeftAt != nil {
+		return 0, false, chat.ErrNotParticipant()
+	}
+
+	obj, err := s.chatRepo.GetByID(ctx, chatID)
+	if err != nil {
+		return 0, false, err
+	}
+	// Нечего отмечать: в чате ещё нет сообщений.
+	if obj.LastMessageID == nil {
+		return 0, false, nil
+	}
+
+	if err := s.partRepo.UpdateLastRead(ctx, chatID, userID, *obj.LastMessageID); err != nil {
+		return 0, false, err
+	}
+	return *obj.LastMessageID, true, nil
 }

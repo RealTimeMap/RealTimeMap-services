@@ -12,6 +12,8 @@ type Application struct {
 	SendMessage *MessageSenderHandler
 	History     *ChatHistoryHandler
 	ListChats   *ListUserChatsHandler
+	MarkRead    *MarkReadHandler
+	Leave       *LeaveHandler
 }
 
 type ProfileGetter interface {

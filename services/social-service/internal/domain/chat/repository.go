@@ -22,6 +22,9 @@ type ParticipantRepository interface {
 	BulkAdd(ctx context.Context, objs []*ChatParticipant) error
 	Get(ctx context.Context, chatID, userID uint) (*ChatParticipant, error)
 	ListByChat(ctx context.Context, chatID uint) ([]*ChatParticipant, error)
+	// ChatIDsByUser возвращает id всех активных чатов пользователя (не вышедших).
+	// Используется socket-слоем для eager-join в комнаты chat:<id> при подключении.
+	ChatIDsByUser(ctx context.Context, userID uint) ([]uint, error)
 	//UpdateRole(ctx context.Context)
 	UpdateLastRead(ctx context.Context, chatID, userID, lastReadID uint) error
 	Remove(ctx context.Context, chatID, userID uint) error

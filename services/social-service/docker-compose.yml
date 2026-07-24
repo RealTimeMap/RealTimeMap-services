@@ -65,14 +65,59 @@ services:
       - "traefik.http.routers.social-health.middlewares=cors-headers@file"
       - "traefik.http.routers.social-health.tls=true"
 
-      # /api/v2/chats/* — HTTP чата (создание, отправка, история, список). Требует
-      # identity: auth-check валидирует Bearer и вклеивает X-User-Id/X-User-Name.
+      # ===== ЧАТЫ (/api/v2/chats) =====
+
+      # CORS preflight OPTIONS для чата — без auth-check (браузер шлёт OPTIONS без
+      # Authorization, auth-check завернул бы его на 401).
+      - "traefik.http.routers.social-chats-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/chats`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.social-chats-options.entrypoints=websecure"
+      - "traefik.http.routers.social-chats-options.priority=210"
+      - "traefik.http.routers.social-chats-options.service=social"
+      - "traefik.http.routers.social-chats-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.social-chats-options.tls=true"
+
+      # GET /api/v2/chats — список чатов пользователя (точный путь без слэша)
+      - "traefik.http.routers.social-chats-list.rule=Host(`realtimemap.ru`) && Path(`/api/v2/chats`) && Method(`GET`)"
+      - "traefik.http.routers.social-chats-list.entrypoints=websecure"
+      - "traefik.http.routers.social-chats-list.priority=120"
+      - "traefik.http.routers.social-chats-list.service=social"
+      - "traefik.http.routers.social-chats-list.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-chats-list.tls=true"
+
+      # /api/v2/chats/* — вложенные пути чата (direct, group, messages, history)
       - "traefik.http.routers.social-chats.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/chats/`)"
       - "traefik.http.routers.social-chats.entrypoints=websecure"
       - "traefik.http.routers.social-chats.priority=100"
       - "traefik.http.routers.social-chats.service=social"
       - "traefik.http.routers.social-chats.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.social-chats.tls=true"
+
+      # ===== ДРУЗЬЯ И БЛОКИРОВКИ (/api/v2/friends) =====
+
+      # CORS preflight OPTIONS для друзей — без auth-check.
+      - "traefik.http.routers.social-friends-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/friends`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.social-friends-options.entrypoints=websecure"
+      - "traefik.http.routers.social-friends-options.priority=210"
+      - "traefik.http.routers.social-friends-options.service=social"
+      - "traefik.http.routers.social-friends-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.social-friends-options.tls=true"
+
+      # GET /api/v2/friends — список друзей (точный путь без слэша)
+      - "traefik.http.routers.social-friends-list.rule=Host(`realtimemap.ru`) && Path(`/api/v2/friends`) && Method(`GET`)"
+      - "traefik.http.routers.social-friends-list.entrypoints=websecure"
+      - "traefik.http.routers.social-friends-list.priority=120"
+      - "traefik.http.routers.social-friends-list.service=social"
+      - "traefik.http.routers.social-friends-list.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-friends-list.tls=true"
+
+      # /api/v2/friends/* — заявки, блокировки, список заблокированных
+      # (request, accept, decline, remove, block, unblock, blocked)
+      - "traefik.http.routers.social-friends.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/friends/`)"
+      - "traefik.http.routers.social-friends.entrypoints=websecure"
+      - "traefik.http.routers.social-friends.priority=100"
+      - "traefik.http.routers.social-friends.service=social"
+      - "traefik.http.routers.social-friends.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-friends.tls=true"
 
       # /socket.io/* — WebSocket чата. auth-check валидирует Bearer на handshake и
       # вклеивает X-User-Id/X-User-Name; socket-сервер читает их из Handshake().Headers.

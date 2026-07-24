@@ -19,6 +19,12 @@ var (
 	ErrNotParticipant = func() error {
 		return apperror.NewForbiddenError("You are not a participant in this chat.")
 	}
+	ErrBlocked = func() error {
+		return apperror.NewForbiddenError("chat is not allowed due to a block between users")
+	}
+	ErrCantLeaveDirect = func() error {
+		return apperror.NewConflictError("chat_id", "can't leave a direct chat", 0)
+	}
 	ErrEmptyMessage = func() error {
 		return apperror.NewRequiredError("content")
 	}

@@ -25,9 +25,10 @@ const redisKeyPrefix = "social:chat"
 const namespaceName = "/chats"
 
 type SocketServer struct {
-	io     *socket.Server
-	ns     socket.Namespace
-	logger *zap.Logger
+	io         *socket.Server
+	ns         socket.Namespace
+	chatLister ChatLister
+	logger     *zap.Logger
 }
 
 type Deps struct {
@@ -39,7 +40,10 @@ type Deps struct {
 	// (удобно для локальной разработки и тест-клиента). Без этой настройки
 	// engine.io режет cross-origin апгрейд с 403.
 	AllowedOrigins []string
-	Logger         *zap.Logger
+	// ChatLister даёт namespace список чатов пользователя для eager-join в
+	// комнаты chat:<id> при подключении.
+	ChatLister ChatLister
+	Logger     *zap.Logger
 }
 
 // New создаёт Socket.IO-сервер с Redis adapter и инициализирует namespace /chats.
@@ -69,9 +73,10 @@ func New(deps Deps) *SocketServer {
 	io := socket.NewServer(nil, opts)
 
 	server := &SocketServer{
-		io:     io,
-		ns:     io.Of(namespaceName, nil),
-		logger: deps.Logger,
+		io:         io,
+		ns:         io.Of(namespaceName, nil),
+		chatLister: deps.ChatLister,
+		logger:     deps.Logger,
 	}
 
 	InitChatNamespace(server)

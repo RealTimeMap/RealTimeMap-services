@@ -15,13 +15,15 @@ type DirectManager interface {
 type DirectChatHandler struct {
 	manager    DirectManager
 	profGetter ProfileGetter
+	rooms      EventPublisher
 	logger     *zap.Logger
 }
 
-func NewDirectChatHandler(manager DirectManager, profGetter ProfileGetter, logger *zap.Logger) *DirectChatHandler {
+func NewDirectChatHandler(manager DirectManager, profGetter ProfileGetter, rooms EventPublisher, logger *zap.Logger) *DirectChatHandler {
 	return &DirectChatHandler{
 		manager:    manager,
 		profGetter: profGetter,
+		rooms:      rooms,
 		logger:     logger,
 	}
 }
@@ -49,6 +51,13 @@ func (h *DirectChatHandler) Handle(ctx context.Context, cmd CreateDirectCommand)
 		h.logger.Warn("failed to open direct chat", zap.Error(err),
 			zap.Uint("user_id", cmd.UserID), zap.Uint("peer_id", cmd.PeerID))
 		return DirectChatResult{}, err
+	}
+
+	// Синхронизируем комнаты: онлайн-сокеты обоих участников заводим в chat:<id>,
+	// чтобы они сразу получали события чата. Best-effort — ошибка не влияет на
+	// ответ (участники доберут события через историю при следующем подключении).
+	if err := h.rooms.JoinUsers(ctx, obj.ID, []uint{cmd.UserID, cmd.PeerID}); err != nil {
+		h.logger.Warn("failed to sync direct chat rooms", zap.Error(err), zap.Uint("chat_id", obj.ID))
 	}
 
 	h.logger.Info("opened direct chat", zap.Uint("chat_id", obj.ID))

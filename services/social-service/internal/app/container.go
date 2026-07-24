@@ -117,24 +117,27 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	chatRepoV2 := postgres.NewChatRepository(db, logger)
 	chatParticipantRepoV2 := postgres.NewChatParticipantRepository(db, logger)
 	messageRepoV2 := postgres.NewMessageRepository(db, logger)
-	chatServiceV2 := services.NewChatService(chatRepoV2, chatParticipantRepoV2, &txm, logger)
-	messageServiceV2 := services.NewMessageService(messageRepoV2, chatRepoV2, chatParticipantRepoV2, &txm, logger)
+	chatServiceV2 := services.NewChatService(chatRepoV2, chatParticipantRepoV2, blockedUserRepo, &txm, logger)
+	messageServiceV2 := services.NewMessageService(messageRepoV2, chatRepoV2, chatParticipantRepoV2, blockedUserRepo, &txm, logger)
 
 	// Socket.IO для realtime-событий чата. Redis adapter внутри обеспечивает
 	// доставку между инстансами. Publisher — реализация порта chat.EventPublisher.
 	chatSocket := chatsocket.New(chatsocket.Deps{
 		Redis:          redisCli,
 		AllowedOrigins: cfg.Http.AllowOrigins,
+		ChatLister:     chatParticipantRepoV2,
 		Logger:         logger,
 	})
 	chatEventPublisher := socketpub.NewPublisher(chatSocket.Namespace(), logger)
 
 	chatCases := &chat.Application{
-		Direct:      chat.NewDirectChatHandler(chatServiceV2, profileService, logger),
-		Group:       chat.NewGroupChatHandler(chatServiceV2, logger),
+		Direct:      chat.NewDirectChatHandler(chatServiceV2, profileService, chatEventPublisher, logger),
+		Group:       chat.NewGroupChatHandler(chatServiceV2, chatEventPublisher, logger),
 		SendMessage: chat.NewMessageSenderHandler(messageServiceV2, profileService, chatEventPublisher, logger),
 		History:     chat.NewChatHistoryHandler(messageServiceV2, profileService, logger),
 		ListChats:   chat.NewListUserChatsHandler(chatServiceV2, profileService, logger),
+		MarkRead:    chat.NewMarkReadHandler(chatServiceV2, chatEventPublisher, logger),
+		Leave:       chat.NewLeaveHandler(chatServiceV2, chatEventPublisher, logger),
 	}
 
 	return &Container{

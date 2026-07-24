@@ -13,10 +13,9 @@ import (
 
 // HandleError - универсальный обработчик доменных ошибок
 func HandleError(c *gin.Context, err error, logger *zap.Logger) {
-	var domainErr apperror.DomainError
 	traceID := context.GetTraceID(c)
 	// Проверяем, является ли ошибка доменной
-	if errors.As(err, &domainErr) {
+	if domainErr, ok := errors.AsType[apperror.DomainError](err); ok {
 		status := domainErr.HTTPStatus()
 
 		// Для 500 ошибок логируем детали
@@ -27,12 +26,12 @@ func HandleError(c *gin.Context, err error, logger *zap.Logger) {
 				zap.String("method", c.Request.Method),
 				zap.String("TraceID", traceID),
 			)
-			c.AbortWithStatusJSON(status, gin.H{"error": "internal server error"})
+			c.AbortWithStatusJSON(status, gin.H{"error": "internal server error", "traceID": traceID})
 			return
 		}
 
 		if status == http.StatusForbidden {
-			c.AbortWithStatusJSON(status, gin.H{"error": "forbidden"})
+			c.AbortWithStatusJSON(status, gin.H{"error": "forbidden", "message": domainErr.Error()})
 			return
 		}
 
