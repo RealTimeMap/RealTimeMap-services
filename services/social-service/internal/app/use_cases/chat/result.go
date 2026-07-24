@@ -33,12 +33,19 @@ func toProfileResult(p *model.Profile) ProfileResult {
 // MESSAGES
 
 type MessageResult struct {
-	ID        uint
-	Type      string
-	Content   string
-	CreatedAt time.Time
-	ChatID    uint
-	Sender    ProfileResult
+	ID   uint
+	Type string
+	// SenderID — id автора на верхнем уровне (дублирует Sender.ID). Клиенту удобно
+	// сматчить «своё/чужое» и рисовать выравнивание пузырей, не разворачивая sender.
+	SenderID uint
+	Content  string
+	// ClientMessageID — UUID, присланный клиентом при отправке (nil, если не было).
+	// Возвращается, чтобы клиент сматчил оптимистично отрисованное сообщение с
+	// серверным (temp id → реальный id) и дедупнул эхо message.new.
+	ClientMessageID *string
+	CreatedAt       time.Time
+	ChatID          uint
+	Sender          ProfileResult
 }
 
 func toMessageResult(m *message.Message, p *model.Profile) MessageResult {
@@ -49,12 +56,14 @@ func toMessageResult(m *message.Message, p *model.Profile) MessageResult {
 		sender.ID = m.SenderID
 	}
 	return MessageResult{
-		ID:        m.ID,
-		Type:      string(m.Type),
-		Content:   m.Content,
-		CreatedAt: m.CreatedAt,
-		ChatID:    m.ChatID,
-		Sender:    sender,
+		ID:              m.ID,
+		Type:            string(m.Type),
+		SenderID:        m.SenderID,
+		Content:         m.Content,
+		ClientMessageID: m.ClientMessageID,
+		CreatedAt:       m.CreatedAt,
+		ChatID:          m.ChatID,
+		Sender:          sender,
 	}
 }
 

@@ -22,7 +22,9 @@
         "schema": [
           { "name": "id", "type": "integer", "required": true, "description": "ID сообщения" },
           { "name": "type", "type": "string", "required": true, "description": "Тип сообщения", "enum": ["text"] },
+          { "name": "senderId", "type": "integer", "required": true, "description": "ID автора на верхнем уровне (дублирует sender.id) — для быстрого определения «своё/чужое» в UI" },
           { "name": "content", "type": "string", "required": true, "description": "Текст сообщения" },
+          { "name": "clientMessageId", "type": "string", "required": false, "description": "UUID, присланный клиентом при отправке. null, если не передавался. Клиент дедупит эхо своего сообщения по нему (или по id)" },
           { "name": "createdAt", "type": "string", "required": true, "description": "Время создания (ISO 8601)" },
           { "name": "chatId", "type": "integer", "required": true, "description": "ID чата, к которому относится сообщение — используется клиентом для маршрутизации" },
           {
@@ -40,13 +42,15 @@
         "example": {
           "id": 341,
           "type": "text",
+          "senderId": 1,
           "content": "Привет! Как дела?",
+          "clientMessageId": "9b2e5f1a-3c4d-4e6f-8a1b-2c3d4e5f6a7b",
           "createdAt": "2026-07-19T10:31:00Z",
           "chatId": 12,
           "sender": { "id": 1, "username": "john_doe", "avatar": "" }
         }
       },
-      "codeExample": "import { io } from 'socket.io-client'\n\n// Аутентификация: Bearer-токен. Traefik forwardAuth валидирует его и вклеивает\n// X-User-Id/X-User-Name в handshake — сервер берёт identity оттуда, userId клиент\n// не передаёт. Заголовки в браузере проходят только через polling-транспорт,\n// поэтому polling ставим ПЕРВЫМ (дальше идёт upgrade на websocket).\nconst socket = io('https://realtimemap.ru/chats', {\n  transports: ['polling', 'websocket'],\n  withCredentials: true,\n  extraHeaders: { Authorization: `Bearer ${token}` },\n})\n\nsocket.on('connect', () => console.log('connected', socket.id))\n\n// Одно соединение — события из ВСЕХ чатов пользователя. Роутим по chatId.\nsocket.on('message.new', (msg) => {\n  // msg = { id, type, content, createdAt, chatId, sender:{ id, username, avatar } }\n  appendMessageToChat(msg.chatId, msg)\n})\n\nsocket.on('connect_error', (err) => {\n  // токен протух / не прошёл auth\n  console.error('socket auth failed:', err.message)\n})"
+      "codeExample": "import { io } from 'socket.io-client'\n\n// Аутентификация: Bearer-токен. Traefik forwardAuth валидирует его и вклеивает\n// X-User-Id/X-User-Name в handshake — сервер берёт identity оттуда, userId клиент\n// не передаёт. Заголовки в браузере проходят только через polling-транспорт,\n// поэтому polling ставим ПЕРВЫМ (дальше идёт upgrade на websocket).\nconst socket = io('https://realtimemap.ru/chats', {\n  transports: ['polling', 'websocket'],\n  withCredentials: true,\n  extraHeaders: { Authorization: `Bearer ${token}` },\n})\n\nsocket.on('connect', () => console.log('connected', socket.id))\n\n// Одно соединение — события из ВСЕХ чатов пользователя. Роутим по chatId.\nsocket.on('message.new', (msg) => {\n  // msg = { id, type, senderId, content, clientMessageId, createdAt, chatId, sender:{ id, username, avatar } }\n  // Своё эхо (msg.senderId === myUserId): матчим по clientMessageId и заменяем temp id -> msg.id.\n  appendMessageToChat(msg.chatId, msg)\n})\n\nsocket.on('connect_error', (err) => {\n  // токен протух / не прошёл auth\n  console.error('socket auth failed:', err.message)\n})"
     },
     {
       "id": "chats-chat-read",
