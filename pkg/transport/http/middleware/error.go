@@ -32,7 +32,7 @@ func HandleError(c *gin.Context, err error, logger *zap.Logger) {
 		}
 
 		if status == http.StatusForbidden {
-			c.AbortWithStatusJSON(status, gin.H{"error": "forbidden"})
+			c.AbortWithStatusJSON(status, gin.H{"error": "forbidden", "message": domainErr.Error()})
 			return
 		}
 

@@ -111,7 +111,7 @@ type ForbiddenError struct {
 }
 
 func (e *ForbiddenError) Error() string {
-	return "forbidden"
+	return e.Message
 }
 func (e *ForbiddenError) HTTPStatus() int {
 	return 403
