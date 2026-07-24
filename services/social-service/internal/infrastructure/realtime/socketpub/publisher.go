@@ -25,21 +25,60 @@ func NewPublisher(ns socket.Namespace, logger *zap.Logger) *Publisher {
 	}
 }
 
-// Publish доставляет событие каждому получателю в его комнату user:<id>.
-// Ошибка одного emit не прерывает остальных; вызывающий useCase трактует
-// публикацию как best-effort.
+// Publish доставляет событие получателям. Способ адресации задаётся событием:
+//   - RecipientIDs заданы → шлём каждому в его комнату user:<id> (message.new).
+//   - иначе, ChatID>0 → шлём в комнату чата chat:<id>: одним emit покрываем все
+//     сокеты всех участников, включая другие устройства инициатора (chat.read —
+//     прочтение синхронизируется между девайсами).
+//
+// Ошибка emit не прерывает остальных; вызывающий useCase трактует публикацию
+// как best-effort.
 func (p *Publisher) Publish(_ context.Context, e chatuc.ChatEvent) error {
 	// Конвертируем useCase-payload в транспортный DTO, чтобы socket-событие
 	// отдавало те же camelCase-поля, что и HTTP-ответ.
 	payload := toSocketPayload(e)
 
-	for _, uid := range e.RecipientIDs {
-		if err := p.ns.To(chatsocket.UserRoom(uid)).Emit(string(e.Type), payload); err != nil {
-			p.logger.Warn("failed to emit chat event",
+	if len(e.RecipientIDs) > 0 {
+		for _, uid := range e.RecipientIDs {
+			if err := p.ns.To(chatsocket.UserRoom(uid)).Emit(string(e.Type), payload); err != nil {
+				p.logger.Warn("failed to emit chat event",
+					zap.Error(err),
+					zap.String("event", string(e.Type)),
+					zap.Uint("recipient_id", uid))
+			}
+		}
+		return nil
+	}
+
+	if e.ChatID > 0 {
+		if err := p.ns.To(chatsocket.ChatRoom(e.ChatID)).Emit(string(e.Type), payload); err != nil {
+			p.logger.Warn("failed to emit chat event to chat room",
 				zap.Error(err),
 				zap.String("event", string(e.Type)),
-				zap.Uint("recipient_id", uid))
+				zap.Uint("chat_id", e.ChatID))
 		}
+	}
+	return nil
+}
+
+// JoinUsers заводит сокеты каждого пользователя в комнату чата chat:<id>. Целим
+// по комнате user:<id> — так покрываются все устройства/вкладки пользователя на
+// всех инстансах (Redis adapter выполняет SocketsJoin удалённо). Best-effort.
+func (p *Publisher) JoinUsers(_ context.Context, chatID uint, userIDs []uint) error {
+	room := chatsocket.ChatRoom(chatID)
+	for _, uid := range userIDs {
+		p.ns.In(chatsocket.UserRoom(uid)).SocketsJoin(room)
+	}
+	return nil
+}
+
+// LeaveUsers выводит сокеты каждого пользователя из комнаты чата chat:<id> — после
+// выхода/исключения участник немедленно перестаёт получать события чата, без
+// реконнекта. Best-effort.
+func (p *Publisher) LeaveUsers(_ context.Context, chatID uint, userIDs []uint) error {
+	room := chatsocket.ChatRoom(chatID)
+	for _, uid := range userIDs {
+		p.ns.In(chatsocket.UserRoom(uid)).SocketsLeave(room)
 	}
 	return nil
 }
@@ -51,6 +90,10 @@ func toSocketPayload(e chatuc.ChatEvent) any {
 	case chatuc.EventMessageNew:
 		if m, ok := e.Payload.(chatuc.MessageResult); ok {
 			return dto.NewMessageResponse(m)
+		}
+	case chatuc.EventChatRead:
+		if r, ok := e.Payload.(chatuc.ReadResult); ok {
+			return dto.NewReadResponse(r)
 		}
 	}
 	return e.Payload

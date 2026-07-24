@@ -10,8 +10,9 @@ import (
 
 type MessageSender interface {
 	SendMessage(ctx context.Context, params services.MessageCreateParams) (*message.Message, error)
-	// RecipientIDs — участники чата, кому доставить realtime-событие (кроме отправителя).
-	RecipientIDs(ctx context.Context, chatID, exceptUserID uint) ([]uint, error)
+	// RecipientIDs — все активные участники чата (включая отправителя), кому
+	// доставить realtime-событие. Клиент-инициатор дедупит эхо по id.
+	RecipientIDs(ctx context.Context, chatID uint) ([]uint, error)
 }
 
 type MessageSenderHandler struct {
@@ -39,6 +40,9 @@ type MessageCreateCommand struct {
 	SenderID uint
 
 	Content string
+
+	// ClientMessageID — идемпотентный ключ от клиента (UUID). Опционален.
+	ClientMessageID string
 }
 
 func (h *MessageSenderHandler) Handle(ctx context.Context, cmd MessageCreateCommand) (MessageResult, error) {
@@ -46,9 +50,10 @@ func (h *MessageSenderHandler) Handle(ctx context.Context, cmd MessageCreateComm
 		zap.Uint("chat_id", cmd.ChatID), zap.Uint("sender_id", cmd.SenderID))
 
 	messObj, err := h.sender.SendMessage(ctx, services.MessageCreateParams{
-		ChatID:   cmd.ChatID,
-		SenderID: cmd.SenderID,
-		Content:  cmd.Content,
+		ChatID:          cmd.ChatID,
+		SenderID:        cmd.SenderID,
+		Content:         cmd.Content,
+		ClientMessageID: cmd.ClientMessageID,
 	})
 	if err != nil {
 		h.logger.Warn("failed to send message", zap.Error(err),
@@ -65,20 +70,20 @@ func (h *MessageSenderHandler) Handle(ctx context.Context, cmd MessageCreateComm
 
 	result := toMessageResult(messObj, prof)
 
-	// Realtime-доставка остальным участникам чата. Best-effort: сообщение уже
-	// сохранено, поэтому ошибка публикации только логируется и не влияет на ответ
-	// (иначе клиент ретраит отправку → дубликат сообщения).
-	h.publishNewMessage(ctx, cmd.ChatID, cmd.SenderID, result)
+	// Realtime-доставка всем участникам чата (включая отправителя — на его другие
+	// устройства). Best-effort: сообщение уже сохранено, поэтому ошибка публикации
+	// только логируется и не влияет на ответ (иначе клиент ретраит → дубликат).
+	h.publishNewMessage(ctx, cmd.ChatID, result)
 
 	h.logger.Info("message sent", zap.Uint("message_id", messObj.ID), zap.Uint("chat_id", cmd.ChatID))
 	return result, nil
 }
 
-// publishNewMessage рассылает событие message.new всем участникам чата, кроме
-// отправителя. Никогда не возвращает ошибку наверх — realtime не критичен для
-// успеха HTTP-запроса.
-func (h *MessageSenderHandler) publishNewMessage(ctx context.Context, chatID, senderID uint, payload MessageResult) {
-	recipientIDs, err := h.sender.RecipientIDs(ctx, chatID, senderID)
+// publishNewMessage рассылает событие message.new всем участникам чата (включая
+// отправителя — эхо на его другие устройства). Никогда не возвращает ошибку
+// наверх — realtime не критичен для успеха HTTP-запроса.
+func (h *MessageSenderHandler) publishNewMessage(ctx context.Context, chatID uint, payload MessageResult) {
+	recipientIDs, err := h.sender.RecipientIDs(ctx, chatID)
 	if err != nil {
 		h.logger.Warn("failed to resolve recipients for realtime event",
 			zap.Error(err), zap.Uint("chat_id", chatID))

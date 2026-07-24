@@ -3,7 +3,7 @@
   "namespaces": [
     {
       "path": "/chats",
-      "description": "Real-time доставка событий чата. Клиент держит одно соединение на всю сессию; сервер джойнит его в персональную комнату user:<id> и пушит события всех чатов пользователя.",
+      "description": "Real-time доставка событий чата. Клиент держит одно соединение на всю сессию; сервер джойнит его в персональную комнату user:<id> и в комнату chat:<id> каждого чата пользователя (членство в комнате = участие в чате). Одно соединение получает события всех чатов; маршрутизацию клиент делает по полю chatId.",
       "auth": true
     }
   ],
@@ -15,7 +15,7 @@
       "namespace": "/chats",
       "auth": true,
       "summary": "Новое сообщение в чате пользователя",
-      "description": "Сервер пушит это событие всем активным участникам чата, КРОМЕ отправителя (он получает своё сообщение из HTTP-ответа POST /api/v2/chats/{chatID}/messages). Payload полностью совпадает с телом result из HTTP-ответа отправки сообщения. Одно соединение получает события из всех чатов пользователя — маршрутизацию по чатам клиент делает по полю chatId. Если получатель offline (нет сокета в комнате) — событие теряется; пропущенное клиент догоняет через GET /history с курсором lastMessageID.",
+      "description": "Сервер пушит это событие всем активным участникам чата, ВКЛЮЧАЯ отправителя — на его другие устройства/вкладки. Клиент-инициатор дедупит эхо своего сообщения по паре (id) либо по clientMessageId, отправленному в POST /messages. Payload полностью совпадает с телом HTTP-ответа отправки сообщения. Одно соединение получает события из всех чатов пользователя — маршрутизацию по чатам клиент делает по полю chatId. Если получатель offline (нет сокета в комнате) — событие теряется; пропущенное клиент догоняет через GET /history с курсором lastMessageID.",
       "tags": ["Чаты", "Real-time"],
       "payload": {
         "description": "Сообщение чата (тот же формат, что и HTTP-ответ отправки)",
@@ -47,6 +47,30 @@
         }
       },
       "codeExample": "import { io } from 'socket.io-client'\n\n// Аутентификация: Bearer-токен. Traefik forwardAuth валидирует его и вклеивает\n// X-User-Id/X-User-Name в handshake — сервер берёт identity оттуда, userId клиент\n// не передаёт. Заголовки в браузере проходят только через polling-транспорт,\n// поэтому polling ставим ПЕРВЫМ (дальше идёт upgrade на websocket).\nconst socket = io('https://realtimemap.ru/chats', {\n  transports: ['polling', 'websocket'],\n  withCredentials: true,\n  extraHeaders: { Authorization: `Bearer ${token}` },\n})\n\nsocket.on('connect', () => console.log('connected', socket.id))\n\n// Одно соединение — события из ВСЕХ чатов пользователя. Роутим по chatId.\nsocket.on('message.new', (msg) => {\n  // msg = { id, type, content, createdAt, chatId, sender:{ id, username, avatar } }\n  appendMessageToChat(msg.chatId, msg)\n})\n\nsocket.on('connect_error', (err) => {\n  // токен протух / не прошёл auth\n  console.error('socket auth failed:', err.message)\n})"
+    },
+    {
+      "id": "chats-chat-read",
+      "name": "chat.read",
+      "direction": "server-to-client",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Участник прочитал чат до сообщения",
+      "description": "Сервер пушит это событие в комнату чата после того, как участник продвинул курсор прочтения (HTTP POST /api/v2/chats/{chatID}/read). Событие получают ВСЕ участники чата, ВКЛЮЧАЯ самого читающего — на его других устройствах, чтобы синхронно обнулить счётчик непрочитанного. Собеседник по lastReadMessageId рисует галочки «прочитано» для всех своих сообщений с id <= lastReadMessageId. Курсор монотонный: устаревшее чтение (меньший id) сервером игнорируется и события не порождает. Если в чате ещё нет сообщений, событие не отправляется.\n\nКлиентский контракт троттлинга: POST /read вызывать не чаще 1 раза в 1–2 секунды и только при реальном изменении (пользователь увидел новые сообщения / вернул фокус на чат). Не слать /read на каждое отрисованное сообщение — курсор и так встаёт на последнее сообщение чата.",
+      "tags": ["Чаты", "Real-time"],
+      "payload": {
+        "description": "Кто и до какого сообщения продвинул курсор прочтения",
+        "schema": [
+          { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+          { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя, продвинувшего курсор прочтения" },
+          { "name": "lastReadMessageId", "type": "integer", "required": true, "description": "ID последнего прочитанного сообщения — все сообщения с id <= этого считаются прочитанными этим пользователем" }
+        ],
+        "example": {
+          "chatId": 12,
+          "userId": 2,
+          "lastReadMessageId": 341
+        }
+      },
+      "codeExample": "// Собеседник продвинул курсор прочтения — рисуем галочки и/или обнуляем unread.\nsocket.on('chat.read', (e) => {\n  // e = { chatId, userId, lastReadMessageId }\n  if (e.userId === myUserId) {\n    // эхо с другого моего устройства — синхронизируем локальный unread\n    resetUnread(e.chatId, e.lastReadMessageId)\n  } else {\n    // собеседник прочитал мои сообщения до lastReadMessageId\n    markMessagesRead(e.chatId, e.userId, e.lastReadMessageId)\n  }\n})\n\n// Отправка отметки о прочтении — троттлить (≤ 1 раз / 1–2с), только при новых\n// увиденных сообщениях или возврате фокуса на чат.\nasync function markChatRead(chatId) {\n  await fetch(`/api/v2/chats/${chatId}/read`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })\n}"
     }
   ]
 }

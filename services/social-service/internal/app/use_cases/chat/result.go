@@ -79,6 +79,16 @@ func toMessageHistoryResult(messages []*message.Message, profiles map[uint]*mode
 
 }
 
+// READ
+
+// ReadResult — payload события chat.read: кто (UserID) и до какого сообщения
+// (LastReadMessageID) продвинул курсор прочтения в чате ChatID.
+type ReadResult struct {
+	ChatID            uint
+	UserID            uint
+	LastReadMessageID uint
+}
+
 // CHATS
 
 type DirectChatResult struct {

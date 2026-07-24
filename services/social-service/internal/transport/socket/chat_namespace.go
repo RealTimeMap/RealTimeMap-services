@@ -1,11 +1,19 @@
 package chatsocket
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/zishang520/socket.io/servers/socket/v3"
 	"go.uber.org/zap"
 )
+
+// ChatLister — узкий порт, дающий namespace список чатов пользователя для
+// eager-join в комнаты chat:<id> при подключении. Реализуется поверх репозитория
+// участников; namespace не знает про БД/GORM.
+type ChatLister interface {
+	ChatIDsByUser(ctx context.Context, userID uint) ([]uint, error)
+}
 
 // Заголовки идентичности, которые Traefik forwardAuth вклеивает в handshake-запрос
 // после валидации Bearer-токена (см. traefik/dynamic.yml → middleware auth-check).
@@ -25,6 +33,15 @@ type socketData struct {
 // Единая точка формирования имени: используется и здесь (Join), и в publisher (Emit).
 func UserRoom(userID uint) socket.Room {
 	return socket.Room("user:" + strconv.FormatUint(uint64(userID), 10))
+}
+
+// ChatRoom возвращает имя комнаты чата. Сокет джойнит комнату каждого своего чата
+// при подключении — членство в комнате chat:<id> = участие в чате. На этом
+// строится адресация событий чату (typing/read/edited/deleted/reactions) без
+// проверки участия в БД. Единая точка формирования имени: Join (namespace),
+// SocketsJoin/Leave (room-sync) и Emit (publisher).
+func ChatRoom(chatID uint) socket.Room {
+	return socket.Room("chat:" + strconv.FormatUint(uint64(chatID), 10))
 }
 
 // InitChatNamespace вешает на namespace /chats аутентификацию и обработчик
@@ -74,8 +91,16 @@ func InitChatNamespace(s *SocketServer) {
 			return
 		}
 
-		// Сокет джойнит комнату своего пользователя — сюда publisher шлёт события.
+		// Сокет джойнит комнату своего пользователя — сюда publisher шлёт события
+		// адресно (message.new, presence-эхо).
 		sock.Join(UserRoom(data.userID))
+
+		// Eager-join во все чаты пользователя: членство в комнате chat:<id> =
+		// участие в чате. Best-effort — если список не загрузился, соединение
+		// остаётся, но событий чата сокет не получит до реконнекта; сообщения
+		// всё равно доберутся через историю (pull-gap).
+		s.joinUserChats(sock, data.userID)
+
 		s.logger.Info("socket connected",
 			zap.Uint("user_id", data.userID),
 			zap.String("socket_id", string(sock.Id())))
@@ -86,4 +111,22 @@ func InitChatNamespace(s *SocketServer) {
 				zap.String("socket_id", string(sock.Id())))
 		})
 	})
+}
+
+// joinUserChats джойнит сокет во все комнаты chat:<id> пользователя. Вызывается
+// при подключении. Ошибка загрузки списка не рвёт соединение — сокет остаётся в
+// user:<id>, пропущенное добирается через историю (pull-gap).
+func (s *SocketServer) joinUserChats(sock *socket.Socket, userID uint) {
+	if s.chatLister == nil {
+		return
+	}
+	chatIDs, err := s.chatLister.ChatIDsByUser(context.Background(), userID)
+	if err != nil {
+		s.logger.Warn("failed to load user chats for eager-join",
+			zap.Error(err), zap.Uint("user_id", userID))
+		return
+	}
+	for _, id := range chatIDs {
+		sock.Join(ChatRoom(id))
+	}
 }

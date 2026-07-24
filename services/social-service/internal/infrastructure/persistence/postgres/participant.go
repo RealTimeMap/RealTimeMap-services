@@ -66,6 +66,20 @@ func (r *ChatParticipantRepository) ListByChat(ctx context.Context, chatID uint)
 	return participants, nil
 }
 
+// ChatIDsByUser возвращает id активных чатов пользователя (left_at IS NULL).
+// Лёгкая проекция только id — для eager-join сокета в комнаты chat:<id>.
+func (r *ChatParticipantRepository) ChatIDsByUser(ctx context.Context, userID uint) ([]uint, error) {
+	var ids []uint
+	err := r.dbCtx(ctx).
+		Model(&chat.ChatParticipant{}).
+		Where("user_id = ? AND left_at IS NULL", userID).
+		Pluck("chat_id", &ids).Error
+	if err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 // UpdateLastRead двигает курсор прочитанного вперёд. Курсор монотонный:
 // значение не откатывается назад, если пришёл меньший last_read_id (out-of-order запросы).
 func (r *ChatParticipantRepository) UpdateLastRead(ctx context.Context, chatID, userID, lastReadID uint) error {
