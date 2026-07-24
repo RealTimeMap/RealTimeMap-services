@@ -448,56 +448,47 @@
       "responses": [
         {
           "statusCode": 200,
-          "description": "Список чатов, обёрнутый в поле result",
+          "description": "Массив чатов пользователя (плоский, без обёртки)",
           "schema": [
+            { "name": "[]", "type": "array", "required": true, "description": "Тело ответа — JSON-массив чатов. Элемент:" },
+            { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+            { "name": "type", "type": "string", "required": true, "description": "Тип чата", "enum": ["direct", "group"] },
+            { "name": "title", "type": "string", "required": true, "description": "Заголовок: для direct — username собеседника, для group — название чата" },
+            { "name": "avatar", "type": "string", "required": false, "description": "Аватар: для direct — аватар собеседника, для group — пустой (пока не реализован)" },
             {
-              "name": "result",
-              "type": "array",
-              "required": true,
-              "description": "Массив чатов пользователя",
+              "name": "lastMessage",
+              "type": "object",
+              "required": false,
+              "description": "Превью последнего сообщения. null, если сообщений ещё нет",
               "children": [
-                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
-                { "name": "type", "type": "string", "required": true, "description": "Тип чата", "enum": ["direct", "group"] },
-                { "name": "title", "type": "string", "required": true, "description": "Заголовок: для direct — username собеседника, для group — название чата" },
-                { "name": "avatar", "type": "string", "required": false, "description": "Аватар: для direct — аватар собеседника, для group — пустой (пока не реализован)" },
-                {
-                  "name": "lastMessage",
-                  "type": "object",
-                  "required": false,
-                  "description": "Превью последнего сообщения. null, если сообщений ещё нет",
-                  "children": [
-                    { "name": "messageId", "type": "integer", "required": true, "description": "ID последнего сообщения" },
-                    { "name": "username", "type": "string", "required": true, "description": "Имя автора последнего сообщения" },
-                    { "name": "content", "type": "string", "required": true, "description": "Текст последнего сообщения" }
-                  ]
-                },
-                { "name": "unreadCount", "type": "integer", "required": true, "description": "Количество непрочитанных сообщений" },
-                { "name": "updatedAt", "type": "string", "required": true, "description": "Время последнего обновления чата (ISO 8601)" }
+                { "name": "messageId", "type": "integer", "required": true, "description": "ID последнего сообщения" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя автора последнего сообщения" },
+                { "name": "content", "type": "string", "required": true, "description": "Текст последнего сообщения" }
               ]
-            }
+            },
+            { "name": "unreadCount", "type": "integer", "required": true, "description": "Количество непрочитанных сообщений" },
+            { "name": "updatedAt", "type": "string", "required": true, "description": "Время последнего обновления чата (ISO 8601)" }
           ],
-          "example": {
-            "result": [
-              {
-                "chatId": 12,
-                "type": "direct",
-                "title": "alice",
-                "avatar": "https://realtimemap.ru/store/profile-avatars/2026/06/alice.jpg",
-                "lastMessage": { "messageId": 340, "username": "alice", "content": "до встречи!" },
-                "unreadCount": 2,
-                "updatedAt": "2026-07-19T10:30:00Z"
-              },
-              {
-                "chatId": 8,
-                "type": "group",
-                "title": "Команда проекта",
-                "avatar": "",
-                "lastMessage": { "messageId": 331, "username": "bob", "content": "залил фикс" },
-                "unreadCount": 0,
-                "updatedAt": "2026-07-19T09:15:00Z"
-              }
-            ]
-          }
+          "example": [
+            {
+              "chatId": 12,
+              "type": "direct",
+              "title": "alice",
+              "avatar": "https://realtimemap.ru/store/profile-avatars/2026/06/alice.jpg",
+              "lastMessage": { "messageId": 340, "username": "alice", "content": "до встречи!" },
+              "unreadCount": 2,
+              "updatedAt": "2026-07-19T10:30:00Z"
+            },
+            {
+              "chatId": 8,
+              "type": "group",
+              "title": "Команда проекта",
+              "avatar": "",
+              "lastMessage": { "messageId": 331, "username": "bob", "content": "залил фикс" },
+              "unreadCount": 0,
+              "updatedAt": "2026-07-19T09:15:00Z"
+            }
+          ]
         }
       ],
       "errors": ["unauthorized"]
@@ -523,34 +514,24 @@
           "statusCode": 200,
           "description": "Личный чат (созданный или существующий)",
           "schema": [
+            { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
             {
-              "name": "result",
+              "name": "peer",
               "type": "object",
               "required": true,
-              "description": "Данные личного чата",
+              "description": "Профиль собеседника",
               "children": [
-                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
-                {
-                  "name": "peer",
-                  "type": "object",
-                  "required": true,
-                  "description": "Профиль собеседника",
-                  "children": [
-                    { "name": "id", "type": "integer", "required": true, "description": "ID собеседника" },
-                    { "name": "username", "type": "string", "required": true, "description": "Имя собеседника" },
-                    { "name": "avatar", "type": "string", "required": false, "description": "URL аватара собеседника" }
-                  ]
-                },
-                { "name": "createdAt", "type": "string", "required": true, "description": "Время создания чата (ISO 8601)" }
+                { "name": "id", "type": "integer", "required": true, "description": "ID собеседника" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя собеседника" },
+                { "name": "avatar", "type": "string", "required": false, "description": "URL аватара собеседника" }
               ]
-            }
+            },
+            { "name": "createdAt", "type": "string", "required": true, "description": "Время создания чата (ISO 8601)" }
           ],
           "example": {
-            "result": {
-              "chatId": 12,
-              "peer": { "id": 5, "username": "alice", "avatar": "https://realtimemap.ru/store/profile-avatars/2026/06/alice.jpg" },
-              "createdAt": "2026-07-19T10:00:00Z"
-            }
+            "chatId": 12,
+            "peer": { "id": 5, "username": "alice", "avatar": "https://realtimemap.ru/store/profile-avatars/2026/06/alice.jpg" },
+            "createdAt": "2026-07-19T10:00:00Z"
           }
         }
       ],
@@ -578,21 +559,11 @@
           "statusCode": 200,
           "description": "Созданный групповой чат",
           "schema": [
-            {
-              "name": "result",
-              "type": "object",
-              "required": true,
-              "description": "Данные группового чата",
-              "children": [
-                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
-                { "name": "title", "type": "string", "required": true, "description": "Название группы (пустая строка, если не задано)" },
-                { "name": "createdAt", "type": "string", "required": true, "description": "Время создания чата (ISO 8601)" }
-              ]
-            }
+            { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+            { "name": "title", "type": "string", "required": true, "description": "Название группы (пустая строка, если не задано)" },
+            { "name": "createdAt", "type": "string", "required": true, "description": "Время создания чата (ISO 8601)" }
           ],
-          "example": {
-            "result": { "chatId": 8, "title": "Команда проекта", "createdAt": "2026-07-19T09:00:00Z" }
-          }
+          "example": { "chatId": 8, "title": "Команда проекта", "createdAt": "2026-07-19T09:00:00Z" }
         }
       ],
       "errors": ["unauthorized", "validation-error"]
@@ -622,40 +593,34 @@
           "statusCode": 200,
           "description": "Созданное сообщение (тот же формат, что и в событии message.new)",
           "schema": [
+            { "name": "id", "type": "integer", "required": true, "description": "ID сообщения" },
+            { "name": "type", "type": "string", "required": true, "description": "Тип сообщения", "enum": ["text"] },
+            { "name": "senderId", "type": "integer", "required": true, "description": "ID автора на верхнем уровне (дублирует sender.id) — для быстрого определения «своё/чужое» в UI" },
+            { "name": "content", "type": "string", "required": true, "description": "Текст сообщения" },
+            { "name": "clientMessageId", "type": "string", "required": false, "description": "UUID, присланный клиентом при отправке. null, если не передавался. Клиент матчит по нему оптимистичное сообщение с серверным (temp id → реальный id) и дедупит эхо message.new" },
+            { "name": "createdAt", "type": "string", "required": true, "description": "Время создания (ISO 8601)" },
+            { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
             {
-              "name": "result",
+              "name": "sender",
               "type": "object",
               "required": true,
-              "description": "Данные сообщения",
+              "description": "Автор сообщения",
               "children": [
-                { "name": "id", "type": "integer", "required": true, "description": "ID сообщения" },
-                { "name": "type", "type": "string", "required": true, "description": "Тип сообщения", "enum": ["text"] },
-                { "name": "content", "type": "string", "required": true, "description": "Текст сообщения" },
-                { "name": "createdAt", "type": "string", "required": true, "description": "Время создания (ISO 8601)" },
-                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
-                {
-                  "name": "sender",
-                  "type": "object",
-                  "required": true,
-                  "description": "Автор сообщения",
-                  "children": [
-                    { "name": "id", "type": "integer", "required": true, "description": "ID автора" },
-                    { "name": "username", "type": "string", "required": true, "description": "Имя автора" },
-                    { "name": "avatar", "type": "string", "required": false, "description": "URL аватара автора" }
-                  ]
-                }
+                { "name": "id", "type": "integer", "required": true, "description": "ID автора" },
+                { "name": "username", "type": "string", "required": true, "description": "Имя автора" },
+                { "name": "avatar", "type": "string", "required": false, "description": "URL аватара автора" }
               ]
             }
           ],
           "example": {
-            "result": {
-              "id": 341,
-              "type": "text",
-              "content": "Привет! Как дела?",
-              "createdAt": "2026-07-19T10:31:00Z",
-              "chatId": 12,
-              "sender": { "id": 1, "username": "john_doe", "avatar": "" }
-            }
+            "id": 341,
+            "type": "text",
+            "senderId": 1,
+            "content": "Привет! Как дела?",
+            "clientMessageId": "9b2e5f1a-3c4d-4e6f-8a1b-2c3d4e5f6a7b",
+            "createdAt": "2026-07-19T10:31:00Z",
+            "chatId": 12,
+            "sender": { "id": 1, "username": "john_doe", "avatar": "" }
           }
         }
       ],
@@ -680,61 +645,57 @@
           "description": "Страница истории с курсором",
           "schema": [
             {
-              "name": "result",
-              "type": "object",
+              "name": "messages",
+              "type": "array",
               "required": true,
-              "description": "Страница сообщений",
+              "description": "Сообщения (от новых к старым)",
               "children": [
+                { "name": "id", "type": "integer", "required": true, "description": "ID сообщения" },
+                { "name": "type", "type": "string", "required": true, "description": "Тип сообщения", "enum": ["text"] },
+                { "name": "senderId", "type": "integer", "required": true, "description": "ID автора на верхнем уровне (дублирует sender.id) — для быстрого определения «своё/чужое» в UI" },
+                { "name": "content", "type": "string", "required": true, "description": "Текст сообщения" },
+                { "name": "clientMessageId", "type": "string", "required": false, "description": "UUID, присланный клиентом при отправке. null, если не передавался" },
+                { "name": "createdAt", "type": "string", "required": true, "description": "Время создания (ISO 8601)" },
+                { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
                 {
-                  "name": "messages",
-                  "type": "array",
+                  "name": "sender",
+                  "type": "object",
                   "required": true,
-                  "description": "Сообщения (от новых к старым)",
+                  "description": "Автор сообщения",
                   "children": [
-                    { "name": "id", "type": "integer", "required": true, "description": "ID сообщения" },
-                    { "name": "type", "type": "string", "required": true, "description": "Тип сообщения", "enum": ["text"] },
-                    { "name": "content", "type": "string", "required": true, "description": "Текст сообщения" },
-                    { "name": "createdAt", "type": "string", "required": true, "description": "Время создания (ISO 8601)" },
-                    { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
-                    {
-                      "name": "sender",
-                      "type": "object",
-                      "required": true,
-                      "description": "Автор сообщения",
-                      "children": [
-                        { "name": "id", "type": "integer", "required": true, "description": "ID автора" },
-                        { "name": "username", "type": "string", "required": true, "description": "Имя автора" },
-                        { "name": "avatar", "type": "string", "required": false, "description": "URL аватара автора" }
-                      ]
-                    }
+                    { "name": "id", "type": "integer", "required": true, "description": "ID автора" },
+                    { "name": "username", "type": "string", "required": true, "description": "Имя автора" },
+                    { "name": "avatar", "type": "string", "required": false, "description": "URL аватара автора" }
                   ]
-                },
-                { "name": "lastMessageId", "type": "integer", "required": false, "description": "Курсор для следующей страницы (ID самого старого сообщения на этой странице). null, если сообщений нет" }
+                }
               ]
-            }
+            },
+            { "name": "lastMessageId", "type": "integer", "required": false, "description": "Курсор для следующей страницы (ID самого старого сообщения на этой странице). null, если сообщений нет" }
           ],
           "example": {
-            "result": {
-              "messages": [
-                {
-                  "id": 341,
-                  "type": "text",
-                  "content": "Привет! Как дела?",
-                  "createdAt": "2026-07-19T10:31:00Z",
-                  "chatId": 12,
-                  "sender": { "id": 1, "username": "john_doe", "avatar": "" }
-                },
-                {
-                  "id": 340,
-                  "type": "text",
-                  "content": "до встречи!",
-                  "createdAt": "2026-07-19T10:30:00Z",
-                  "chatId": 12,
-                  "sender": { "id": 5, "username": "alice", "avatar": "" }
-                }
-              ],
-              "lastMessageId": 340
-            }
+            "messages": [
+              {
+                "id": 341,
+                "type": "text",
+                "senderId": 1,
+                "content": "Привет! Как дела?",
+                "clientMessageId": "9b2e5f1a-3c4d-4e6f-8a1b-2c3d4e5f6a7b",
+                "createdAt": "2026-07-19T10:31:00Z",
+                "chatId": 12,
+                "sender": { "id": 1, "username": "john_doe", "avatar": "" }
+              },
+              {
+                "id": 340,
+                "type": "text",
+                "senderId": 5,
+                "content": "до встречи!",
+                "clientMessageId": null,
+                "createdAt": "2026-07-19T10:30:00Z",
+                "chatId": 12,
+                "sender": { "id": 5, "username": "alice", "avatar": "" }
+              }
+            ],
+            "lastMessageId": 340
           }
         }
       ],

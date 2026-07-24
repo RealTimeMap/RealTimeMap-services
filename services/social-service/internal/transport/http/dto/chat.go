@@ -30,22 +30,30 @@ func NewSenderResponse(p chatuc.ProfileResult) SenderResponse {
 
 // MessageResponse — сообщение чата. Единый контракт для HTTP-ответа и socket-события.
 type MessageResponse struct {
-	ID        uint           `json:"id"`
-	Type      string         `json:"type"`
-	Content   string         `json:"content"`
-	CreatedAt time.Time      `json:"createdAt"`
-	ChatID    uint           `json:"chatId"`
-	Sender    SenderResponse `json:"sender"`
+	ID   uint   `json:"id"`
+	Type string `json:"type"`
+	// SenderID — id автора на верхнем уровне (дублирует sender.id) для удобного UI:
+	// клиент сразу решает «своё/чужое» без разворачивания sender.
+	SenderID uint   `json:"senderId"`
+	Content  string `json:"content"`
+	// ClientMessageID — UUID, присланный клиентом при отправке (null, если не было).
+	// Клиент по нему матчит оптимистичное сообщение с серверным и дедупит эхо.
+	ClientMessageID *string        `json:"clientMessageId"`
+	CreatedAt       time.Time      `json:"createdAt"`
+	ChatID          uint           `json:"chatId"`
+	Sender          SenderResponse `json:"sender"`
 }
 
 func NewMessageResponse(m chatuc.MessageResult) MessageResponse {
 	return MessageResponse{
-		ID:        m.ID,
-		Type:      m.Type,
-		Content:   m.Content,
-		CreatedAt: m.CreatedAt,
-		ChatID:    m.ChatID,
-		Sender:    NewSenderResponse(m.Sender),
+		ID:              m.ID,
+		Type:            m.Type,
+		SenderID:        m.SenderID,
+		Content:         m.Content,
+		ClientMessageID: m.ClientMessageID,
+		CreatedAt:       m.CreatedAt,
+		ChatID:          m.ChatID,
+		Sender:          NewSenderResponse(m.Sender),
 	}
 }
 
