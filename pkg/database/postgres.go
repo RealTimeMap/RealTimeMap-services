@@ -9,12 +9,12 @@ import (
 )
 
 type Config struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"db_name"`
+	SSLMode  string `yaml:"ssl_mode"`
 }
 
 func (c Config) DSN() string {
