@@ -7,6 +7,11 @@ services:
       context: ../..
       dockerfile: services/feedback-service/Dockerfile
     container_name: feedback-service
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
     labels:
       - "traefik.enable=true"
       # CORS preflight OPTIONS для всех /api/v2/* эндпоинтов
@@ -33,6 +38,8 @@ services:
       - "traefik.http.routers.feedback-list.service=feedback"
       - "traefik.http.routers.feedback-list.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.feedback-list.tls=true"
+
+      - "traefik.http.services.feedback.loadbalancer.server.port=8080"
     networks:
       - web
       - service-network

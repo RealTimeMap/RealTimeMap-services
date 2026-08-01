@@ -5,6 +5,11 @@ services:
       dockerfile: services/social-service/Dockerfile
     container_name: social-service
     restart: always
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
     labels:
       - "traefik.enable=true"
 
@@ -136,6 +141,7 @@ services:
       - web
       - service-network
       - internal-social
+      - kafka-network
     volumes:
       - social_store_data:/app/store
 
@@ -148,4 +154,6 @@ networks:
   service-network:
     external: true
     name: service-network
+  kafka-network:
+    external: true
   internal-social:

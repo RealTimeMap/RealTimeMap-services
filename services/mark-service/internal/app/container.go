@@ -72,7 +72,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	// Создание доменных репозиториев
 	statRepo := postgres.NewPgMarkStatRepository(db, log)
 	markRepo := postgres.NewMarkRepositoryV2(db, log)
-	categoryRepo := postgres.NewCategoryRepositoryV2(db, log)
+	categoryRepo := postgres.NewCategoryRepository(db, log)
 	interactRepo := postgres.NewPgLikeRepository(db, log)
 	// Создание доменных сервисов
 	statService := mark.NewStatService(statRepo, log)

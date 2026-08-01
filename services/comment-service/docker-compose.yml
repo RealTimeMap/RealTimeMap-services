@@ -6,6 +6,11 @@ services:
       dockerfile: services/comment-service/Dockerfile
     container_name: comment-service
     restart: always
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
     labels:
       - "traefik.enable=true"
 

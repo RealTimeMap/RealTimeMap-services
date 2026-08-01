@@ -19,6 +19,11 @@ services:
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
       - /etc/letsencrypt/live/realtimemap.ru:/etc/letsencrypt/live/realtimemap.ru:ro
       - /etc/letsencrypt/archive/realtimemap.ru:/etc/letsencrypt/archive/realtimemap.ru:ro
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
     networks:
       - web
 
