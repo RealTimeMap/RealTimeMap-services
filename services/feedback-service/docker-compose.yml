@@ -1,0 +1,47 @@
+
+
+
+services:
+  feedback-service:
+    build:
+      context: ../..
+      dockerfile: services/feedback-service/Dockerfile
+    container_name: feedback-service
+    labels:
+      - "traefik.enable=true"
+      # CORS preflight OPTIONS для всех /api/v2/* эндпоинтов
+      - "traefik.http.routers.feedback-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.feedback-options.entrypoints=websecure"
+      - "traefik.http.routers.feedback-options.priority=200"
+      - "traefik.http.routers.feedback-options.service=feedback"
+      - "traefik.http.routers.feedback-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.feedback-options.tls=true"
+
+
+      - "traefik.http.routers.feedback-create.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/bug/create`) && Method(`POST`)"
+      - "traefik.http.routers.feedback-create.entrypoints=websecure"
+      - "traefik.http.routers.feedback-create.priority=100"
+      - "traefik.http.routers.feedback-create.service=feedback"
+      - "traefik.http.routers.feedback-create.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.feedback-create.tls=true"
+
+
+
+      - "traefik.http.routers.feedback-list.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/bug/list`) && Method(`GET`)"
+      - "traefik.http.routers.feedback-list.entrypoints=websecure"
+      - "traefik.http.routers.feedback-list.priority=100"
+      - "traefik.http.routers.feedback-list.service=feedback"
+      - "traefik.http.routers.feedback-list.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.feedback-list.tls=true"
+    networks:
+      - web
+      - service-network
+      - kafka-network
+
+networks:
+  web:
+    external: true
+  service-network:
+    external: true
+  kafka-network:
+    external: true
