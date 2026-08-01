@@ -6,7 +6,11 @@ services:
       dockerfile: services/gamification-service/Dockerfile
     container_name: gamification-service
     restart: always
-
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
     labels:
       - "traefik.enable=true"
 
@@ -49,6 +53,14 @@ services:
       - "traefik.http.routers.gamification-achievement-list.service=gamification"
       - "traefik.http.routers.gamification-achievement-list.middlewares=cors-headers@file"
       - "traefik.http.routers.gamification-achievement-list.tls=true"
+
+      # Static files (store) — только фотографии gamification-service
+      - "traefik.http.routers.gamification-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store/photos/achievements`)"
+      - "traefik.http.routers.gamification-store.entrypoints=websecure"
+      - "traefik.http.routers.gamification-store.priority=10"
+      - "traefik.http.routers.gamification-store.service=gamification"
+      - "traefik.http.routers.gamification-store.middlewares=cors-headers@file"
+      - "traefik.http.routers.gamification-store.tls=true"
 
       # GET /gamification/health - health check (публичный)
       - "traefik.http.routers.gamification-health.rule=Host(`realtimemap.ru`) && Path(`/gamification/health`) && Method(`GET`)"
