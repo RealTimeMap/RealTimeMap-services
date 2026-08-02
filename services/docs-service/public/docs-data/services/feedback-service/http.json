@@ -1,0 +1,127 @@
+{
+  "endpoints": [
+    {
+      "id": "create-bug",
+      "method": "POST",
+      "path": "/api/v2/bug/create",
+      "summary": "Сообщить о баге",
+      "description": "Создаёт новую запись, которая информирует разработчиков об обнаруженных багах во время использования приложения.",
+      "tags": ["Баги"],
+      "auth": false,
+      "requestBody": {
+        "description": "Описание бага и информация о приложении и устройстве",
+        "contentType": "json",
+        "schema": [
+          { "name": "title", "type": "string", "required": true, "description": "Заголовок бага" },
+          { "name": "desc", "type": "string", "required": true, "description": "Подробное описание бага." },
+          { "name": "tag", "type": "string", "required": true, "description": "Тэг бага, чтобы определять к какой категории системы он относится", "enum": ["feature", "ui", "logic"] },
+          {
+            "name": "device",
+            "type": "object",
+            "required": true,
+            "description": "Информация об устройстве",
+            "children": [
+              { "name": "os", "type": "string", "required": true, "description": "Операционная система устройства + версия. Например: Windows 11" },
+              { "name": "platform", "type": "string", "required": true, "description": "Платформа устройства. Android/IOS/Windows/Web" },
+              { "name": "resolution", "type": "string", "required": true, "description": "Разрешение устройства" },
+              { "name": "battery", "type": "number", "required": false, "description": "Уровень заряда устройства" }
+            ]
+          },
+          {
+            "name": "app",
+            "type": "object",
+            "required": true,
+            "description": "Информация о приложении",
+            "children": [
+              { "name": "build", "type": "string", "required": true, "description": "Версия сборки приложения. Например: 0.1.5" },
+              { "name": "logs", "type": "string[]", "required": true, "description": "Логи последних действий" }
+            ]
+          }
+        ],
+        "example": {
+          "title": "Кнопка 'Отправить' не реагирует на нажатие",
+          "desc": "При клике на кнопку отправки формы в профиле ничего не происходит.",
+          "tag": "ui",
+          "device": {
+            "os": "Windows 11 Pro 22H2",
+            "platform": "Web",
+            "resolution": "1920x1080",
+            "battery": 100
+          },
+          "app": {
+            "build": "0.1.5",
+            "logs": [
+              "12:00:01 [INFO] User opened profile page",
+              "12:00:05 [ERROR] Unhandled click event on #submit-btn"
+            ]
+          }
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 202,
+          "description": "При успехе ответа от сервера нет, будет лишь код 202, подтверждающий что баг принят",
+          "schema": [],
+          "example": {}
+        }
+      ],
+      "errors": ["validation-error", "conflict"]
+    },
+    {
+      "id": "get-bug-list",
+      "method": "GET",
+      "path": "/api/v2/bug/list",
+      "summary": "Получение списка багов",
+      "description": "Возвращает список зарегистрированных багов с поддержкой фильтрации по статусу, тэгу и постраничной пагинацией.",
+      "tags": ["Баги"],
+      "auth": true,
+      "pagination": "page",
+      "parameters": [
+        { "name": "status", "type": "string", "required": false, "location": "query", "description": "Фильтр по статусу бага", "enum": ["new", "in_progress", "resolved", "closed"] },
+        { "name": "tag", "type": "string", "required": false, "location": "query", "description": "Фильтр по тэгу бага", "enum": ["feature", "ui", "logic"] }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список багов, удовлетворяющих фильтрам",
+          "schema": [
+            { "name": "id", "type": "integer", "required": true, "description": "Уникальный идентификатор бага" },
+            { "name": "createdAt", "type": "string", "required": true, "description": "Дата и время создания записи (ISO 8601 / RFC3339)" },
+            { "name": "title", "type": "string", "required": true, "description": "Заголовок бага" },
+            { "name": "tag", "type": "string", "required": true, "description": "Тэг категории бага", "enum": ["feature", "ui", "logic"] },
+            { "name": "status", "type": "string", "required": true, "description": "Текущий статус бага" },
+            { "name": "platform", "type": "string", "required": true, "description": "Платформа устройства (из DeviceInfo)" },
+            { "name": "build", "type": "string", "required": true, "description": "Версия сборки приложения (из AppInfo)" },
+            { "name": "hasLogs", "type": "boolean", "required": true, "description": "Флаг, указывающий на наличие прикрепленных логов" },
+            { "name": "userId", "type": "integer", "required": false, "description": "ID пользователя, отправившего баг (null, если анонимно)" }
+          ],
+          "example": [
+            {
+              "id": 101,
+              "createdAt": "2026-04-25T14:30:00Z",
+              "title": "Кнопка 'Отправить' не реагирует на нажатие",
+              "tag": "ui",
+              "status": "new",
+              "platform": "Web",
+              "build": "0.1.5",
+              "hasLogs": true,
+              "userId": 42
+            },
+            {
+              "id": 102,
+              "createdAt": "2026-04-25T15:10:00Z",
+              "title": "Ошибка 500 при загрузке профиля",
+              "tag": "logic",
+              "status": "in_progress",
+              "platform": "Android",
+              "build": "0.1.4",
+              "hasLogs": false,
+              "userId": null
+            }
+          ]
+        }
+      ],
+      "errors": ["validation-error", "unauthorized"]
+    }
+  ]
+}

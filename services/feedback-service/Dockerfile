@@ -1,7 +1,7 @@
 # ===============================================
 # Stage 1: Base builder (кэширование зависимостей)
 # ===============================================
-FROM golang:1.26.0-alpine AS base-builder
+FROM golang:1.26.1-alpine AS base-builder
 
 # Установка зависимостей для компиляции
 RUN apk add --no-cache git gcc musl-dev

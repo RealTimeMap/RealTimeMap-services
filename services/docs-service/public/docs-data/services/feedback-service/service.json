@@ -1,0 +1,11 @@
+{
+  "id": "feedback-service",
+  "name": "feedback-service",
+  "description": "Сервис обратной связи rtm. Баги/предложения и исправления, все обрабатывается тут",
+  "fullDescription": "Расширяет функционал пользователя, позволяет им сообщать о багах приложения без сторонних сервисов и форм. Все инкапсулировано прямо в приложение",
+  "protocols": ["http"],
+  "availableEnvs": ["dev", "staging", "prod"],
+  "healthPath": "/feedback/health",
+  "team": "Backend",
+  "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/feedback-service"
+}
