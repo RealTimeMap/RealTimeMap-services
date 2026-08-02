@@ -303,8 +303,8 @@ docker-compose up -d
 # Kafka (при необходимости)
 docker-compose -f docker-compose.kafka.yml up -d
 
-# Запуск конкретного сервиса (на примере mark-service)
-docker-compose -f services/mark-service/docker-compose.yml up -d --build
+# Запуск конкретного сервиса (на примере mark_action-service)
+docker-compose -f services/mark_action-service/docker-compose.yml up -d --build
 ```
 
 Каждый сервис маршрутизируется Traefik по своему `PathPrefix` (см. `traefik/dynamic.yml` и label'ы в `docker-compose.yml` сервиса).
@@ -314,7 +314,7 @@ docker-compose -f services/mark-service/docker-compose.yml up -d --build
 Настройте `config/config.yaml` сервиса (хосты БД/Redis/Kafka, gRPC-адреса) и запустите:
 
 ```bash
-cd services/mark-service && go run ./cmd
+cd services/mark_action-service && go run ./cmd
 ```
 
 ---
@@ -362,7 +362,7 @@ service-name/
 
 ```bash
 # Тесты конкретного сервиса
-cd services/mark-service && go test ./...
+cd services/mark_action-service && go test ./...
 ```
 
 ### Документация API

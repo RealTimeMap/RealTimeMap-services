@@ -48,5 +48,15 @@
     "healthPath": "/gamification/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/gamification-service"
+  },
+  {
+    "id": "feedback-service",
+    "name": "feedback-service",
+    "description": "Сервис обратной связи rtm. Баги/предложения и исправления, все обрабатывается тут",
+    "protocols": ["http"],
+    "availableEnvs": ["dev", "staging", "prod"],
+    "healthPath": "/feedback/health",
+    "team": "Backend",
+    "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/feedback-service"
   }
 ]

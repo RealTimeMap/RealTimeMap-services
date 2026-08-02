@@ -6,7 +6,7 @@
       "path": "/api/v2/auth/register",
       "summary": "Регистрация нового пользователя",
       "description": "Создаёт новый аккаунт пользователя. Возвращает данные созданного пользователя.",
-      "tags": ["Auth"],
+      "tags": ["Аутентификация"],
       "requestBody": {
         "description": "Данные для регистрации",
         "contentType": "json",
@@ -55,7 +55,7 @@
       "path": "/api/v2/auth/login",
       "summary": "Вход в систему",
       "description": "Аутентификация пользователя по email и паролю. Возвращает access token.",
-      "tags": ["Auth"],
+      "tags": ["Аутентификация"],
       "requestBody": {
         "description": "Данные для входа",
         "contentType": "x-www-form-urlencoded",
@@ -90,7 +90,7 @@
       "path": "/api/v2/auth/token-validate",
       "summary": "Валидация токена",
       "description": "Проверяет валидность Bearer токена. Используется Traefik forwardAuth middleware. При успехе возвращает заголовки X-User-Id, X-User-Name, X-User-Ban, X-User-Admin. Служит для внутрисервисной связи.",
-      "tags": ["Auth"],
+      "tags": ["Аутентификация"],
       "auth": true,
       "parameters": [],
       "responses": [
@@ -104,6 +104,64 @@
         }
       ],
       "errors": ["unauthorized"]
+    },
+    {
+      "id": "forgot-password",
+      "method": "POST",
+      "path": "/api/v2/forgot-password",
+      "summary": "Запрос на восстановление пароля",
+      "description": "Инициирует процесс сброса пароля и отправляет письмо с токеном/ссылкой для восстановления на указанный email.",
+      "tags": ["Аутентификация"],
+      "auth": false,
+      "requestBody": {
+        "description": "Email пользователя для восстановления доступа",
+        "contentType": "json",
+        "schema": [
+          { "name": "email", "type": "string", "required": true, "description": "Email пользователя, привязаный к аккаунту" }
+        ],
+        "example": {
+          "email": "user@example.com"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 202,
+          "description": "Запрос принят. Если email существует в системе, на него будет отправлено письмо с инструкциями",
+          "schema": [],
+          "example": {}
+        }
+      ],
+      "errors": ["validation-error"]
+    },
+    {
+      "id": "reset-password",
+      "method": "POST",
+      "path": "/api/v2/reset-password",
+      "summary": "Установка нового пароля",
+      "description": "Устанавливает новый пароль пользователя с использованием токена сброса, полученного из письма.",
+      "tags": ["Аутентификация"],
+      "auth": false,
+      "requestBody": {
+        "description": "Токен подтверждения и новый пароль",
+        "contentType": "json",
+        "schema": [
+          { "name": "token", "type": "string", "required": true, "description": "Токен сброса пароля из письма" },
+          { "name": "password", "type": "string", "required": true, "description": "Новый пароль пользователя" }
+        ],
+        "example": {
+          "token": "d9b2d63d-ce7c-4860-840f-7f59782d8c36",
+          "password": "NewSecurePassword123!"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Пароль успешно изменён",
+          "schema": [],
+          "example": {}
+        }
+      ],
+      "errors": ["conflict", "validation-error"]
     }
   ]
 }

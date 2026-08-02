@@ -12,6 +12,7 @@ import (
 type Container struct {
 	BugCases *bugcases.Application
 	Logger   *zap.Logger
+	DB       *gorm.DB
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) (*Container, error) {
@@ -25,5 +26,6 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) (*Contain
 	return &Container{
 		BugCases: bugUseCases,
 		Logger:   logger,
+		DB:       db,
 	}, nil
 }

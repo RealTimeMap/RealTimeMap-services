@@ -16,3 +16,22 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS}
     depends_on:
       - loki
+    labels:
+      - "traefik.enable=true"
+
+      # grafana доступен по /grafana
+      - "traefik.http.routers.grafana.rule=Host(`realtimemap.ru`) && PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.service=grafana"
+      - "traefik.http.routers.grafana.tls=true"
+
+      # Service configuration
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+    networks:
+      - web
+
+
+networks:
+  web:
+    external: true
