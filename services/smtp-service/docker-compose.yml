@@ -1,0 +1,46 @@
+services:
+
+  smtp-service:
+    build:
+      context: ../..
+      dockerfile: services/smtp-service/Dockerfile
+    container_name: smtp-service
+    restart: always
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
+    labels:
+      - "traefik.enable=true"
+
+      # CORS preflight для /api/v2/emails/*
+      - "traefik.http.routers.smtp-options.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/emails(/.*)?$`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.smtp-options.entrypoints=websecure"
+      - "traefik.http.routers.smtp-options.priority=200"
+      - "traefik.http.routers.smtp-options.service=smtp"
+      - "traefik.http.routers.smtp-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.smtp-options.tls=true"
+
+      # Все ручки требуют администратора: отправка писем с домена проекта
+      # открытым эндпоинтом — это открытый релей.
+      - "traefik.http.routers.smtp-emails.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/emails(/.*)?$`)"
+      - "traefik.http.routers.smtp-emails.entrypoints=websecure"
+      - "traefik.http.routers.smtp-emails.priority=100"
+      - "traefik.http.routers.smtp-emails.service=smtp"
+      - "traefik.http.routers.smtp-emails.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.smtp-emails.tls=true"
+
+      - "traefik.http.services.smtp.loadbalancer.server.port=8080"
+    networks:
+      - web
+      - service-network
+      - kafka-network
+
+networks:
+  web:
+    external: true
+  service-network:
+    external: true
+  kafka-network:
+    external: true
