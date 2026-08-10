@@ -1,0 +1,248 @@
+{
+  "endpoints": [
+    {
+      "id": "send-email",
+      "method": "POST",
+      "path": "/api/v2/emails",
+      "summary": "Поставить письмо в очередь",
+      "description": "Ставит письмо в очередь на отправку. Ручной путь для админки — доменные письма (например приветственное) сервис ставит в очередь сам, по событиям из Kafka.\n\nОтвечает 202 Accepted, а не 200: письмо принято, но ещё НЕ отправлено — доставку выполнят фоновые воркеры. При этом ошибки шаблона и адреса возвращаются синхронно: тело письма рендерится прямо здесь, поэтому админка узнаёт о них сразу, а не из молчаливого failed через час.\n\nИдемпотентность: одинаковые письма дедуплицируются в окне 5 минут. Ключ берётся из idempotencyKey, а если он не передан — считается по содержимому (шаблон + адрес + data). Повторный запрос в пределах окна не создаёт второе письмо, а возвращает идентификатор уже существующего с флагом duplicate=true — это успех, а не ошибка. Окна фиксированные, поэтому фактическая защита длится от 0 до 5 минут.\n\nДоступ только для администраторов: открытая ручка отправки с домена проекта — это открытый релей.",
+      "tags": ["Письма", "Админка"],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "Параметры письма. Тема и тело берутся из шаблона — напрямую их задать нельзя.",
+        "contentType": "json",
+        "schema": [
+          { "name": "templateId", "type": "string", "required": true, "description": "Идентификатор шаблона письма. Доступные шаблоны зашиты в сервис; в MVP доступен только welcome", "enum": ["welcome"] },
+          { "name": "to", "type": "string", "required": true, "description": "Email получателя. Невалидный адрес отклоняется сразу (422) и в очередь не попадает" },
+          { "name": "data", "type": "object", "required": false, "description": "Данные для подстановки в шаблон. Набор полей задаётся шаблоном: для welcome обязательно username. Нехватка обязательных полей — ошибка рендера (422)" },
+          { "name": "priority", "type": "integer", "required": false, "description": "Приоритет в очереди: письма с большим значением воркеры забирают раньше. По умолчанию 0" },
+          { "name": "scheduledAt", "type": "string", "required": false, "description": "Отложить отправку до указанного момента (ISO 8601). Время в прошлом означает «отправить сейчас»" },
+          { "name": "idempotencyKey", "type": "string", "required": false, "description": "Явный ключ дедупликации — задаёт смысл «то же самое письмо». Без него ключ считается по содержимому письма" },
+          { "name": "templateVersion", "type": "integer", "required": false, "description": "Версия шаблона. Зарезервировано под фазу 2, когда шаблоны переедут в БД; в MVP всегда 1" }
+        ],
+        "example": {
+          "templateId": "welcome",
+          "to": "user@example.com",
+          "data": { "username": "john_doe" },
+          "idempotencyKey": "welcome:42"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 202,
+          "description": "Письмо принято в очередь. Отправка произойдёт асинхронно — состояние смотреть через GET /api/v2/emails/{id}",
+          "schema": [
+            { "name": "emailId", "type": "string", "required": true, "description": "UUID письма — по нему запрашивается состояние и история" },
+            { "name": "duplicate", "type": "boolean", "required": true, "description": "true — такое письмо уже стояло в очереди и повторно не создавалось; emailId указывает на существующее. Это успешный результат" }
+          ],
+          "example": {
+            "emailId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+            "duplicate": false
+          }
+        }
+      ],
+      "errors": ["unauthorized", "forbidden", "validation-error", "internal-error"]
+    },
+    {
+      "id": "list-emails",
+      "method": "GET",
+      "path": "/api/v2/emails",
+      "summary": "Список писем с фильтрами",
+      "description": "Отдаёт письма постранично, с фильтрами по статусу, получателю и датам. Основной инструмент разбора вопроса «почему пользователю не пришло письмо».\n\nТело письма (HTML) наружу не отдаётся ни здесь, ни в карточке письма: в нём персональные данные, а для диагностики достаточно статуса и причины отказа.\n\nОтвет НЕ обёрнут в стандартный wrapper пагинации: возвращаются items и total, номер страницы и размер клиент передаёт сам.",
+      "tags": ["Письма", "Админка"],
+      "auth": true,
+      "parameters": [
+        { "name": "status", "type": "string", "required": false, "description": "Фильтр по статусу письма: queued (ждёт отправки), processing (взято воркером), sent (отправлено), failed (не удалось), cancelled (отменено)", "location": "query", "example": "failed" },
+        { "name": "to", "type": "string", "required": false, "description": "Фильтр по email получателя", "location": "query", "example": "user@example.com" },
+        { "name": "from", "type": "string", "required": false, "description": "Начало периода создания письма, формат YYYY-MM-DD", "location": "query", "example": "2026-08-01" },
+        { "name": "till", "type": "string", "required": false, "description": "Конец периода создания письма, формат YYYY-MM-DD", "location": "query", "example": "2026-08-10" },
+        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы, начиная с 1. По умолчанию 1", "location": "query", "example": "1" },
+        { "name": "pageSize", "type": "integer", "required": false, "description": "Размер страницы. По умолчанию 10, максимум 100", "location": "query", "example": "20" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Страница писем",
+          "schema": [
+            {
+              "name": "items",
+              "type": "array",
+              "required": true,
+              "description": "Письма текущей страницы",
+              "children": [
+                { "name": "id", "type": "string", "required": true, "description": "UUID письма" },
+                { "name": "status", "type": "string", "required": true, "description": "Текущий статус письма", "enum": ["queued", "processing", "sent", "failed", "cancelled"] },
+                { "name": "to", "type": "string", "required": true, "description": "Email получателя" },
+                { "name": "subject", "type": "string", "required": true, "description": "Тема письма, отрендеренная из шаблона при постановке в очередь" },
+                { "name": "templateId", "type": "string", "required": true, "description": "Идентификатор использованного шаблона" },
+                { "name": "attempt", "type": "integer", "required": true, "description": "Сколько попыток отправки уже сделано" },
+                { "name": "max_attempt", "type": "integer", "required": true, "description": "Предельное число попыток. По их исчерпании письмо переходит в failed" },
+                { "name": "priority", "type": "integer", "required": true, "description": "Приоритет в очереди" },
+                { "name": "lastError", "type": "string", "required": false, "description": "Причина последней неудачной попытки. Отсутствует, если ошибок не было" },
+                { "name": "traceId", "type": "string", "required": false, "description": "Trace ID запроса или Kafka-сообщения, породившего письмо — для сквозного поиска по логам" },
+                { "name": "scheduledAt", "type": "string", "required": true, "description": "Момент, начиная с которого письмо можно отправлять (ISO 8601). Двигается вперёд при retry и при откладывании по rate-limit" },
+                { "name": "sentAt", "type": "string", "required": false, "description": "Момент успешной сдачи письма провайдеру (ISO 8601). Отсутствует, пока письмо не отправлено" },
+                { "name": "createdAt", "type": "string", "required": true, "description": "Момент постановки в очередь (ISO 8601)" }
+              ]
+            },
+            { "name": "total", "type": "integer", "required": true, "description": "Общее количество писем, подходящих под фильтр" }
+          ],
+          "example": {
+            "items": [
+              {
+                "id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+                "status": "sent",
+                "to": "user@example.com",
+                "subject": "Добро пожаловать в RealTimeMap, john_doe!",
+                "templateId": "welcome",
+                "attempt": 1,
+                "max_attempt": 5,
+                "priority": 0,
+                "traceId": "9b2e5f1a3c4d4e6f",
+                "scheduledAt": "2026-08-10T10:00:00Z",
+                "sentAt": "2026-08-10T10:00:04Z",
+                "createdAt": "2026-08-10T10:00:00Z"
+              }
+            ],
+            "total": 1
+          }
+        }
+      ],
+      "errors": ["unauthorized", "forbidden", "validation-error", "internal-error"]
+    },
+    {
+      "id": "get-email",
+      "method": "GET",
+      "path": "/api/v2/emails/{id}",
+      "summary": "Состояние письма",
+      "description": "Отдаёт текущее состояние письма — ответ на вопрос «дошло ли». Если письмо ещё не отправлено, статус и scheduledAt показывают, когда будет следующая попытка; если не ушло совсем — lastError объясняет причину.\n\nТело письма не возвращается: в нём персональные данные.",
+      "tags": ["Письма", "Админка"],
+      "auth": true,
+      "parameters": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID письма, возвращённый при постановке в очередь", "location": "path", "example": "3f2504e0-4f89-11d3-9a0c-0305e82c3301" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Состояние письма",
+          "schema": [
+            { "name": "id", "type": "string", "required": true, "description": "UUID письма" },
+            { "name": "status", "type": "string", "required": true, "description": "Текущий статус письма", "enum": ["queued", "processing", "sent", "failed", "cancelled"] },
+            { "name": "to", "type": "string", "required": true, "description": "Email получателя" },
+            { "name": "subject", "type": "string", "required": true, "description": "Тема письма" },
+            { "name": "templateId", "type": "string", "required": true, "description": "Идентификатор использованного шаблона" },
+            { "name": "attempt", "type": "integer", "required": true, "description": "Сколько попыток отправки уже сделано" },
+            { "name": "max_attempt", "type": "integer", "required": true, "description": "Предельное число попыток" },
+            { "name": "priority", "type": "integer", "required": true, "description": "Приоритет в очереди" },
+            { "name": "lastError", "type": "string", "required": false, "description": "Причина последней неудачной попытки" },
+            { "name": "traceId", "type": "string", "required": false, "description": "Trace ID источника письма" },
+            { "name": "scheduledAt", "type": "string", "required": true, "description": "Момент, начиная с которого письмо можно отправлять (ISO 8601)" },
+            { "name": "sentAt", "type": "string", "required": false, "description": "Момент успешной сдачи провайдеру (ISO 8601)" },
+            { "name": "createdAt", "type": "string", "required": true, "description": "Момент постановки в очередь (ISO 8601)" }
+          ],
+          "example": {
+            "id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+            "status": "failed",
+            "to": "user@example.com",
+            "subject": "Добро пожаловать в RealTimeMap, john_doe!",
+            "templateId": "welcome",
+            "attempt": 5,
+            "max_attempt": 5,
+            "priority": 0,
+            "lastError": "550 5.1.1 recipient rejected",
+            "traceId": "9b2e5f1a3c4d4e6f",
+            "scheduledAt": "2026-08-10T16:00:00Z",
+            "createdAt": "2026-08-10T10:00:00Z"
+          }
+        }
+      ],
+      "errors": ["unauthorized", "forbidden", "not-found", "internal-error"]
+    },
+    {
+      "id": "get-email-events",
+      "method": "GET",
+      "path": "/api/v2/emails/{id}/events",
+      "summary": "История переходов письма",
+      "description": "Отдаёт полную историю письма: сколько было попыток, какой воркер их делал и почему письмо не ушло. История append-only — записи не обновляются и не удаляются.\n\nТипичный сценарий разбора: created → queued → processing → failed → retried → processing → sent. По details видно код ошибки SMTP и задержку перед следующей попыткой.\n\nСобытия bounced и complained приходят асинхронно уже после успешной сдачи письма провайдеру. В MVP они не проставляются: SMTP Yandex не отдаёт вебхуков — появятся при переезде на SES/SendGrid/Postmark.\n\nТело письма и данные шаблона в историю не пишутся: там персональные данные.",
+      "tags": ["Письма", "Админка"],
+      "auth": true,
+      "parameters": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID письма", "location": "path", "example": "3f2504e0-4f89-11d3-9a0c-0305e82c3301" }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "История переходов письма, от старых записей к новым",
+          "schema": [
+            {
+              "name": "items",
+              "type": "array",
+              "required": true,
+              "description": "Записи истории",
+              "children": [
+                { "name": "event_type", "type": "string", "required": true, "description": "Тип записи: created (создано), queued (в очереди), processing (взято воркером), sent (отправлено), failed (неудача), retried (запланирован повтор), cancelled (отменено), bounced/complained (отказ или жалоба от провайдера — в MVP не проставляются)", "enum": ["created", "queued", "processing", "sent", "failed", "retried", "cancelled", "bounced", "complained"] },
+                { "name": "occurred_time", "type": "string", "required": true, "description": "Момент события (ISO 8601)" },
+                { "name": "attempt", "type": "integer", "required": true, "description": "Номер попытки, к которой относится запись" },
+                { "name": "workerId", "type": "string", "required": false, "description": "Идентификатор воркера, обработавшего попытку. Отсутствует у событий, не связанных с отправкой (created)" },
+                { "name": "details", "type": "object", "required": false, "description": "Произвольный контекст события: код ошибки SMTP, задержка перед повтором. Персональных данных не содержит" }
+              ]
+            }
+          ],
+          "example": {
+            "items": [
+              { "event_type": "created", "occurred_time": "2026-08-10T10:00:00Z", "attempt": 0 },
+              { "event_type": "processing", "occurred_time": "2026-08-10T10:00:02Z", "attempt": 1, "workerId": "worker-1" },
+              { "event_type": "failed", "occurred_time": "2026-08-10T10:00:04Z", "attempt": 1, "workerId": "worker-1", "details": { "error": "dial tcp: i/o timeout", "class": "transient" } },
+              { "event_type": "retried", "occurred_time": "2026-08-10T10:00:04Z", "attempt": 1, "workerId": "worker-1", "details": { "backoff": "1m" } },
+              { "event_type": "sent", "occurred_time": "2026-08-10T10:01:06Z", "attempt": 2, "workerId": "worker-2" }
+            ]
+          }
+        }
+      ],
+      "errors": ["unauthorized", "forbidden", "not-found", "internal-error"]
+    },
+    {
+      "id": "smtp-health",
+      "method": "GET",
+      "path": "/smtp/health",
+      "summary": "Проверка состояния сервиса",
+      "description": "Проверяет доступность базы и состояние очереди. Авторизация не требуется.\n\nОтдельно от доступности БД проверяется, что очередь разгребается: возраст старейшего письма в статусе queued. Если он превышает 15 минут, сервис отвечает 503 со статусом degraded — воркеры встали или упёрлись в лимит отправки.\n\nЭта проверка существенна, потому что у отправки почты нет обратной связи в интерфейсе: пользователь просто не получает письмо и молчит. Возраст очереди — единственный симптом, видимый до того, как начнутся жалобы.\n\nSMTP-сервер намеренно не опрашивается: провайдеры считают регулярные подключения без отправки злоупотреблением.",
+      "tags": ["Служебные"],
+      "auth": false,
+      "parameters": [],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Сервис здоров: база доступна, очередь разгребается",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["healthy"] },
+            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" },
+            { "name": "oldest_queued_sec", "type": "integer", "required": true, "description": "Возраст старейшего письма в очереди, в секундах. 0 — очередь пуста" }
+          ],
+          "example": {
+            "status": "healthy",
+            "service": "smtp-service",
+            "oldest_queued_sec": 12
+          }
+        },
+        {
+          "statusCode": 503,
+          "description": "Сервис нездоров: база недоступна (status=unhealthy) либо очередь не разгребается дольше 15 минут (status=degraded)",
+          "schema": [
+            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["unhealthy", "degraded"] },
+            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" },
+            { "name": "reason", "type": "string", "required": true, "description": "Причина: database unavailable, queue check failed или queue is not draining" },
+            { "name": "oldest_queued_sec", "type": "integer", "required": false, "description": "Возраст старейшего письма в очереди, в секундах. Присутствует при status=degraded" }
+          ],
+          "example": {
+            "status": "degraded",
+            "service": "smtp-service",
+            "reason": "queue is not draining",
+            "oldest_queued_sec": 1830
+          }
+        }
+      ]
+    }
+  ]
+}

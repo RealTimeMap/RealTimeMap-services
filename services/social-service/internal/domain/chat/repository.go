@@ -25,6 +25,10 @@ type ParticipantRepository interface {
 	// ChatIDsByUser возвращает id всех активных чатов пользователя (не вышедших).
 	// Используется socket-слоем для eager-join в комнаты chat:<id> при подключении.
 	ChatIDsByUser(ctx context.Context, userID uint) ([]uint, error)
+	// PeerIDsByUser возвращает id пользователей, с которыми userID состоит хотя бы
+	// в одном активном чате. Используется socket-слоем для presence-снапшота:
+	// подключившемуся надо сразу показать, кто из его собеседников уже онлайн.
+	PeerIDsByUser(ctx context.Context, userID uint) ([]uint, error)
 	//UpdateRole(ctx context.Context)
 	UpdateLastRead(ctx context.Context, chatID, userID, lastReadID uint) error
 	Remove(ctx context.Context, chatID, userID uint) error

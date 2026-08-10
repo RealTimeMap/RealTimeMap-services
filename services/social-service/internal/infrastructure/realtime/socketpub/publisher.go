@@ -13,15 +13,25 @@ import (
 	"go.uber.org/zap"
 )
 
-type Publisher struct {
-	ns     socket.Namespace
-	logger *zap.Logger
+// PresenceAnnouncer — узкий порт socket-слоя, позволяющий досылать онлайн-статусы
+// в только что созданный чат. Реализуется chatsocket.SocketServer.
+type PresenceAnnouncer interface {
+	AnnounceInChat(ctx context.Context, chatID uint, userIDs []uint)
 }
 
-func NewPublisher(ns socket.Namespace, logger *zap.Logger) *Publisher {
+type Publisher struct {
+	ns socket.Namespace
+	// presence опционален: без него чат работает как раньше, просто участники
+	// нового чата узнают статусы друг друга только после реконнекта.
+	presence PresenceAnnouncer
+	logger   *zap.Logger
+}
+
+func NewPublisher(ns socket.Namespace, presence PresenceAnnouncer, logger *zap.Logger) *Publisher {
 	return &Publisher{
-		ns:     ns,
-		logger: logger,
+		ns:       ns,
+		presence: presence,
+		logger:   logger,
 	}
 }
 
@@ -64,10 +74,18 @@ func (p *Publisher) Publish(_ context.Context, e chatuc.ChatEvent) error {
 // JoinUsers заводит сокеты каждого пользователя в комнату чата chat:<id>. Целим
 // по комнате user:<id> — так покрываются все устройства/вкладки пользователя на
 // всех инстансах (Redis adapter выполняет SocketsJoin удалённо). Best-effort.
-func (p *Publisher) JoinUsers(_ context.Context, chatID uint, userIDs []uint) error {
+//
+// Сразу после джойна досылаем в новую комнату онлайн-статусы участников:
+// presence.online рассылается по чатам, известным на момент подключения, поэтому
+// без этого собеседники в свежесозданном чате отображались бы офлайн до реконнекта.
+func (p *Publisher) JoinUsers(ctx context.Context, chatID uint, userIDs []uint) error {
 	room := chatsocket.ChatRoom(chatID)
 	for _, uid := range userIDs {
 		p.ns.In(chatsocket.UserRoom(uid)).SocketsJoin(room)
+	}
+
+	if p.presence != nil {
+		p.presence.AnnounceInChat(ctx, chatID, userIDs)
 	}
 	return nil
 }

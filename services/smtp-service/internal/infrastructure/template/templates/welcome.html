@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>RealTime Map</title>
+    <style>
+        /* Reset styles for email clients */
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            max-width: 100%;
+        }
+
+        /* Base styles using project color scheme */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #343a40; /* --text-primary */
+            background-color: #f8f9fa; /* --bg-page */
+        }
+
+        .email-wrapper {
+            width: 100%;
+            background-color: #f8f9fa; /* --bg-page */
+            padding: 20px 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff; /* --bg-card */
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(29, 33, 41, 0.07); /* --shadow-color */
+        }
+
+        /* Header */
+        .email-header {
+            background: linear-gradient(135deg, #7aafeb 0%, #4a8ad4 100%); /* --accent-primary to --accent-primary-deep */
+            padding: 30px;
+            text-align: center;
+        }
+
+        .logo {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Content */
+        .email-content {
+            padding: 40px 30px;
+        }
+
+        h1 {
+            color: #343a40; /* --text-primary */
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0 0 20px 0;
+            line-height: 1.3;
+        }
+
+        h2 {
+            color: #343a40; /* --text-primary */
+            font-size: 20px;
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+        }
+
+        p {
+            color: #343a40; /* --text-primary */
+            margin: 0 0 15px 0;
+            line-height: 1.6;
+        }
+
+        .text-secondary {
+            color: #6c757d; /* --text-secondary */
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #7aafeb; /* --accent-primary */
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: #4a8ad4; /* --accent-primary-deep */
+        }
+
+        .btn-success {
+            background-color: #82f00d; /* --accent-success */
+            color: #343a40;
+        }
+
+        .btn-danger {
+            background-color: #ff3b30; /* --accent-danger */
+            color: #ffffff;
+        }
+
+        .btn-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        /* Info boxes */
+        .info-box {
+            background-color: #f8f9fa; /* --bg-page */
+            border-left: 4px solid #7aafeb; /* --accent-primary */
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .info-box-success {
+            border-left-color: #82f00d; /* --accent-success */
+        }
+
+        .info-box-danger {
+            border-left-color: #ff3b30; /* --accent-danger */
+        }
+
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #343a40;
+        }
+
+        .info-box p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* List styles */
+        .feature-list {
+            margin: 20px 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 10px 0 10px 30px;
+            position: relative;
+            color: #343a40;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #7aafeb; /* --accent-primary */
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background-color: #e9ecef; /* --border-color */
+            margin: 30px 0;
+        }
+
+        /* Footer */
+        .email-footer {
+            background-color: #f8f9fa; /* --bg-page */
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e9ecef; /* --border-color */
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: #6c757d; /* --text-secondary */
+            margin: 5px 0;
+        }
+
+        .footer-links {
+            margin: 15px 0;
+        }
+
+        .footer-links a {
+            color: #7aafeb; /* --accent-primary */
+            text-decoration: none;
+            margin: 0 10px;
+            font-size: 13px;
+        }
+
+        .footer-links a:hover {
+            color: #4a8ad4; /* --accent-primary-deep */
+            text-decoration: underline;
+        }
+
+        /* Social links */
+        .social-links {
+            margin: 20px 0;
+        }
+
+        .social-links a {
+            display: inline-block;
+            margin: 0 8px;
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        /* Card */
+        .card {
+            background-color: #ffffff; /* --bg-card */
+            border: 1px solid #e9ecef; /* --border-color */
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        /* Code/token display */
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-align: center;
+            color: #343a40;
+            margin: 20px 0;
+        }
+
+        @media screen and (max-width: 600px) {
+            .email-container {
+                margin: 0 10px;
+            }
+
+            .email-content {
+                padding: 30px 20px;
+            }
+
+            .email-header,
+            .email-footer {
+                padding: 25px 20px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .btn {
+                display: block;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<table class="email-wrapper" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+        <td align="center">
+            <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td class="email-header">
+                        <div class="logo">RealTime Map</div>
+                        <div class="logo-subtitle">Гео-Социальная платформа</div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="email-content">
+                        <h1>Добро пожаловать, {{ .username }}!</h1>
+
+                        <p>Мы рады приветствовать вас на платформе <strong>RealTime Map</strong> — современном геосоциальном сервисе для
+                            создания временных маркеров на карте и общения в реальном времени.</p>
+
+                        <div class="info-box info-box-success">
+                            <h3>Ваш аккаунт успешно создан!</h3>
+                            <p>Теперь вы можете использовать все возможности платформы.</p>
+                        </div>
+
+                        <h2>Что вы можете делать:</h2>
+
+                        <ul class="feature-list">
+                            <li>Создавать временные географические маркеры на карте</li>
+                            <li>Получать уведомления о новых маркерах в реальном времени</li>
+                            <li>Комментировать маркеры и общаться с другими пользователями</li>
+                            <li>Использовать систему чатов для личных сообщений</li>
+                            <li>Зарабатывать очки опыта и повышать уровень</li>
+                            <li>Подписываться на премиум-планы для расширенных возможностей</li>
+                        </ul>
+
+                        <div class="btn-container">
+                            <a href="https://real-time-map-frontend.vercel.app/" class="btn btn-primary">Открыть карту</a>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <p class="text-secondary">
+                            Если у вас возникнут вопросы, наша команда поддержки всегда готова помочь.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="email-footer">
+                        <p class="footer-text">&copy; 2026 RealTime Map. Все права защищены.</p>
+                        <div class="footer-links">
+                            <a href="/docs">Документация</a>
+                            <a href="/support">Поддержка</a>
+                            <a href="/privacy">Конфиденциальность</a>
+                        </div>
+                        <p class="footer-text text-secondary">
+                            Вы получили это письмо, так как зарегистрированы на платформе RealTime Map.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

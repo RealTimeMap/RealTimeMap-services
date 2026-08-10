@@ -9,10 +9,14 @@ import (
 )
 
 // ChatLister — узкий порт, дающий namespace список чатов пользователя для
-// eager-join в комнаты chat:<id> при подключении. Реализуется поверх репозитория
-// участников; namespace не знает про БД/GORM.
+// eager-join в комнаты chat:<id> при подключении и список собеседников для
+// presence-снапшота. Реализуется поверх репозитория участников; namespace не
+// знает про БД/GORM.
 type ChatLister interface {
 	ChatIDsByUser(ctx context.Context, userID uint) ([]uint, error)
+	// PeerIDsByUser возвращает id пользователей, с которыми userID состоит хотя
+	// бы в одном активном чате — кандидатов на presence.snapshot.
+	PeerIDsByUser(ctx context.Context, userID uint) ([]uint, error)
 }
 
 // Заголовки идентичности, которые Traefik forwardAuth вклеивает в handshake-запрос
@@ -99,13 +103,34 @@ func InitChatNamespace(s *SocketServer) {
 		// участие в чате. Best-effort — если список не загрузился, соединение
 		// остаётся, но событий чата сокет не получит до реконнекта; сообщения
 		// всё равно доберутся через историю (pull-gap).
-		s.joinUserChats(sock, data.userID)
+		chatIDs := s.joinUserChats(sock, data.userID)
+
+		// Приём typing.start/typing.stop от клиента. Вешаем до presence, чтобы
+		// сокет был готов принимать события сразу после подключения.
+		typing := s.bindTypingHandlers(sock, data)
+
+		// Регистрируем присутствие и рассылаем presence.online, если это первое
+		// соединение пользователя. chatIDs передаём готовым — второй раз ходить
+		// в БД за тем же списком незачем.
+		s.handlePresenceConnect(sock, data.userID, chatIDs)
+
+		// Держим presence-ключ живым, пока держится соединение.
+		refreshDone := make(chan struct{})
+		s.startPresenceRefresh(data.userID, refreshDone)
 
 		s.logger.Info("socket connected",
 			zap.Uint("user_id", data.userID),
 			zap.String("socket_id", string(sock.Id())))
 
 		sock.On("disconnect", func(reason ...any) {
+			close(refreshDone)
+
+			// Гасим индикаторы набора, оставшиеся от этого соединения: у
+			// собеседников не должно висеть «Печатает...» от того, кто отвалился.
+			s.stopTypingOnDisconnect(sock, data, typing)
+
+			s.handlePresenceDisconnect(sock, data.userID, chatIDs)
+
 			s.logger.Info("socket disconnected",
 				zap.Uint("user_id", data.userID),
 				zap.String("socket_id", string(sock.Id())))
@@ -113,20 +138,33 @@ func InitChatNamespace(s *SocketServer) {
 	})
 }
 
-// joinUserChats джойнит сокет во все комнаты chat:<id> пользователя. Вызывается
-// при подключении. Ошибка загрузки списка не рвёт соединение — сокет остаётся в
-// user:<id>, пропущенное добирается через историю (pull-gap).
-func (s *SocketServer) joinUserChats(sock *socket.Socket, userID uint) {
+// joinUserChats джойнит сокет во все комнаты chat:<id> пользователя и возвращает
+// список этих чатов — он же используется как адресация presence-событий.
+// Вызывается при подключении. Ошибка загрузки списка не рвёт соединение — сокет
+// остаётся в user:<id>, пропущенное добирается через историю (pull-gap).
+func (s *SocketServer) joinUserChats(sock *socket.Socket, userID uint) []uint {
 	if s.chatLister == nil {
-		return
+		return nil
 	}
 	chatIDs, err := s.chatLister.ChatIDsByUser(context.Background(), userID)
 	if err != nil {
 		s.logger.Warn("failed to load user chats for eager-join",
 			zap.Error(err), zap.Uint("user_id", userID))
-		return
+		return nil
 	}
 	for _, id := range chatIDs {
 		sock.Join(ChatRoom(id))
+	}
+	return chatIDs
+}
+
+// stopTypingOnDisconnect снимает таймеры набора отвалившегося сокета и гасит
+// индикаторы в тех чатах, где они успели зажечься.
+//
+// Рассылаем до того, как обработчик disconnect отработает до конца: пока сокет
+// ещё числится в комнатах, sock.To(room) доставит событие остальным участникам.
+func (s *SocketServer) stopTypingOnDisconnect(sock *socket.Socket, data socketData, tracker *typingTracker) {
+	for _, chatID := range tracker.stopAll() {
+		s.emitTyping(sock, data, chatID, false)
 	}
 }

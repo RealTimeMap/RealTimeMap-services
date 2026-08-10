@@ -1,9 +1,10 @@
 package http
 
 import (
+	nethttp "net/http"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	nethttp "net/http"
 )
 
 const (

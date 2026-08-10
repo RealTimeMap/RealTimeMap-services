@@ -17,6 +17,7 @@ import (
 	progressadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/progress"
 	markstatadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/persistence/postgres"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/realtime/presence"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/realtime/socketpub"
 	profilegrpc "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/grpc/profile"
 	chatsocket "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/socket"
@@ -122,13 +123,16 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	// Socket.IO для realtime-событий чата. Redis adapter внутри обеспечивает
 	// доставку между инстансами. Publisher — реализация порта chat.EventPublisher.
+	// Presence в том же Redis: онлайн-статус общий для всех инстансов, иначе
+	// пользователь, подключённый к соседнему инстансу, числился бы офлайн.
 	chatSocket := chatsocket.New(chatsocket.Deps{
 		Redis:          redisCli,
 		AllowedOrigins: cfg.Http.AllowOrigins,
 		ChatLister:     chatParticipantRepoV2,
+		Presence:       presence.NewStore(redisCli),
 		Logger:         logger,
 	})
-	chatEventPublisher := socketpub.NewPublisher(chatSocket.Namespace(), logger)
+	chatEventPublisher := socketpub.NewPublisher(chatSocket.Namespace(), chatSocket, logger)
 
 	chatCases := &chat.Application{
 		Direct:      chat.NewDirectChatHandler(chatServiceV2, profileService, chatEventPublisher, logger),
