@@ -80,6 +80,25 @@ func (r *ChatParticipantRepository) ChatIDsByUser(ctx context.Context, userID ui
 	return ids, nil
 }
 
+// PeerIDsByUser возвращает id пользователей, с которыми userID состоит хотя бы в
+// одном активном чате (сам userID исключён). Один запрос с самосоединением по
+// chat_id вместо «список чатов → участники каждого»: presence-снапшот строится на
+// подключении сокета, лишние round-trip-ы здесь нежелательны.
+func (r *ChatParticipantRepository) PeerIDsByUser(ctx context.Context, userID uint) ([]uint, error) {
+	var ids []uint
+	err := r.dbCtx(ctx).
+		Model(&chat.ChatParticipant{}).
+		Distinct("peers.user_id").
+		Joins("JOIN chat_participants AS peers ON peers.chat_id = chat_participants.chat_id AND peers.left_at IS NULL").
+		Where("chat_participants.user_id = ? AND chat_participants.left_at IS NULL", userID).
+		Where("peers.user_id <> ?", userID).
+		Pluck("peers.user_id", &ids).Error
+	if err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 // UpdateLastRead двигает курсор прочитанного вперёд. Курсор монотонный:
 // значение не откатывается назад, если пришёл меньший last_read_id (out-of-order запросы).
 func (r *ChatParticipantRepository) UpdateLastRead(ctx context.Context, chatID, userID, lastReadID uint) error {

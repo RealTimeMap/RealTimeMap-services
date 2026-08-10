@@ -28,6 +28,7 @@ type SocketServer struct {
 	io         *socket.Server
 	ns         socket.Namespace
 	chatLister ChatLister
+	presence   PresenceStore
 	logger     *zap.Logger
 }
 
@@ -43,7 +44,10 @@ type Deps struct {
 	// ChatLister даёт namespace список чатов пользователя для eager-join в
 	// комнаты chat:<id> при подключении.
 	ChatLister ChatLister
-	Logger     *zap.Logger
+	// Presence — общее для всех инстансов хранилище онлайн-статусов. Если nil,
+	// presence-события не рассылаются, остальной чат работает как раньше.
+	Presence PresenceStore
+	Logger   *zap.Logger
 }
 
 // New создаёт Socket.IO-сервер с Redis adapter и инициализирует namespace /chats.
@@ -76,6 +80,7 @@ func New(deps Deps) *SocketServer {
 		io:         io,
 		ns:         io.Of(namespaceName, nil),
 		chatLister: deps.ChatLister,
+		presence:   deps.Presence,
 		logger:     deps.Logger,
 	}
 
