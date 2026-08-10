@@ -22,8 +22,8 @@
   {
     "id": "social-service",
     "name": "social-service",
-    "description": "Социальный сервис: профили пользователей, блокировки, поиск.",
-    "protocols": ["http", "kafka"],
+    "description": "Социальный сервис: профили пользователей, блокировки, друзья, чаты с real-time доставкой.",
+    "protocols": ["http", "socketio", "kafka"],
     "availableEnvs": ["dev", "staging", "prod"],
     "healthPath": "/social/health",
     "team": "Backend",
@@ -58,5 +58,15 @@
     "healthPath": "/feedback/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/feedback-service"
+  },
+  {
+    "id": "smtp-service",
+    "name": "smtp-service",
+    "description": "Сервис отправки email: очередь писем с ретраями, шаблоны, история доставки.",
+    "protocols": ["http", "kafka"],
+    "availableEnvs": ["dev", "staging", "prod"],
+    "healthPath": "/smtp/health",
+    "team": "Backend",
+    "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/smtp-service"
   }
 ]

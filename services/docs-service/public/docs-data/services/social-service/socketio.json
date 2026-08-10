@@ -3,7 +3,7 @@
   "namespaces": [
     {
       "path": "/chats",
-      "description": "Real-time доставка событий чата. Клиент держит одно соединение на всю сессию; сервер джойнит его в персональную комнату user:<id> и в комнату chat:<id> каждого чата пользователя (членство в комнате = участие в чате). Одно соединение получает события всех чатов; маршрутизацию клиент делает по полю chatId.",
+      "description": "Real-time доставка событий чата, онлайн-статусов участников и индикатора набора текста. Клиент держит одно соединение на всю сессию; сервер джойнит его в персональную комнату user:<id> и в комнату chat:<id> каждого чата пользователя (членство в комнате = участие в чате). Подписываться на чаты вручную не нужно. Одно соединение получает события всех чатов; маршрутизацию клиент делает по полю chatId.\n\nОнлайн-статус (presence) — производная от наличия socket-соединения, в БД он не хранится и HTTP-эндпоинта «кто онлайн» нет. Единственный источник — событие presence.snapshot при подключении плюс последующие presence.online/presence.offline. Состояние общее для всех инстансов сервиса (хранится в Redis), поэтому собеседник, подключённый к другому инстансу, отображается корректно.",
       "auth": true
     }
   ],
@@ -75,6 +75,140 @@
         }
       },
       "codeExample": "// Собеседник продвинул курсор прочтения — рисуем галочки и/или обнуляем unread.\nsocket.on('chat.read', (e) => {\n  // e = { chatId, userId, lastReadMessageId }\n  if (e.userId === myUserId) {\n    // эхо с другого моего устройства — синхронизируем локальный unread\n    resetUnread(e.chatId, e.lastReadMessageId)\n  } else {\n    // собеседник прочитал мои сообщения до lastReadMessageId\n    markMessagesRead(e.chatId, e.userId, e.lastReadMessageId)\n  }\n})\n\n// Отправка отметки о прочтении — троттлить (≤ 1 раз / 1–2с), только при новых\n// увиденных сообщениях или возврате фокуса на чат.\nasync function markChatRead(chatId) {\n  await fetch(`/api/v2/chats/${chatId}/read`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })\n}"
+    },
+    {
+      "id": "chats-presence-snapshot",
+      "name": "presence.snapshot",
+      "direction": "server-to-client",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Снимок онлайн-собеседников при подключении",
+      "description": "Приходит ОДИН РАЗ сразу после подключения и только этому сокету. Содержит id пользователей, с которыми у вас есть хотя бы один общий активный чат и которые прямо сейчас онлайн. Всех, кого нет в списке, клиент считает офлайн.\n\nСобытие обязательно к обработке. presence.online/presence.offline описывают только БУДУЩИЕ переходы состояния, поэтому без снапшота после перезагрузки страницы или реконнекта клиент считал бы офлайн всех, кто вошёл в сеть раньше него, — до тех пор пока те не переподключатся.\n\nЕсли онлайн-собеседников нет, приходит {\"online\": []}, а не null — отдельный случай для пустого списка обрабатывать не нужно. Снапшот best-effort: при недоступности Redis событие может не прийти, соединение при этом остаётся рабочим и чат функционирует без индикаторов онлайна.",
+      "tags": ["Чаты", "Presence", "Real-time"],
+      "payload": {
+        "description": "Список id собеседников, находящихся в сети на момент подключения",
+        "schema": [
+          { "name": "online", "type": "array", "required": true, "description": "ID пользователей, которые сейчас онлайн. Пустой массив, если онлайн никого нет. В список попадают только те, с кем есть общий активный чат" }
+        ],
+        "example": {
+          "online": [2, 5, 9]
+        }
+      },
+      "codeExample": "// Локальное состояние присутствия, собираемое из событий сервера.\nconst onlineUsers = new Set()\n\n// Снимок — приходит один раз сразу после connect. Полностью заменяет состояние.\nsocket.on('presence.snapshot', (e) => {\n  // e = { online: [2, 5, 9] }\n  onlineUsers.clear()\n  e.online.forEach((id) => onlineUsers.add(id))\n  renderOnlineBadges(onlineUsers)\n})\n\n// На разрыве соединения накопленное состояние недостоверно — сбрасываем.\n// После реконнекта придёт свежий presence.snapshot.\nsocket.on('disconnect', () => {\n  onlineUsers.clear()\n  renderOnlineBadges(onlineUsers)\n})"
+    },
+    {
+      "id": "chats-presence-online",
+      "name": "presence.online",
+      "direction": "server-to-client",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Собеседник появился в сети",
+      "description": "Сервер пушит это событие участникам всех чатов пользователя, когда тот появился в сети. Собственный статус клиенту НЕ приходит — своё состояние он и так знает.\n\nСобытие шлётся на ПЕРЕХОД состояния, а не на каждое соединение: у пользователя может быть открыто несколько вкладок и устройств, и presence.online уходит только при появлении ПЕРВОГО живого соединения. Открытая вторая вкладка события не породит.\n\nОтдельный случай: при создании нового чата (direct или group) сервер досылает в его комнату актуальные онлайн-статусы участников. Без этого собеседники в только что созданном чате отображались бы офлайн до ближайшего реконнекта, ведь основная рассылка идёт по чатам, известным на момент подключения.",
+      "tags": ["Чаты", "Presence", "Real-time"],
+      "payload": {
+        "description": "Пользователь, появившийся в сети",
+        "schema": [
+          { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя, появившегося в сети" },
+          { "name": "online", "type": "boolean", "required": true, "description": "Всегда true для этого события. Дублирует смысл имени события — удобно, если обработчик один на presence.online и presence.offline" },
+          { "name": "at", "type": "string", "required": true, "description": "Время перехода в онлайн (ISO 8601, UTC)" }
+        ],
+        "example": {
+          "userId": 2,
+          "online": true,
+          "at": "2026-08-09T10:00:00Z"
+        }
+      },
+      "codeExample": "socket.on('presence.online', (e) => {\n  // e = { userId, online: true, at }\n  onlineUsers.add(e.userId)\n  renderOnlineBadges(onlineUsers)\n})\n\n// Один обработчик на оба события — различаем по полю online.\nfunction handlePresence(e) {\n  if (e.online) onlineUsers.add(e.userId)\n  else onlineUsers.delete(e.userId)\n  renderOnlineBadges(onlineUsers)\n}\nsocket.on('presence.online', handlePresence)\nsocket.on('presence.offline', handlePresence)"
+    },
+    {
+      "id": "chats-presence-offline",
+      "name": "presence.offline",
+      "direction": "server-to-client",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Собеседник ушёл из сети",
+      "description": "Сервер пушит это событие участникам всех чатов пользователя, когда тот ушёл из сети. Собственный статус клиенту НЕ приходит.\n\nКак и presence.online, событие шлётся на ПЕРЕХОД состояния: presence.offline уходит только когда закрылось ПОСЛЕДНЕЕ соединение пользователя. Закрытая вкладка события не породит, пока жива хотя бы одна другая.\n\nПолучив это событие, клиент должен снять с пользователя не только признак онлайна, но и индикатор набора текста (см. chat.typing): ушедший в офлайн печатать не может. Сервер и сам рассылает chat.typing с isTyping=false при разрыве соединения, но порядок доставки двух событий не гарантирован — надёжнее гасить индикатор здесь же.\n\nЗащита от «залипания» статуса: если инстанс сервиса упадёт, не успев разослать offline, запись о соединении протухнет в Redis по TTL и пользователь перестанет числиться онлайн у тех, кто подключится после этого (получат актуальный presence.snapshot).",
+      "tags": ["Чаты", "Presence", "Real-time"],
+      "payload": {
+        "description": "Пользователь, ушедший из сети",
+        "schema": [
+          { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя, ушедшего из сети" },
+          { "name": "online", "type": "boolean", "required": true, "description": "Всегда false для этого события" },
+          { "name": "at", "type": "string", "required": true, "description": "Время перехода в офлайн (ISO 8601, UTC)" }
+        ],
+        "example": {
+          "userId": 2,
+          "online": false,
+          "at": "2026-08-09T10:42:00Z"
+        }
+      },
+      "codeExample": "socket.on('presence.offline', (e) => {\n  // e = { userId, online: false, at }\n  onlineUsers.delete(e.userId)\n  // Ушедший в офлайн не может продолжать печатать — гасим и индикатор набора.\n  typingUsers.delete(e.userId)\n  renderOnlineBadges(onlineUsers)\n  renderTypingIndicator(typingUsers)\n})"
+    },
+    {
+      "id": "chats-chat-typing",
+      "name": "chat.typing",
+      "direction": "server-to-client",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Участник чата начал или перестал набирать текст",
+      "description": "Сервер ретранслирует индикатор набора остальным участникам чата. ОДНО событие на оба состояния — включение и выключение различаются полем isTyping, чтобы клиенту хватило одного обработчика.\n\nСвоё собственное событие обратно не приходит. Другие устройства того же пользователя событие получат — если это мешает, фильтруйте по своему userId.\n\nisTyping=false приходит в трёх случаях: (1) собеседник явно перестал печатать (клиент прислал typing.stop — отправил сообщение, очистил поле, ушёл из чата); (2) сервер погасил индикатор сам по таймауту ~6 секунд после последнего typing.start; (3) сокет собеседника отвалился — сервер гасит индикаторы во всех чатах, где они горели.\n\nСерверный автосброс закрывает случай «пользователь начал печатать и закрыл ноутбук»: без него «Печатает…» висел бы у собеседников бесконечно. Состояние набора нигде не сохраняется — это эфемерный сигнал, живущий только внутри соединения.",
+      "tags": ["Чаты", "Typing", "Real-time"],
+      "payload": {
+        "description": "Кто и в каком чате начал или перестал набирать текст",
+        "schema": [
+          { "name": "chatId", "type": "integer", "required": true, "description": "ID чата — используется клиентом для маршрутизации индикатора" },
+          { "name": "userId", "type": "integer", "required": true, "description": "ID пользователя, набирающего текст" },
+          { "name": "username", "type": "string", "required": false, "description": "Имя пользователя — чтобы показать «bob печатает…» без запроса профиля. Может быть пустым, если identity пришла без имени" },
+          { "name": "isTyping", "type": "boolean", "required": true, "description": "true — зажечь индикатор, false — погасить. false приходит и по явному typing.stop, и по серверному автосбросу (~6с), и при разрыве соединения собеседника" }
+        ],
+        "example": {
+          "chatId": 12,
+          "userId": 2,
+          "username": "jane_doe",
+          "isTyping": true
+        }
+      },
+      "codeExample": "// userId -> username тех, кто печатает. Ключ по userId: в групповом чате\n// одновременно печатать могут несколько человек.\nconst typingUsers = new Map()\n\nsocket.on('chat.typing', (e) => {\n  // e = { chatId, userId, username, isTyping }\n  if (e.userId === myUserId) return // эхо с другого моего устройства\n\n  if (e.isTyping) typingUsers.set(e.userId, e.username)\n  else typingUsers.delete(e.userId)\n\n  renderTypingIndicator(e.chatId, typingUsers)\n})\n\n// Отдельный таймер гашения на клиенте НЕ нужен: сервер сам пришлёт\n// isTyping=false по таймауту или при разрыве соединения собеседника."
+    },
+    {
+      "id": "chats-typing-start",
+      "name": "typing.start",
+      "direction": "client-to-server",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Сообщить, что пользователь начал набирать текст",
+      "description": "Клиент эмитит это событие, когда пользователь набирает текст в чате. Сервер ретранслирует его остальным участникам как chat.typing с isTyping=true.\n\nКОНТРАКТ ТРОТТЛИНГА: слать с throttle ~2 секунды, а НЕ на каждое нажатие клавиши. При этом пока пользователь продолжает печатать, typing.start нужно ПОВТОРЯТЬ: сервер гасит индикатор через ~6 секунд после последнего полученного start, поэтому без повторов «Печатает…» погаснет посреди набора. Повторный start не создаёт нового события у собеседников — он лишь сдвигает таймер автосброса.\n\nАвторизация: право слать typing проверяется по членству в чате (сокет автоматически заведён в комнаты всех чатов пользователя при подключении). Событие для чужого чата молча игнорируется — ошибки клиенту не возвращается. Невалидный payload (нет chatId, chatId <= 0, нечисловое значение) также игнорируется.\n\nПоле chatId принимается и числом, и строкой.",
+      "tags": ["Чаты", "Typing", "Real-time"],
+      "payload": {
+        "description": "Чат, в котором пользователь набирает текст",
+        "schema": [
+          { "name": "chatId", "type": "integer", "required": true, "description": "ID чата. Принимается числом или строкой. Пользователь должен быть активным участником этого чата, иначе событие игнорируется" }
+        ],
+        "example": {
+          "chatId": 12
+        }
+      },
+      "codeExample": "let typingSent = false\nlet stopTimer = null\n\ninput.addEventListener('input', () => {\n  // Поле очистили — набор прекращён, гасим индикатор сразу.\n  if (!input.value.trim()) return sendTypingStop()\n\n  // Throttle: не чаще одного start в 2 секунды.\n  if (!typingSent) {\n    socket.emit('typing.start', { chatId })\n    typingSent = true\n    setTimeout(() => { typingSent = false }, 2000)\n  }\n\n  // Пользователь замер, не отправив сообщение — гасим сами, не дожидаясь\n  // серверного автосброса (~6с).\n  clearTimeout(stopTimer)\n  stopTimer = setTimeout(sendTypingStop, 3000)\n})\n\nfunction sendTypingStop() {\n  clearTimeout(stopTimer)\n  typingSent = false\n  socket.emit('typing.stop', { chatId })\n}"
+    },
+    {
+      "id": "chats-typing-stop",
+      "name": "typing.stop",
+      "direction": "client-to-server",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Сообщить, что пользователь перестал набирать текст",
+      "description": "Клиент эмитит это событие, когда пользователь закончил набор: отправил сообщение, очистил поле ввода, ушёл из чата или свернул его. Сервер ретранслирует его остальным участникам как chat.typing с isTyping=false.\n\nСлать typing.stop не обязательно для корректности — сервер погасит индикатор сам через ~6 секунд после последнего typing.start, а также при разрыве соединения. Но явный stop делает UI отзывчивее: собеседник видит, что набор прекращён, сразу, а не через несколько секунд.\n\nПовторный stop (когда индикатор уже погашен автосбросом или предыдущим stop) сервером игнорируется и лишнего chat.typing не порождает — спамить безопасно.\n\nАвторизация и валидация payload — как у typing.start: чужой чат и некорректный chatId молча игнорируются.",
+      "tags": ["Чаты", "Typing", "Real-time"],
+      "payload": {
+        "description": "Чат, в котором пользователь прекратил набор",
+        "schema": [
+          { "name": "chatId", "type": "integer", "required": true, "description": "ID чата. Принимается числом или строкой. Пользователь должен быть активным участником этого чата, иначе событие игнорируется" }
+        ],
+        "example": {
+          "chatId": 12
+        }
+      },
+      "codeExample": "// После успешной отправки сообщения набор окончен — гасим индикатор сразу,\n// не дожидаясь серверного автосброса.\nasync function sendMessage(chatId, content) {\n  await fetch(`/api/v2/chats/${chatId}/messages`, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },\n    body: JSON.stringify({ content }),\n  })\n\n  socket.emit('typing.stop', { chatId })\n}\n\n// Также стоит слать при уходе из чата / потере фокуса.\nfunction onLeaveChat(chatId) {\n  socket.emit('typing.stop', { chatId })\n}"
     }
   ]
 }
