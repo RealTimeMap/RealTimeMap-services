@@ -41,7 +41,6 @@ func main() {
 	defer container.Close()
 
 	httpServer := httpserver.NewServer(cfg.Http, log)
-	httpServer.Router().Static("/store", cfg.Storage.BasePath)
 	httptransport.RegisterRoutes(httpServer.Router(), container)
 
 	grpcServer, err := grpctransport.NewServer(cfg.GRPC, log, func(s *grpc.Server) {

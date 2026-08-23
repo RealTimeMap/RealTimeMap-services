@@ -1,7 +1,6 @@
 package mark
 
 import (
-	"bytes"
 	"context"
 	"time"
 
@@ -54,20 +53,24 @@ func (s *Service) validateLimit(ctx context.Context, userID int) error {
 	return nil
 }
 
-// uploadPhotos загружает все фото в storage
+// uploadPhotos загружает все фото в storage.
+//
+// Fail-fast: ошибка любого файла рушит создание метки целиком. Раньше метка
+// создавалась с частичным набором фото и отвечала 200 OK. Валидация файлов
+// отработала выше, поэтому ошибка здесь — сбой инфраструктуры, а не проблема
+// конкретного файла.
 func (s *Service) uploadPhotos(ctx context.Context, photos []mediavalidator.PhotoInput) (types.Photos, error) {
 	// Подготовка файлов для загрузки
 	fileUploads := make([]storage.FileUpload, 0, len(photos))
 
 	for _, photo := range photos {
 		fileUploads = append(fileUploads, storage.FileUpload{
-			Reader: bytes.NewReader(photo.Data),
+			Data: photo.Data,
 			Options: storage.UploadOptions{
-				FileName:      photo.FileName,
-				Category:      storage.CategoryMarkPhoto,
-				MaxSize:       5 * 1024 * 1024, // 5MB
-				GenerateThumb: false,
-				Optimize:      false, // Отключаем оптимизацию для ускорения
+				FileName: photo.FileName,
+				Category: storage.CategoryMarkPhoto,
+				MaxSize:  5 * 1024 * 1024, // 5MB
+				Optimize: false,           // Отключаем оптимизацию для ускорения
 			},
 		})
 	}

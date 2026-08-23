@@ -8,14 +8,17 @@ import (
 )
 
 type Photo struct {
-	URL        string    `json:"url"`                   // URL или путь к файлу на сервере
-	Thumbnail  string    `json:"thumbnail,omitempty"`   // URL миниатюры (опционально)
-	FileName   string    `json:"file_name,omitempty"`   // Оригинальное имя файла
-	Size       int64     `json:"size,omitempty"`        // Размер файла в байтах
-	Width      int       `json:"width,omitempty"`       // Ширина изображения в пикселях
-	Height     int       `json:"height,omitempty"`      // Высота изображения в пикселях
-	MimeType   string    `json:"mime_type,omitempty"`   // MIME тип (image/jpeg, image/png, image/webp и т.д.)
-	Hash       string    `json:"hash,omitempty"`        // Хэш файла (SHA256) для проверки целостности
+	URL      string `json:"url"`                 // URL или путь к файлу на сервере
+	FileName string `json:"file_name,omitempty"` // Оригинальное имя файла
+	Size     int64  `json:"size,omitempty"`      // Размер файла в байтах
+	Width    int    `json:"width,omitempty"`     // Ширина изображения в пикселях
+	Height   int    `json:"height,omitempty"`    // Высота изображения в пикселях
+	MimeType string `json:"mime_type,omitempty"` // MIME тип (image/jpeg, image/png, image/webp и т.д.)
+	// TODO: переименовать в SourceHash.
+	// SHA256 ИСХОДНЫХ байтов, загруженных клиентом — НЕ содержимого в бакете.
+	// При Optimize: true в бакет попадают перекодированные байты, чей хеш
+	// отличается. Не использовать для проверки целостности объекта или как ETag.
+	Hash       string    `json:"hash,omitempty"`
 	StorageKey string    `json:"storage_key,omitempty"` // Ключ/путь в хранилище (S3, MinIO и т.д.)
 	UploadedAt time.Time `json:"uploaded_at,omitempty"` // Время загрузки
 }

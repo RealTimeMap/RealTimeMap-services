@@ -36,7 +36,7 @@ func (s *Service) UpdateMark(ctx context.Context, input UpdateMarkParams, userID
 }
 
 // updatePhotos обрабатывает обновление фотографий:
-// 1. Удаляет старые фото из storage и массива
+// 1. Убирает ссылки на удаляемые фото из массива (байты в бакете остаются)
 // 2. Загружает новые фото в storage
 // 3. Возвращает обновленный массив фотографий
 func (s *Service) updatePhotos(ctx context.Context, currentPhotos types.Photos, newPhotos []mediavalidator.PhotoInput, photosToDelete []string, maxPhotos int) (types.Photos, error) {
@@ -46,14 +46,14 @@ func (s *Service) updatePhotos(ctx context.Context, currentPhotos types.Photos, 
 		deleteMap[url] = true
 	}
 
-	// 2. Фильтруем старые фото и удаляем из storage
+	// 2. Фильтруем старые фото.
+	//
+	// Байты из бакета не удаляются: ключ content-addressed, поэтому одно и то
+	// же фото в двух метках имеет один ключ, и удаление здесь стёрло бы файл
+	// во второй метке. Мусор чистит будущий GC, см. .scratch/storage-rewrite.
 	var keptPhotos types.Photos
 	for _, photo := range currentPhotos {
-		if deleteMap[photo.URL] {
-			// Удаляем из storage (игнорируем ошибки, так как файл может быть уже удален)
-			_ = s.store.Delete(ctx, photo.StorageKey)
-		} else {
-			// Сохраняем фото, которое не удаляется
+		if !deleteMap[photo.URL] {
 			keptPhotos = append(keptPhotos, photo)
 		}
 	}
