@@ -57,11 +57,75 @@ services:
     networks:
       - service-network
 
+  minio:
+    image: minio/minio:latest
+    container_name: rtm_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    labels:
+      - "traefik.enable=true"
 
+      # Раздача медиафайлов: /files/v1/... -> бакет rtm-media.
+      # Бакет публичен на чтение только для префикса v1/ (см. minio-init),
+      # поэтому auth-check здесь намеренно не подключён.
+      - "traefik.http.routers.media-public.rule=Host(`realtimemap.ru`) && PathPrefix(`/files/`)"
+      - "traefik.http.routers.media-public.entrypoints=websecure"
+      - "traefik.http.routers.media-public.priority=100"
+      - "traefik.http.routers.media-public.service=media"
+      - "traefik.http.routers.media-public.middlewares=cors-headers@file,media-path"
+      - "traefik.http.routers.media-public.tls=true"
+
+      # /files/v1/ab/cd/<hash>.jpg -> /rtm-media/v1/ab/cd/<hash>.jpg
+      - "traefik.http.middlewares.media-path.replacepathregex.regex=^/files/(.*)"
+      - "traefik.http.middlewares.media-path.replacepathregex.replacement=/rtm-media/$$1"
+
+
+      - "traefik.http.services.media.loadbalancer.server.port=9000"
+    networks:
+      # service-network — доступ из Go-сервисов; web — раздача через traefik
+      # (providers.docker.network: web в traefik.yml)
+      - service-network
+      - web
+
+  # Одноразовая инициализация: создаёт бакет и открывает публичное чтение
+  # префикса v1/. Без неё бакета не будет, и NewMinIOStorage упадёт на старте.
+  minio-init:
+    image: minio/mc:latest
+    container_name: rtm_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+      mc mb --ignore-existing local/$$MINIO_BUCKET &&
+      mc anonymous set download local/$$MINIO_BUCKET/v1 &&
+      echo 'minio bucket ready'
+      "
+    networks:
+      - service-network
 
 volumes:
   redis_data:
   postgres_data:
+  minio_data:
 
 networks:
   web:

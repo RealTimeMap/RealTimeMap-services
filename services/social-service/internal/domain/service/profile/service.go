@@ -1,7 +1,6 @@
 package profile
 
 import (
-	"bytes"
 	"context"
 	"errors"
 
@@ -105,10 +104,6 @@ func (s *Service) UpdateProfile(ctx context.Context, in UpdateProfileInput) (*mo
 		fields["tag"] = *in.Tag
 	}
 
-	var (
-		uploadedAvatarKey string
-		oldAvatarKey      string
-	)
 	if in.Avatar != nil {
 		if err := s.photoValidator.ValidateSinglePhoto(mediavalidator.PhotoInput{
 			Data:     in.Avatar.Data,
@@ -117,46 +112,31 @@ func (s *Service) UpdateProfile(ctx context.Context, in UpdateProfileInput) (*mo
 			return nil, err
 		}
 
-		photo, err := s.store.Upload(ctx, bytes.NewReader(in.Avatar.Data), storage.UploadOptions{
-			FileName:      in.Avatar.FileName,
-			Category:      storage.CategoryProfileAvatar,
-			MaxSize:       avatarMaxSize,
-			Optimize:      true,
-			GenerateThumb: true,
-			ThumbWidth:    200,
-			ThumbHeight:   200,
+		photo, err := s.store.Upload(ctx, in.Avatar.Data, storage.UploadOptions{
+			FileName: in.Avatar.FileName,
+			Category: storage.CategoryProfileAvatar,
+			MaxSize:  avatarMaxSize,
+			Optimize: true,
 		})
 		if err != nil {
 			return nil, err
 		}
 
 		fields["avatar"] = *photo
-		uploadedAvatarKey = photo.StorageKey
-		oldAvatarKey = current.Avatar.StorageKey
 	}
 
 	if len(fields) == 0 {
 		return current, nil
 	}
 
+	// Отката загруженного аватара при ошибке БД нет и быть не может: ключ
+	// content-addressed, поэтому Upload мог вернуть ключ УЖЕ существовавшего
+	// объекта, ничего не записав. Удаление стёрло бы чужой файл.
+	// Старый аватар по той же причине не удаляется: два пользователя с
+	// одинаковой картинкой делят один ключ.
 	updated, err := s.profileRepo.Update(ctx, in.UserID, fields)
 	if err != nil {
-		if uploadedAvatarKey != "" {
-			if delErr := s.store.Delete(ctx, uploadedAvatarKey); delErr != nil {
-				s.logger.Warn("failed to rollback uploaded avatar",
-					zap.String("storage_key", uploadedAvatarKey), zap.Error(delErr))
-			}
-		}
 		return nil, err
-	}
-
-	if oldAvatarKey != "" {
-		go func(key string) {
-			if err := s.store.Delete(context.Background(), key); err != nil {
-				s.logger.Warn("failed to delete old avatar",
-					zap.String("storage_key", key), zap.Error(err))
-			}
-		}(oldAvatarKey)
 	}
 
 	return updated, nil

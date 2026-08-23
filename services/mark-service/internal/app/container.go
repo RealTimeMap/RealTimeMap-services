@@ -37,7 +37,7 @@ type Container struct {
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
 	// Создание вспомогательных компонентов
 	//imageValidator := mediavalidator.NewPhotoValidator()
-	store, err := storage.NewLocalStorage(cfg.Storage.BasePath, cfg.Storage.BaseURL, log)
+	store, err := storage.NewMinIOStorage(cfg.Storage, log)
 	if err != nil {
 		panic(err)
 	}

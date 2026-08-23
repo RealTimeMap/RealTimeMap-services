@@ -66,7 +66,7 @@ func (c *Container) Close() error {
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Container {
-	store, err := storage.NewLocalStorage(cfg.Storage.BasePath, cfg.Storage.BaseURL, logger)
+	store, err := storage.NewMinIOStorage(cfg.Storage, logger)
 	if err != nil {
 		panic(err)
 	}
