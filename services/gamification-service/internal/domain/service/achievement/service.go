@@ -1,7 +1,6 @@
 package achievement
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
@@ -112,12 +111,11 @@ func (s *service) CreateAchievement(ctx context.Context, input Input) (*model.Ac
 		return nil, err
 	}
 
-	icon, err := s.store.Upload(ctx, bytes.NewReader(input.Icon.Data), storage.UploadOptions{
-		FileName:      input.Icon.FileName,
-		Category:      storage.CategoryAchievement,
-		MaxSize:       5 * 1024 * 1024,
-		Optimize:      true,
-		GenerateThumb: false,
+	icon, err := s.store.Upload(ctx, input.Icon.Data, storage.UploadOptions{
+		FileName: input.Icon.FileName,
+		Category: storage.CategoryAchievement,
+		MaxSize:  5 * 1024 * 1024,
+		Optimize: true,
 	})
 	if err != nil {
 		return nil, err
