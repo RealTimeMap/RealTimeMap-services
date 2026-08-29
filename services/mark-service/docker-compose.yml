@@ -2,7 +2,9 @@ services:
   mark-service:
     build:
       context: ../..
-      dockerfile: services/mark-service/Dockerfile
+      dockerfile: build/Dockerfile
+      args:
+        SERVICE: mark-service
     container_name: mark-service
     logging:
       driver: loki

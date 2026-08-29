@@ -58,7 +58,7 @@ func NewContainer(config *config.Config, db *gorm.DB, logger *zap.Logger) *Conta
 	achievementRepo := postgres.NewPgAchievementRepository(db, logger)
 	xpRewardRepo := postgres.NewPgXPRewardRepository(db, logger)
 	userAchRepo := postgres.NewPgUserAchievementRepository(db, logger)
-	store, err := storage.NewLocalStorage(config.Storage.BasePath, config.Storage.BaseURL, logger)
+	store, err := storage.NewMinIOStorage(config.Storage, logger)
 	if err != nil {
 		panic(err)
 	}

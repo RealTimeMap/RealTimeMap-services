@@ -5,7 +5,9 @@ services:
   feedback-service:
     build:
       context: ../..
-      dockerfile: services/feedback-service/Dockerfile
+      dockerfile: build/Dockerfile
+      args:
+        SERVICE: feedback-service
     container_name: feedback-service
     logging:
       driver: loki

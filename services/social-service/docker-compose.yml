@@ -2,7 +2,9 @@ services:
   social-service:
     build:
       context: ../..
-      dockerfile: services/social-service/Dockerfile
+      dockerfile: build/Dockerfile
+      args:
+        SERVICE: social-service
     container_name: social-service
     restart: always
     logging:

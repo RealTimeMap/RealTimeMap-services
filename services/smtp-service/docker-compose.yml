@@ -3,7 +3,9 @@ services:
   smtp-service:
     build:
       context: ../..
-      dockerfile: services/smtp-service/Dockerfile
+      dockerfile: build/Dockerfile
+      args:
+        SERVICE: smtp-service
     container_name: smtp-service
     restart: always
     logging:

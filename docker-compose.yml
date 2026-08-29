@@ -1,7 +1,10 @@
-#include:
-#  - services/mark-service/docker-compose.yml
-#  - services/gamification-service/docker-compose.yml
-#  - services/social-service/docker-compose.yml
+include:
+  - services/mark-service/docker-compose.yml
+  - services/comment-service/docker-compose.yml
+  - services/feedback-service/docker-compose.yml
+  - services/gamification-service/docker-compose.yml
+  - services/smtp-service/docker-compose.yml
+  - services/social-service/docker-compose.yml
 #  - docker-compose.kafka.yml
 
 services:
@@ -77,6 +80,12 @@ services:
       - minio_data:/data
     labels:
       - "traefik.enable=true"
+
+
+      - "traefik.http.routers.media-ui.rule=Host(`realtimemap.ru`) && PathPrefix(`/minio`)"
+      - "traefik.http.routers.media-ui.entrypoints=websecure"
+      - "traefik.http.routers.media-ui.service=media"
+      - "traefik.http.routers.media-ui.tls=true"
 
       # Раздача медиафайлов: /files/v1/... -> бакет rtm-media.
       # Бакет публичен на чтение только для префикса v1/ (см. minio-init),

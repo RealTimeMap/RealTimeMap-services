@@ -6,24 +6,55 @@
       "path": "/api/v2/level/",
       "summary": "Получить список уровней",
       "description": "Возвращает все уровни системы геймификации с информацией о необходимом опыте для достижения каждого уровня. Результат кэшируется (TTL 15 минут).",
-      "tags": ["Уровни"],
+      "tags": [
+        "Уровни"
+      ],
       "responses": [
         {
           "statusCode": 200,
           "description": "Список всех уровней",
           "schema": [
-            { "name": "level", "type": "integer", "required": true, "description": "Номер уровня" },
-            { "name": "title", "type": "string", "required": true, "description": "Название уровня" },
-            { "name": "xpRequired", "type": "integer", "required": true, "description": "Общий накопленный опыт, необходимый для достижения уровня" }
+            {
+              "name": "level",
+              "type": "integer",
+              "required": true,
+              "description": "Номер уровня"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Название уровня"
+            },
+            {
+              "name": "xpRequired",
+              "type": "integer",
+              "required": true,
+              "description": "Общий накопленный опыт, необходимый для достижения уровня"
+            }
           ],
           "example": [
-            { "level": 1, "title": "Новичок", "xpRequired": 0 },
-            { "level": 2, "title": "Исследователь", "xpRequired": 100 },
-            { "level": 3, "title": "Путешественник", "xpRequired": 250 }
+            {
+              "level": 1,
+              "title": "Новичок",
+              "xpRequired": 0
+            },
+            {
+              "level": 2,
+              "title": "Исследователь",
+              "xpRequired": 100
+            },
+            {
+              "level": 3,
+              "title": "Путешественник",
+              "xpRequired": 250
+            }
           ]
         }
       ],
-      "errors": ["internal-error"]
+      "errors": [
+        "internal-error"
+      ]
     },
     {
       "id": "create-achievement",
@@ -31,20 +62,62 @@
       "path": "/api/v2/achievement/create",
       "summary": "Создать достижение",
       "description": "Создаёт новое достижение в системе. Достижение привязывается к типу события (triggerEvent) и активируется, когда счётчик действий пользователя достигает порога (threshold). Опционально может быть звеном цепочки прогрессий через nextId. Требуется роль администратора.",
-      "tags": ["Достижения"],
+      "tags": [
+        "Достижения"
+      ],
       "auth": true,
       "requestBody": {
         "description": "Параметры достижения в формате multipart/form-data (вместе с файлом иконки)",
         "contentType": "multipart/form-data",
         "schema": [
-          { "name": "code", "type": "string", "required": true, "description": "Уникальный машинный код достижения" },
-          { "name": "title", "type": "string", "required": true, "description": "Название достижения (отображается пользователю)" },
-          { "name": "desc", "type": "string", "required": true, "description": "Описание достижения" },
-          { "name": "triggerEvent", "type": "string", "required": true, "description": "Тип события, по которому считается прогресс (например, mark.created)" },
-          { "name": "threshold", "type": "integer", "required": true, "description": "Количество событий для получения достижения" },
-          { "name": "rewardId", "type": "integer", "required": true, "description": "ID награды XP, выдаваемой за получение достижения" },
-          { "name": "nextId", "type": "integer", "required": false, "description": "ID следующего достижения в цепочке прогрессии (если есть)" },
-          { "name": "icon", "type": "file", "required": true, "description": "Изображение иконки достижения (JPG/PNG, до 5 МБ)" }
+          {
+            "name": "code",
+            "type": "string",
+            "required": true,
+            "description": "Уникальный машинный код достижения"
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true,
+            "description": "Название достижения (отображается пользователю)"
+          },
+          {
+            "name": "desc",
+            "type": "string",
+            "required": true,
+            "description": "Описание достижения"
+          },
+          {
+            "name": "triggerEvent",
+            "type": "string",
+            "required": true,
+            "description": "Тип события, по которому считается прогресс (например, mark.created)"
+          },
+          {
+            "name": "threshold",
+            "type": "integer",
+            "required": true,
+            "description": "Количество событий для получения достижения"
+          },
+          {
+            "name": "rewardId",
+            "type": "integer",
+            "required": true,
+            "description": "ID награды XP, выдаваемой за получение достижения"
+          },
+          {
+            "name": "nextId",
+            "type": "integer",
+            "required": false,
+            "description": "ID следующего достижения в цепочке прогрессии (если есть)"
+          },
+          {
+            "name": "icon",
+            "type": "file",
+            "required": true,
+            "description": "Изображение иконки достижения (JPG/PNG, до 5 МБ)"
+          }
         ],
         "example": {
           "code": "map_explorer_bronze",
@@ -68,22 +141,72 @@
               "required": true,
               "description": "Созданное достижение",
               "children": [
-                { "name": "id", "type": "integer", "required": true, "description": "ID достижения" },
-                { "name": "code", "type": "string", "required": true, "description": "Машинный код" },
-                { "name": "title", "type": "string", "required": true, "description": "Название" },
-                { "name": "desc", "type": "string", "required": true, "description": "Описание" },
-                { "name": "triggerEventType", "type": "string", "required": true, "description": "Тип триггерного события" },
-                { "name": "threshold", "type": "integer", "required": true, "description": "Порог получения" },
-                { "name": "icon", "type": "string", "required": true, "description": "URL иконки" },
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID достижения"
+                },
+                {
+                  "name": "code",
+                  "type": "string",
+                  "required": true,
+                  "description": "Машинный код"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true,
+                  "description": "Название"
+                },
+                {
+                  "name": "desc",
+                  "type": "string",
+                  "required": true,
+                  "description": "Описание"
+                },
+                {
+                  "name": "triggerEventType",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип триггерного события"
+                },
+                {
+                  "name": "threshold",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Порог получения"
+                },
+                {
+                  "name": "icon",
+                  "type": "string",
+                  "required": true,
+                  "description": "URL иконки"
+                },
                 {
                   "name": "reward",
                   "type": "object",
                   "required": false,
                   "description": "XP-награда (опционально)",
                   "children": [
-                    { "name": "id", "type": "integer", "required": true, "description": "ID награды" },
-                    { "name": "code", "type": "string", "required": true, "description": "Код награды" },
-                    { "name": "amount", "type": "integer", "required": true, "description": "Количество XP" }
+                    {
+                      "name": "id",
+                      "type": "integer",
+                      "required": true,
+                      "description": "ID награды"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string",
+                      "required": true,
+                      "description": "Код награды"
+                    },
+                    {
+                      "name": "amount",
+                      "type": "integer",
+                      "required": true,
+                      "description": "Количество XP"
+                    }
                   ]
                 },
                 {
@@ -104,7 +227,11 @@
               "triggerEventType": "mark.created",
               "threshold": 10,
               "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
-              "reward": { "id": 2, "code": "mark.created", "amount": 100 },
+              "reward": {
+                "id": 2,
+                "code": "mark.created",
+                "amount": 100
+              },
               "next": {
                 "id": 16,
                 "code": "map_explorer_silver",
@@ -118,7 +245,13 @@
           }
         }
       ],
-      "errors": ["unauthorized", "forbidden", "validation-error", "not-found", "conflict"]
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "validation-error",
+        "not-found",
+        "conflict"
+      ]
     },
     {
       "id": "get-user-achievements",
@@ -126,12 +259,35 @@
       "path": "/api/v2/achievement/{userID}",
       "summary": "Получить достижения пользователя",
       "description": "Возвращает список полученных пользователем достижений с пагинацией. Прогрессии (цепочки достижений Bronze → Silver → Gold) схлопываются — возвращается только верхняя достигнутая ступень с информацией о следующей цели через поле next. Одиночные достижения (без цепочки) возвращаются как есть с next: null.",
-      "tags": ["Достижения"],
+      "tags": [
+        "Достижения"
+      ],
       "pagination": "page",
       "parameters": [
-        { "name": "userID", "type": "integer", "required": true, "description": "ID пользователя", "location": "path", "example": "1" },
-        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы (по умолчанию 1)", "location": "query", "example": "1" },
-        { "name": "limit", "type": "integer", "required": false, "description": "Размер страницы (по умолчанию 20)", "location": "query", "example": "20" }
+        {
+          "name": "userID",
+          "type": "integer",
+          "required": true,
+          "description": "ID пользователя",
+          "location": "path",
+          "example": "1"
+        },
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "description": "Номер страницы (по умолчанию 1)",
+          "location": "query",
+          "example": "1"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": false,
+          "description": "Размер страницы (по умолчанию 20)",
+          "location": "query",
+          "example": "20"
+        }
       ],
       "responses": [
         {
@@ -150,22 +306,72 @@
                   "required": true,
                   "description": "Данные достижения",
                   "children": [
-                    { "name": "id", "type": "integer", "required": true, "description": "ID достижения" },
-                    { "name": "code", "type": "string", "required": true, "description": "Машинный код" },
-                    { "name": "title", "type": "string", "required": true, "description": "Название" },
-                    { "name": "desc", "type": "string", "required": true, "description": "Описание" },
-                    { "name": "triggerEventType", "type": "string", "required": true, "description": "Тип триггерного события" },
-                    { "name": "threshold", "type": "integer", "required": true, "description": "Порог получения" },
-                    { "name": "icon", "type": "string", "required": true, "description": "URL иконки" },
+                    {
+                      "name": "id",
+                      "type": "integer",
+                      "required": true,
+                      "description": "ID достижения"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string",
+                      "required": true,
+                      "description": "Машинный код"
+                    },
+                    {
+                      "name": "title",
+                      "type": "string",
+                      "required": true,
+                      "description": "Название"
+                    },
+                    {
+                      "name": "desc",
+                      "type": "string",
+                      "required": true,
+                      "description": "Описание"
+                    },
+                    {
+                      "name": "triggerEventType",
+                      "type": "string",
+                      "required": true,
+                      "description": "Тип триггерного события"
+                    },
+                    {
+                      "name": "threshold",
+                      "type": "integer",
+                      "required": true,
+                      "description": "Порог получения"
+                    },
+                    {
+                      "name": "icon",
+                      "type": "string",
+                      "required": true,
+                      "description": "URL иконки"
+                    },
                     {
                       "name": "reward",
                       "type": "object",
                       "required": false,
                       "description": "XP-награда",
                       "children": [
-                        { "name": "id", "type": "integer", "required": true, "description": "ID награды" },
-                        { "name": "code", "type": "string", "required": true, "description": "Код награды" },
-                        { "name": "amount", "type": "integer", "required": true, "description": "Количество XP" }
+                        {
+                          "name": "id",
+                          "type": "integer",
+                          "required": true,
+                          "description": "ID награды"
+                        },
+                        {
+                          "name": "code",
+                          "type": "string",
+                          "required": true,
+                          "description": "Код награды"
+                        },
+                        {
+                          "name": "amount",
+                          "type": "integer",
+                          "required": true,
+                          "description": "Количество XP"
+                        }
                       ]
                     },
                     {
@@ -176,7 +382,12 @@
                     }
                   ]
                 },
-                { "name": "unlockedAt", "type": "string", "required": true, "description": "Дата получения достижения (ISO 8601)" }
+                {
+                  "name": "unlockedAt",
+                  "type": "string",
+                  "required": true,
+                  "description": "Дата получения достижения (ISO 8601)"
+                }
               ]
             }
           ],
@@ -191,7 +402,11 @@
                   "triggerEventType": "mark.created",
                   "threshold": 50,
                   "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
-                  "reward": { "id": 2, "code": "mark.created", "amount": 100 },
+                  "reward": {
+                    "id": 2,
+                    "code": "mark.created",
+                    "amount": 100
+                  },
                   "next": {
                     "id": 17,
                     "code": "map_explorer_gold",
@@ -213,7 +428,11 @@
                   "triggerEventType": "comment.created",
                   "threshold": 1,
                   "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/cmt.jpg",
-                  "reward": { "id": 3, "code": "comment.created", "amount": 50 }
+                  "reward": {
+                    "id": 3,
+                    "code": "comment.created",
+                    "amount": 50
+                  }
                 },
                 "unlockedAt": "2026-05-10T09:30:00Z"
               }
@@ -221,7 +440,9 @@
           }
         }
       ],
-      "errors": ["validation-error"]
+      "errors": [
+        "validation-error"
+      ]
     },
     {
       "id": "get-user-nearest-achievements",
@@ -229,9 +450,18 @@
       "path": "/api/v2/achievement/{userID}/nearest",
       "summary": "Ближайшие достижения пользователя",
       "description": "Возвращает топ-5 достижений, к получению которых пользователь ближе всего, отсортированных по проценту прогресса (current/threshold) по убыванию. Учитываются только начатые (с count > 0) и ещё не полученные достижения. Для цепочек прогрессий возвращается только самая близкая ступень — следующие видны через поле next. Лимит фиксирован константой на стороне сервиса и не настраивается через параметры.",
-      "tags": ["Достижения"],
+      "tags": [
+        "Достижения"
+      ],
       "parameters": [
-        { "name": "userID", "type": "integer", "required": true, "description": "ID пользователя", "location": "path", "example": "1" }
+        {
+          "name": "userID",
+          "type": "integer",
+          "required": true,
+          "description": "ID пользователя",
+          "location": "path",
+          "example": "1"
+        }
       ],
       "responses": [
         {
@@ -250,9 +480,24 @@
                   "required": true,
                   "description": "Данные достижения (структура как в /achievement/{userID})"
                 },
-                { "name": "current", "type": "integer", "required": true, "description": "Текущее значение счётчика действий пользователя" },
-                { "name": "threshold", "type": "integer", "required": true, "description": "Порог для получения достижения" },
-                { "name": "progress", "type": "number", "required": true, "description": "Процент выполнения (current/threshold * 100)" }
+                {
+                  "name": "current",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Текущее значение счётчика действий пользователя"
+                },
+                {
+                  "name": "threshold",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Порог для получения достижения"
+                },
+                {
+                  "name": "progress",
+                  "type": "number",
+                  "required": true,
+                  "description": "Процент выполнения (current/threshold * 100)"
+                }
               ]
             }
           ],
@@ -267,7 +512,11 @@
                   "triggerEventType": "mark.created",
                   "threshold": 10,
                   "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
-                  "reward": { "id": 2, "code": "mark.created", "amount": 100 },
+                  "reward": {
+                    "id": 2,
+                    "code": "mark.created",
+                    "amount": 100
+                  },
                   "next": {
                     "id": 16,
                     "code": "map_explorer_silver",
@@ -291,7 +540,11 @@
                   "triggerEventType": "friend.added",
                   "threshold": 5,
                   "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/friend.jpg",
-                  "reward": { "id": 4, "code": "friend.added", "amount": 30 }
+                  "reward": {
+                    "id": 4,
+                    "code": "friend.added",
+                    "amount": 30
+                  }
                 },
                 "current": 3,
                 "threshold": 5,
@@ -301,7 +554,9 @@
           }
         }
       ],
-      "errors": ["validation-error"]
+      "errors": [
+        "validation-error"
+      ]
     },
     {
       "id": "health",
@@ -309,14 +564,29 @@
       "path": "/gamification/health",
       "summary": "Health-check",
       "description": "Проверка доступности сервиса и подключения к базе данных.",
-      "tags": ["Служебные"],
+      "tags": [
+        "Служебные"
+      ],
       "responses": [
         {
           "statusCode": 200,
           "description": "Сервис и БД работают",
           "schema": [
-            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["healthy"] },
-            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Состояние сервиса",
+              "enum": [
+                "healthy"
+              ]
+            },
+            {
+              "name": "service",
+              "type": "string",
+              "required": true,
+              "description": "Имя сервиса"
+            }
           ],
           "example": {
             "status": "healthy",
@@ -327,13 +597,59 @@
           "statusCode": 503,
           "description": "БД недоступна",
           "schema": [
-            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["unhealthy"] },
-            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Состояние сервиса",
+              "enum": [
+                "unhealthy"
+              ]
+            },
+            {
+              "name": "service",
+              "type": "string",
+              "required": true,
+              "description": "Имя сервиса"
+            }
           ],
           "example": {
             "status": "unhealthy",
             "service": "gamification-service"
           }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "static-store",
+      "method": "GET",
+      "path": "/store/{filepath}",
+      "summary": "Статические файлы",
+      "description": "Раздача загруженных файлов из локального хранилища сервиса. Путь после /store/ соответствует пути файла в хранилище.",
+      "tags": [
+        "Служебные"
+      ],
+      "parameters": [
+        {
+          "name": "filepath",
+          "type": "string",
+          "required": true,
+          "description": "Относительный путь к файлу в хранилище",
+          "location": "path",
+          "example": "photos/marks/1/photo.jpg"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Содержимое файла (binary)",
+          "schema": []
+        },
+        {
+          "statusCode": 404,
+          "description": "Файл не найден",
+          "schema": []
         }
       ],
       "errors": []

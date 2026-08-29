@@ -3,7 +3,9 @@ services:
   comment-service:
     build:
       context: ../..
-      dockerfile: services/comment-service/Dockerfile
+      dockerfile: build/Dockerfile
+      args:
+        SERVICE: comment-service
     container_name: comment-service
     restart: always
     logging:

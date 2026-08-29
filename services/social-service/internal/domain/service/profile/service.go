@@ -3,6 +3,7 @@ package profile
 import (
 	"context"
 	"errors"
+	"regexp"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
@@ -20,6 +21,7 @@ type ProgressGetter interface {
 }
 
 const avatarMaxSize = 5 * 1024 * 1024 // 5MB
+var re = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
 type Service struct {
 	profileRepo    repository.ProfileRepository
@@ -60,7 +62,7 @@ func (s *Service) CreateProfile(ctx context.Context, input CreateProfileInput) (
 		Username:        input.Username,
 		IsPrivate:       false,
 		PrivacySettings: model.DefaultPrivacySettings(),
-		Tag:             "@" + input.Username,
+		Tag:             input.Username,
 	}
 
 	profile, err := s.profileRepo.Create(ctx, payload)
@@ -101,6 +103,9 @@ func (s *Service) UpdateProfile(ctx context.Context, in UpdateProfileInput) (*mo
 		fields["username"] = *in.Username
 	}
 	if in.Tag != nil {
+		if !re.MatchString(*in.Tag) {
+			return nil, apperror.NewFieldValidationError("tag", "The field contains special characters.", "value_error", *in.Tag)
+		}
 		fields["tag"] = *in.Tag
 	}
 

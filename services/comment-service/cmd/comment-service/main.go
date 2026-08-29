@@ -7,7 +7,8 @@ import (
 	httpserver "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/config"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/model"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/comment"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/comment/reaction"
 	httptransport "github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/transport/http"
 	"go.uber.org/zap"
 )
@@ -28,9 +29,16 @@ func main() {
 		DBName:   cfg.Database.DBName,
 	}, log)
 	defer database.Close(db)
-	db.AutoMigrate(&model.Comment{}, &model.Reaction{})
+	db.AutoMigrate(&comment.Comment{}, &reaction.Reaction{})
 
-	container := app.NewContainer(cfg, db, log)
+	// Дизлайки удалены: убираем устаревшую колонку, AutoMigrate её сам не дропает
+	if db.Migrator().HasColumn(&comment.Comment{}, "dislikes_count") {
+		if err := db.Migrator().DropColumn(&comment.Comment{}, "dislikes_count"); err != nil {
+			log.Error("failed to drop dislikes_count column", zap.Error(err))
+		}
+	}
+
+	container := app.MustContainer(cfg, db, log)
 	defer container.Close()
 
 	httpServer := httpserver.NewServer(cfg.HTTP, log)

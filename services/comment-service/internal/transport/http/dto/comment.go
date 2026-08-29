@@ -1,8 +1,12 @@
 package dto
 
 import (
-	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/model"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/app/use_cases/comment_action"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/app/use_cases/comment_interaction"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/comment"
 )
+
+// ---- Requests ----
 
 type CommentParams struct {
 	Entity string `form:"entity" binding:"required"`
@@ -11,48 +15,24 @@ type CommentParams struct {
 	Cursor *uint  `form:"cursor"`
 }
 
-func (p CommentParams) ToFilter(entityID uint, parentID *uint) model.CommentFilter {
+func (p CommentParams) ToFilter(entityID uint, parentID *uint) comment.CommentFilter {
 	limit := p.Limit
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
 
-	sort := model.SortNewest
+	sort := comment.SortNewest
 	if p.Sort == "oldest" {
-		sort = model.SortOldest
+		sort = comment.SortOldest
 	}
 
-	return model.CommentFilter{
+	return comment.CommentFilter{
 		Limit:    limit,
 		Sort:     sort,
 		Cursor:   p.Cursor,
 		Entity:   p.Entity,
 		EntityID: entityID,
 		ParentID: parentID,
-	}
-
-}
-
-type ReactionRequest struct {
-	Type string `json:"type" binding:"required,oneof=like dislike"`
-}
-
-type ReactionResponse struct {
-	UserReaction  *string `json:"userReaction"`
-	LikesCount    uint    `json:"likesCount"`
-	DislikesCount uint    `json:"dislikesCount"`
-}
-
-func NewReactionResponse(result *model.ToggleResult) ReactionResponse {
-	var userReaction *string
-	if result.Reaction != nil {
-		t := string(result.Reaction.Type)
-		userReaction = &t
-	}
-	return ReactionResponse{
-		UserReaction:  userReaction,
-		LikesCount:    result.LikesCount,
-		DislikesCount: result.DislikesCount,
 	}
 }
 
@@ -67,22 +47,13 @@ type CommentUpdateRequest struct {
 	Content string `form:"content" json:"content" binding:"required"`
 }
 
+// ---- Responses (мапятся из Result use case) ----
+
 type Meta struct {
-	CanReply     bool                `json:"canReply"`
-	HaveReplies  bool                `json:"haveReplies"`
-	RepliesCount int64               `json:"repliesCount"`
-	Status       model.CommentStatus `json:"status"`
-}
-
-func NewMeta(c *model.Comment) Meta {
-
-	return Meta{
-		CanReply:     c.Depth <= model.MaxDepth,
-		HaveReplies:  c.RepliesCount > 0,
-		RepliesCount: c.RepliesCount,
-		Status:       c.Status,
-	}
-
+	CanReply     bool                  `json:"canReply"`
+	HaveReplies  bool                  `json:"haveReplies"`
+	RepliesCount int64                 `json:"repliesCount"`
+	Status       comment.CommentStatus `json:"status"`
 }
 
 type AuthorResponse struct {
@@ -92,44 +63,32 @@ type AuthorResponse struct {
 	Avatar   string `json:"avatar"`
 }
 
-func NewAuthorResponse(p *model.UserProfile) AuthorResponse {
-	if p == nil {
-		return AuthorResponse{}
-	}
-	return AuthorResponse{
-		ID:       p.ID,
-		Username: p.Username,
-		Tag:      p.Tag,
-		Avatar:   p.Avatar,
-	}
-}
-
 type CommentResponse struct {
-	ID       uint           `json:"id"`
-	Content  string         `json:"content"`
-	Author   AuthorResponse `json:"author"`
-	Likes    uint           `json:"likes"`
-	Dislikes uint           `json:"dislikes"`
-	Meta     Meta           `json:"meta"`
+	ID      uint           `json:"id"`
+	Content string         `json:"content"`
+	Author  AuthorResponse `json:"author"`
+	Likes   uint           `json:"likes"`
+	Meta    Meta           `json:"meta"`
 }
 
-func NewCommentResponse(comment *model.Comment) CommentResponse {
+func NewCommentResponse(res comment_action.CommentResult) CommentResponse {
 	return CommentResponse{
-		ID:       comment.ID,
-		Content:  comment.Content,
-		Author:   NewAuthorResponse(comment.Author),
-		Likes:    comment.LikesCount,
-		Dislikes: comment.DislikesCount,
-		Meta:     NewMeta(comment),
+		ID:      res.ID,
+		Content: res.Content,
+		Author: AuthorResponse{
+			ID:       res.Author.ID,
+			Username: res.Author.Username,
+			Tag:      res.Author.Tag,
+			Avatar:   res.Author.Avatar,
+		},
+		Likes: res.Likes,
+		Meta: Meta{
+			CanReply:     res.Meta.CanReply,
+			HaveReplies:  res.Meta.HaveReplies,
+			RepliesCount: res.Meta.RepliesCount,
+			Status:       res.Meta.Status,
+		},
 	}
-}
-
-func NewMultipCommentResponse(comments []*model.Comment) []CommentResponse {
-	res := make([]CommentResponse, 0, len(comments))
-	for _, comment := range comments {
-		res = append(res, NewCommentResponse(comment))
-	}
-	return res
 }
 
 type CursorPaginateResponse struct {
@@ -137,10 +96,27 @@ type CursorPaginateResponse struct {
 	HasMore bool              `json:"hasMore"`
 }
 
-func NewCursorPaginateResponse(items []*model.Comment, hasMore bool) CursorPaginateResponse {
-	res := NewMultipCommentResponse(items)
+func NewCursorPaginateResponse(page comment_action.CursorPage) CursorPaginateResponse {
+	items := make([]CommentResponse, 0, len(page.Items))
+	for _, item := range page.Items {
+		items = append(items, NewCommentResponse(item))
+	}
 	return CursorPaginateResponse{
-		Items:   res,
-		HasMore: hasMore,
+		Items:   items,
+		HasMore: page.HasMore,
+	}
+}
+
+// ---- Reaction ----
+
+type ReactionResponse struct {
+	Liked      bool  `json:"liked"`
+	LikesCount int64 `json:"likesCount"`
+}
+
+func NewReactionResponse(res comment_interaction.ReactionResult) ReactionResponse {
+	return ReactionResponse{
+		Liked:      res.Liked,
+		LikesCount: res.LikesCount,
 	}
 }

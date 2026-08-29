@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	pkgprofile "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/profile"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/comment"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/domainerrors"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/model"
 )
 
 type Adapter struct {
@@ -19,7 +19,7 @@ func NewAdapter(client *pkgprofile.Client) *Adapter {
 	}
 }
 
-func (a *Adapter) GetUserProfileByID(ctx context.Context, id uint) (*model.UserProfile, error) {
+func (a *Adapter) GetUserProfileByID(ctx context.Context, id uint) (*comment.UserProfile, error) {
 	p, err := a.client.GetUserProfileByID(ctx, id)
 	if err != nil {
 		return nil, mapError(err)
@@ -27,12 +27,12 @@ func (a *Adapter) GetUserProfileByID(ctx context.Context, id uint) (*model.UserP
 	return toProfile(p), nil
 }
 
-func (a *Adapter) GetUserProfileByIDs(ctx context.Context, ids []uint) ([]*model.UserProfile, error) {
+func (a *Adapter) GetUserProfileByIDs(ctx context.Context, ids []uint) ([]*comment.UserProfile, error) {
 	ps, err := a.client.GetUserProfileByIDs(ctx, ids)
 	if err != nil {
 		return nil, mapError(err)
 	}
-	out := make([]*model.UserProfile, 0, len(ps))
+	out := make([]*comment.UserProfile, 0, len(ps))
 	for _, p := range ps {
 		out = append(out, toProfile(p))
 	}
@@ -46,8 +46,8 @@ func mapError(err error) error {
 	return err
 }
 
-func toProfile(p *pkgprofile.UserProfile) *model.UserProfile {
-	return &model.UserProfile{
+func toProfile(p *pkgprofile.UserProfile) *comment.UserProfile {
+	return &comment.UserProfile{
 		ID:       p.ID,
 		Username: p.Username,
 		Tag:      p.Tag,

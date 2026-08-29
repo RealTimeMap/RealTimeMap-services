@@ -3,7 +3,9 @@ services:
   gamification-service:
     build:
       context: ../..
-      dockerfile: services/gamification-service/Dockerfile
+      dockerfile: build/Dockerfile
+      args:
+        SERVICE: gamification-service
     container_name: gamification-service
     restart: always
     logging:
