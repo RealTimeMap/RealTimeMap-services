@@ -1,11 +1,11 @@
-package model
+package comment
 
 import "gorm.io/gorm"
 
 type EntityType string
 
 const (
-	EntityMark EntityType = "mark"
+	EntityMark EntityType = "mark_action"
 )
 
 const (
@@ -36,9 +36,8 @@ type Comment struct {
 	EntityType EntityType `gorm:"size:32;not null;index:idx_entity"`
 	EntityID   uint       `gorm:"not null;index:idx_entity"`
 
-	Status        CommentStatus `gorm:"type:varchar(20);not null;default:'active'"`
-	LikesCount    uint          `gorm:"default:0"`
-	DislikesCount uint          `gorm:"default:0"`
+	Status     CommentStatus `gorm:"type:varchar(20);not null;default:'active'"`
+	LikesCount uint          `gorm:"default:0"`
 
 	Depth uint `gorm:"not null; default:0"`
 

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/date"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/model"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/repository"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/comment"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/comment/stat"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -16,7 +16,7 @@ type PgStatisticRepositoryRepository struct {
 	logger *zap.Logger
 }
 
-func NewPgStatisticRepositoryRepository(db *gorm.DB, logger *zap.Logger) repository.StatisticRepository {
+func NewPgStatisticRepositoryRepository(db *gorm.DB, logger *zap.Logger) stat.Repository {
 	return &PgStatisticRepositoryRepository{
 		db:     db,
 		logger: logger,
@@ -25,6 +25,16 @@ func NewPgStatisticRepositoryRepository(db *gorm.DB, logger *zap.Logger) reposit
 
 func (r *PgStatisticRepositoryRepository) GetCountsByPeriod(ctx context.Context, userID uint, params date.Resolved) (int64, int64, error) {
 	r.logger.Info("PgStatisticRepositoryRepository.GetCountsByPeriod start", zap.Uint("user_id", userID))
+
+	// AllTime — период без границ: считаем все комментарии пользователя,
+	// предыдущего периода для сравнения не существует.
+	if params.IsAllTime() {
+		total, err := r.GetAllUsersComments(ctx, userID)
+		if err != nil {
+			return 0, 0, err
+		}
+		return total, 0, nil
+	}
 
 	currentStart, currentEnd := params.Current()
 	prevStart, prevEnd := params.Previous()
@@ -37,7 +47,7 @@ func (r *PgStatisticRepositoryRepository) GetCountsByPeriod(ctx context.Context,
 		PrevCount    int64
 	}
 
-	err := r.db.WithContext(ctx).Model(&model.Comment{}).
+	err := r.db.WithContext(ctx).Model(&comment.Comment{}).
 		Select(
 			"COUNT(*) FILTER (WHERE created_at >= ? AND created_at < ?) AS current_count, "+
 				"COUNT(*) FILTER (WHERE created_at >= ? AND created_at < ?) AS prev_count",
@@ -58,7 +68,7 @@ func (r *PgStatisticRepositoryRepository) GetAllUsersComments(ctx context.Contex
 	r.logger.Info("PgStatisticRepositoryRepository.GetAllUsersComments start", zap.Uint("user_id", userID))
 	var count int64
 
-	err := r.db.WithContext(ctx).Model(&model.Comment{}).
+	err := r.db.WithContext(ctx).Model(&comment.Comment{}).
 		Where("deleted_at IS NULL").
 		Where("user_id = ?", userID).Count(&count).Error
 	if err != nil {

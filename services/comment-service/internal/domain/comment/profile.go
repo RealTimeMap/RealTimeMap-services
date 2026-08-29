@@ -1,4 +1,4 @@
-package model
+package comment
 
 type UserProfile struct {
 	ID       uint

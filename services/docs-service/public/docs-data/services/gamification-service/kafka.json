@@ -1,0 +1,168 @@
+{
+  "topics": [
+    {
+      "id": "gamification-mark-events",
+      "name": "mark_action-service.events",
+      "summary": "События меток — начисление опыта и достижений",
+      "description": "Consumer-группа gamification-service подписана на события mark-service. На каждое событие сервис начисляет пользователю опыт (GreatUserExp) и проверяет условия достижений (OnEvent).\n\nТип события, ID пользователя и ID источника передаются в заголовках Kafka-сообщения (event_type, user_id, source_id, timestamp), а не в теле. Consumer читает их через pkg/transport/kafka.ExtractMeta: сообщения без event_type или user_id пропускаются (Skip) без повторной обработки.\n\nОбратите внимание: типы событий меток именуются в camelCase (markCreated), в отличие от событий комментариев и пользователей, где используется точечная нотация.",
+      "producers": [
+        "mark-service"
+      ],
+      "consumers": [
+        "gamification-service"
+      ],
+      "partitionKey": "user_id из заголовка сообщения",
+      "schema": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "description": "UUID события (envelope)"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Тип события",
+          "enum": [
+            "markCreated",
+            "markUpdated",
+            "markDeleted"
+          ]
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "required": true,
+          "description": "Время публикации события (UTC, RFC3339)"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Данные метки: id, categoryId, ownerId, markName и прочие поля MarkPayload"
+        }
+      ],
+      "example": {
+        "id": "3f2b1c88-0d3a-4a1e-9f77-1b0c2a5d4e6f",
+        "type": "markCreated",
+        "timestamp": "2026-08-29T10:15:00Z",
+        "payload": {
+          "id": 42,
+          "categoryId": 3,
+          "ownerId": 12,
+          "markName": "Смотровая площадка"
+        }
+      }
+    },
+    {
+      "id": "gamification-comment-events",
+      "name": "comment-service.events",
+      "summary": "События комментариев — начисление опыта и достижений",
+      "description": "Consumer-группа gamification-service подписана на события comment-service и начисляет опыт за активность в комментариях.\n\nТип события, ID пользователя и ID источника передаются в заголовках Kafka-сообщения (event_type, user_id, source_id, timestamp), а не в теле. Consumer читает их через pkg/transport/kafka.ExtractMeta: сообщения без event_type или user_id пропускаются (Skip) без повторной обработки.",
+      "producers": [
+        "comment-service"
+      ],
+      "consumers": [
+        "gamification-service"
+      ],
+      "partitionKey": "user_id из заголовка сообщения",
+      "schema": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "description": "UUID события (envelope)"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Тип события",
+          "enum": [
+            "comment.created",
+            "comment.updated",
+            "comment.deleted"
+          ]
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "required": true,
+          "description": "Время публикации события (UTC, RFC3339)"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Данные комментария: commentId, userId, entityType, entityId, parentId, content"
+        }
+      ],
+      "example": {
+        "id": "9c1e7d40-52b8-4a03-bb1f-77ae0c2f9d31",
+        "type": "comment.created",
+        "timestamp": "2026-08-29T10:16:30Z",
+        "payload": {
+          "commentId": 101,
+          "userId": 12,
+          "entityType": "mark",
+          "entityId": 42,
+          "parentId": null,
+          "content": "Отличное место"
+        }
+      }
+    },
+    {
+      "id": "gamification-user-events",
+      "name": "user-service.events",
+      "summary": "События пользователей — регистрация профиля в геймификации",
+      "description": "Consumer-группа gamification-service подписана на события жизненного цикла пользователя.\n\nТип события, ID пользователя и ID источника передаются в заголовках Kafka-сообщения (event_type, user_id, source_id, timestamp), а не в теле. Consumer читает их через pkg/transport/kafka.ExtractMeta: сообщения без event_type или user_id пропускаются (Skip) без повторной обработки.",
+      "producers": [
+        "auth-service"
+      ],
+      "consumers": [
+        "gamification-service"
+      ],
+      "partitionKey": "user_id из заголовка сообщения",
+      "schema": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "description": "UUID события (envelope)"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Тип события",
+          "enum": [
+            "user.created",
+            "user.updated",
+            "user.deleted"
+          ]
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "required": true,
+          "description": "Время публикации события (UTC, RFC3339)"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Данные пользователя: user_id"
+        }
+      ],
+      "example": {
+        "id": "5a7f2b19-88d4-4c6e-9012-3ab4cd5e6f70",
+        "type": "user.created",
+        "timestamp": "2026-08-29T10:00:00Z",
+        "payload": {
+          "user_id": 12
+        }
+      }
+    }
+  ]
+}

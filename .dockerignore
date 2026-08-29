@@ -1,0 +1,59 @@
+# ============================================
+# Docker build context filter
+# Контекст общий для всех сервисов монорепы,
+# поэтому режем всё, что не участвует в go build.
+# ============================================
+
+# VCS и IDE
+.git
+.gitignore
+.idea
+.vscode
+*.iml
+
+# Frontend-сервис: свой Dockerfile, в Go-сборку не входит
+services/docs-service
+
+# Node
+**/node_modules
+**/dist
+**/*.log
+
+# Инструменты и артефакты агентов
+graphify-out
+.scratch
+.claude
+skills-lock.json
+tools
+
+# Документация — не влияет на бинарник
+**/docs
+**/*.md
+docs
+
+# Пользовательский контент и локальные стораджи
+**/photos
+**/store
+**/uploads
+
+# Docker/compose файлы: инвалидируют контекст, но не нужны внутри сборки
+docker-compose*.yml
+docker-compose*.yaml
+**/docker-compose*.yml
+**/docker-compose*.yaml
+Dockerfile
+**/Dockerfile
+.dockerignore
+
+# Локальная разработка
+**/.air.toml
+**/tmp
+.env
+.env.*
+
+# Traefik и скрипты хоста
+traefik
+scripts
+
+# Тесты не нужны в образе
+**/*_test.go

@@ -6,7 +6,9 @@
       "path": "/api/v2/marks/",
       "summary": "Получение меток в области карты",
       "description": "Возвращает метки или кластеры меток в заданной видимой области карты. При zoomLevel < 12 возвращает кластеры, при >= 12 — отдельные метки. Фильтрация по временному диапазону событий.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "requestBody": {
         "description": "Параметры области и фильтрации",
         "contentType": "json",
@@ -23,8 +25,18 @@
                 "required": true,
                 "description": "Левый верхний угол области",
                 "children": [
-                  { "name": "lon", "type": "number", "required": true, "description": "Долгота (-180 до 180)" },
-                  { "name": "lat", "type": "number", "required": true, "description": "Широта (-90 до 90)" }
+                  {
+                    "name": "lon",
+                    "type": "number",
+                    "required": true,
+                    "description": "Долгота (-180 до 180)"
+                  },
+                  {
+                    "name": "lat",
+                    "type": "number",
+                    "required": true,
+                    "description": "Широта (-90 до 90)"
+                  }
                 ]
               },
               {
@@ -33,8 +45,18 @@
                 "required": true,
                 "description": "Центр области",
                 "children": [
-                  { "name": "lon", "type": "number", "required": true, "description": "Долгота" },
-                  { "name": "lat", "type": "number", "required": true, "description": "Широта" }
+                  {
+                    "name": "lon",
+                    "type": "number",
+                    "required": true,
+                    "description": "Долгота"
+                  },
+                  {
+                    "name": "lat",
+                    "type": "number",
+                    "required": true,
+                    "description": "Широта"
+                  }
                 ]
               },
               {
@@ -43,21 +65,55 @@
                 "required": true,
                 "description": "Правый нижний угол области",
                 "children": [
-                  { "name": "lon", "type": "number", "required": true, "description": "Долгота" },
-                  { "name": "lat", "type": "number", "required": true, "description": "Широта" }
+                  {
+                    "name": "lon",
+                    "type": "number",
+                    "required": true,
+                    "description": "Долгота"
+                  },
+                  {
+                    "name": "lat",
+                    "type": "number",
+                    "required": true,
+                    "description": "Широта"
+                  }
                 ]
               }
             ]
           },
-          { "name": "zoomLevel", "type": "integer", "required": false, "description": "Уровень зума карты. По умолчанию 15. При < 12 возвращаются кластеры, при >= 12 — метки" },
-          { "name": "startAt", "type": "string", "required": true, "description": "Начало временного диапазона (ISO 8601 / RFC3339)" },
-          { "name": "endAt", "type": "string", "required": false, "description": "Конец временного диапазона. По умолчанию — текущее время UTC" }
+          {
+            "name": "zoomLevel",
+            "type": "integer",
+            "required": false,
+            "description": "Уровень зума карты. По умолчанию 15. При < 12 возвращаются кластеры, при >= 12 — метки"
+          },
+          {
+            "name": "startAt",
+            "type": "string",
+            "required": true,
+            "description": "Начало временного диапазона (ISO 8601 / RFC3339)"
+          },
+          {
+            "name": "endAt",
+            "type": "string",
+            "required": false,
+            "description": "Конец временного диапазона. По умолчанию — текущее время UTC"
+          }
         ],
         "example": {
           "screen": {
-            "leftTop": { "lon": 37.5, "lat": 55.8 },
-            "center": { "lon": 37.6, "lat": 55.75 },
-            "rightBottom": { "lon": 37.7, "lat": 55.7 }
+            "leftTop": {
+              "lon": 37.5,
+              "lat": 55.8
+            },
+            "center": {
+              "lon": 37.6,
+              "lat": 55.75
+            },
+            "rightBottom": {
+              "lon": 37.7,
+              "lat": 55.7
+            }
           },
           "zoomLevel": 15,
           "startAt": "2026-04-25T00:00:00Z"
@@ -68,19 +124,47 @@
           "statusCode": 200,
           "description": "Список меток (при zoomLevel >= 12). Возвращается краткая форма метки — для деталей используйте `GET /api/v2/marks/{markID}`",
           "schema": [
-            { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
-            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID метки"
+            },
+            {
+              "name": "markName",
+              "type": "string",
+              "required": true,
+              "description": "Название метки"
+            },
             {
               "name": "geom",
               "type": "object",
               "required": true,
               "description": "Геометрия метки (GeoJSON Point)",
               "children": [
-                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
-                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                {
+                  "name": "type",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип геометрии",
+                  "enum": [
+                    "Point"
+                  ]
+                },
+                {
+                  "name": "coordinates",
+                  "type": "number[]",
+                  "required": true,
+                  "description": "Координаты [lon, lat]"
+                }
               ]
             },
-            { "name": "photos", "type": "string[]", "required": false, "description": "URL фотографий метки (может отсутствовать, если фото не загружены)" }
+            {
+              "name": "photos",
+              "type": "string[]",
+              "required": false,
+              "description": "URL фотографий метки (может отсутствовать, если фото не загружены)"
+            }
           ],
           "example": [
             {
@@ -88,7 +172,10 @@
               "markName": "Концерт в парке",
               "geom": {
                 "type": "Point",
-                "coordinates": [37.6176, 55.7558]
+                "coordinates": [
+                  37.6176,
+                  55.7558
+                ]
               },
               "photos": [
                 "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"
@@ -106,37 +193,76 @@
               "required": true,
               "description": "Центр кластера (GeoJSON Point)",
               "children": [
-                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
-                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                {
+                  "name": "type",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип геометрии",
+                  "enum": [
+                    "Point"
+                  ]
+                },
+                {
+                  "name": "coordinates",
+                  "type": "number[]",
+                  "required": true,
+                  "description": "Координаты [lon, lat]"
+                }
               ]
             },
-            { "name": "count", "type": "integer", "required": true, "description": "Количество меток в кластере" }
+            {
+              "name": "count",
+              "type": "integer",
+              "required": true,
+              "description": "Количество меток в кластере"
+            }
           ],
           "example": [
             {
               "center": {
                 "type": "Point",
-                "coordinates": [37.62, 55.75]
+                "coordinates": [
+                  37.62,
+                  55.75
+                ]
               },
               "count": 15
             }
           ]
         }
       ],
-      "errors": ["validation-error"]
+      "errors": [
+        "validation-error"
+      ]
     },
     {
       "id": "get-my-marks",
       "method": "GET",
       "path": "/api/v2/marks/my",
       "summary": "Мои метки",
-      "description": "Возвращает список меток текущего авторизованного пользователя с пагинацией.",
-      "tags": ["Метки"],
+      "description": "ВНИМАНИЕ: обработчик отсутствует в коде сервиса — запрос вернёт 404. Возвращает список меток текущего авторизованного пользователя с пагинацией.",
+      "tags": [
+        "Метки"
+      ],
       "auth": true,
       "pagination": "page",
       "parameters": [
-        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы (по умолчанию 1)", "location": "query", "example": "1" },
-        { "name": "pageSize", "type": "integer", "required": false, "description": "Количество элементов на странице (1–100, по умолчанию 10)", "location": "query", "example": "10" }
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "description": "Номер страницы (по умолчанию 1)",
+          "location": "query",
+          "example": "1"
+        },
+        {
+          "name": "pageSize",
+          "type": "integer",
+          "required": false,
+          "description": "Количество элементов на странице (1–100, по умолчанию 10)",
+          "location": "query",
+          "example": "10"
+        }
       ],
       "responses": [
         {
@@ -149,27 +275,85 @@
               "required": true,
               "description": "Массив меток (краткая форма)",
               "children": [
-                { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
-                { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID метки"
+                },
+                {
+                  "name": "markName",
+                  "type": "string",
+                  "required": true,
+                  "description": "Название метки"
+                },
                 {
                   "name": "geom",
                   "type": "object",
                   "required": true,
                   "description": "Геометрия (GeoJSON Point)",
                   "children": [
-                    { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
-                    { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                    {
+                      "name": "type",
+                      "type": "string",
+                      "required": true,
+                      "description": "Тип геометрии",
+                      "enum": [
+                        "Point"
+                      ]
+                    },
+                    {
+                      "name": "coordinates",
+                      "type": "number[]",
+                      "required": true,
+                      "description": "Координаты [lon, lat]"
+                    }
                   ]
                 },
-                { "name": "photos", "type": "string[]", "required": false, "description": "URL фотографий метки" }
+                {
+                  "name": "photos",
+                  "type": "string[]",
+                  "required": false,
+                  "description": "URL фотографий метки"
+                }
               ]
             },
-            { "name": "page", "type": "integer", "required": true, "description": "Текущая страница" },
-            { "name": "pageSize", "type": "integer", "required": true, "description": "Размер страницы" },
-            { "name": "totalPages", "type": "integer", "required": true, "description": "Общее число страниц" },
-            { "name": "total", "type": "integer", "required": true, "description": "Общее число меток" },
-            { "name": "hasNext", "type": "boolean", "required": true, "description": "Есть ли следующая страница" },
-            { "name": "hasPrev", "type": "boolean", "required": true, "description": "Есть ли предыдущая страница" }
+            {
+              "name": "page",
+              "type": "integer",
+              "required": true,
+              "description": "Текущая страница"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "required": true,
+              "description": "Размер страницы"
+            },
+            {
+              "name": "totalPages",
+              "type": "integer",
+              "required": true,
+              "description": "Общее число страниц"
+            },
+            {
+              "name": "total",
+              "type": "integer",
+              "required": true,
+              "description": "Общее число меток"
+            },
+            {
+              "name": "hasNext",
+              "type": "boolean",
+              "required": true,
+              "description": "Есть ли следующая страница"
+            },
+            {
+              "name": "hasPrev",
+              "type": "boolean",
+              "required": true,
+              "description": "Есть ли предыдущая страница"
+            }
           ],
           "example": {
             "items": [
@@ -178,7 +362,10 @@
                 "markName": "Концерт в парке",
                 "geom": {
                   "type": "Point",
-                  "coordinates": [37.6176, 55.7558]
+                  "coordinates": [
+                    37.6176,
+                    55.7558
+                  ]
                 },
                 "photos": [
                   "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"
@@ -194,7 +381,11 @@
           }
         }
       ],
-      "errors": ["unauthorized", "validation-error"]
+      "errors": [
+        "unauthorized",
+        "validation-error"
+      ],
+      "deprecated": true
     },
     {
       "id": "detail-mark",
@@ -202,28 +393,72 @@
       "path": "/api/v2/marks/{markID}",
       "summary": "Детальная информация о метке",
       "description": "Возвращает полную информацию о конкретной метке по её ID.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "parameters": [
-        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID метки",
+          "location": "path",
+          "example": "42"
+        }
       ],
       "responses": [
         {
           "statusCode": 200,
           "description": "Детальная информация о метке",
           "schema": [
-            { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
-            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
-            { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID метки"
+            },
+            {
+              "name": "markName",
+              "type": "string",
+              "required": true,
+              "description": "Название метки"
+            },
+            {
+              "name": "additionalInfo",
+              "type": "string",
+              "required": false,
+              "description": "Дополнительное описание"
+            },
             {
               "name": "category",
               "type": "object",
               "required": false,
               "description": "Категория метки. Может быть null, если категория удалена",
               "children": [
-                { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
-                { "name": "categoryName", "type": "string", "required": true, "description": "Название категории" },
-                { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории" },
-                { "name": "icon", "type": "string", "required": true, "description": "URL иконки категории" }
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID категории"
+                },
+                {
+                  "name": "categoryName",
+                  "type": "string",
+                  "required": true,
+                  "description": "Название категории"
+                },
+                {
+                  "name": "color",
+                  "type": "string",
+                  "required": true,
+                  "description": "HEX-цвет категории"
+                },
+                {
+                  "name": "icon",
+                  "type": "string",
+                  "required": true,
+                  "description": "URL иконки категории"
+                }
               ]
             },
             {
@@ -232,8 +467,21 @@
               "required": true,
               "description": "Геометрия метки (GeoJSON Point)",
               "children": [
-                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
-                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                {
+                  "name": "type",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип геометрии",
+                  "enum": [
+                    "Point"
+                  ]
+                },
+                {
+                  "name": "coordinates",
+                  "type": "number[]",
+                  "required": true,
+                  "description": "Координаты [lon, lat]"
+                }
               ]
             },
             {
@@ -242,24 +490,74 @@
               "required": true,
               "description": "Владелец метки",
               "children": [
-                { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
-                { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
-                { "name": "tag", "type": "string", "required": false, "description": "Тег профиля" },
-                { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" }
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID пользователя"
+                },
+                {
+                  "name": "username",
+                  "type": "string",
+                  "required": true,
+                  "description": "Имя пользователя"
+                },
+                {
+                  "name": "tag",
+                  "type": "string",
+                  "required": false,
+                  "description": "Тег профиля"
+                },
+                {
+                  "name": "avatar",
+                  "type": "string",
+                  "required": false,
+                  "description": "URL аватара"
+                }
               ]
             },
-            { "name": "photos", "type": "string[]", "required": false, "description": "URL фотографий метки" },
+            {
+              "name": "photos",
+              "type": "string[]",
+              "required": false,
+              "description": "URL фотографий метки"
+            },
             {
               "name": "date",
               "type": "object",
               "required": true,
               "description": "Временные характеристики события и его прогресс",
               "children": [
-                { "name": "startAt", "type": "string", "required": true, "description": "Время начала события (ISO 8601)" },
-                { "name": "endAt", "type": "string", "required": true, "description": "Время окончания события (ISO 8601)" },
-                { "name": "progressPercent", "type": "number", "required": true, "description": "Текущий процент прогресса события (0–100)" },
-                { "name": "daysPassed", "type": "integer", "required": true, "description": "Количество дней, прошедших с начала события" },
-                { "name": "daysLeft", "type": "integer", "required": true, "description": "Количество дней до окончания события" }
+                {
+                  "name": "startAt",
+                  "type": "string",
+                  "required": true,
+                  "description": "Время начала события (ISO 8601)"
+                },
+                {
+                  "name": "endAt",
+                  "type": "string",
+                  "required": true,
+                  "description": "Время окончания события (ISO 8601)"
+                },
+                {
+                  "name": "progressPercent",
+                  "type": "number",
+                  "required": true,
+                  "description": "Текущий процент прогресса события (0–100)"
+                },
+                {
+                  "name": "daysPassed",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Количество дней, прошедших с начала события"
+                },
+                {
+                  "name": "daysLeft",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Количество дней до окончания события"
+                }
               ]
             },
             {
@@ -268,8 +566,18 @@
               "required": true,
               "description": "Метаинформация о метке",
               "children": [
-                { "name": "status", "type": "string", "required": true, "description": "Текущий статус метки (например, активная / завершённая)" },
-                { "name": "markType", "type": "string", "required": true, "description": "Тип метки (определяется на основании временного диапазона и категории)" }
+                {
+                  "name": "status",
+                  "type": "string",
+                  "required": true,
+                  "description": "Текущий статус метки (например, активная / завершённая)"
+                },
+                {
+                  "name": "markType",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип метки (определяется на основании временного диапазона и категории)"
+                }
               ]
             }
           ],
@@ -285,7 +593,10 @@
             },
             "geom": {
               "type": "Point",
-              "coordinates": [37.6176, 55.7558]
+              "coordinates": [
+                37.6176,
+                55.7558
+              ]
             },
             "owner": {
               "id": 5,
@@ -310,15 +621,20 @@
           }
         }
       ],
-      "errors": ["validation-error", "not-found"]
+      "errors": [
+        "validation-error",
+        "not-found"
+      ]
     },
     {
       "id": "create-data",
       "method": "GET",
       "path": "/api/v2/marks/create-data",
       "summary": "Данные для создания метки",
-      "description": "Возвращает актуальные данные, необходимые для создания метки: доступные категории и допустимые значения длительности (в часах).",
-      "tags": ["Утилиты"],
+      "description": "ВНИМАНИЕ: обработчик отсутствует в коде сервиса — запрос вернёт 404. Возвращает актуальные данные, необходимые для создания метки: доступные категории и допустимые значения длительности (в часах).",
+      "tags": [
+        "Утилиты"
+      ],
       "responses": [
         {
           "statusCode": 200,
@@ -330,13 +646,38 @@
               "required": true,
               "description": "Список доступных категорий",
               "children": [
-                { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
-                { "name": "categoryName", "type": "string", "required": true, "description": "Название категории" },
-                { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории" },
-                { "name": "icon", "type": "string", "required": true, "description": "URL иконки категории" }
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID категории"
+                },
+                {
+                  "name": "categoryName",
+                  "type": "string",
+                  "required": true,
+                  "description": "Название категории"
+                },
+                {
+                  "name": "color",
+                  "type": "string",
+                  "required": true,
+                  "description": "HEX-цвет категории"
+                },
+                {
+                  "name": "icon",
+                  "type": "string",
+                  "required": true,
+                  "description": "URL иконки категории"
+                }
               ]
             },
-            { "name": "allowedDuration", "type": "integer[]", "required": true, "description": "Допустимые длительности метки в часах" }
+            {
+              "name": "allowedDuration",
+              "type": "integer[]",
+              "required": true,
+              "description": "Допустимые длительности метки в часах"
+            }
           ],
           "example": {
             "allowedCategories": [
@@ -347,11 +688,17 @@
                 "icon": "https://realtimemap.ru/store/photos/categories/2026/01/event-icon.png"
               }
             ],
-            "allowedDuration": [12, 24, 36, 48]
+            "allowedDuration": [
+              12,
+              24,
+              36,
+              48
+            ]
           }
         }
       ],
-      "errors": []
+      "errors": [],
+      "deprecated": true
     },
     {
       "id": "create-mark",
@@ -359,20 +706,62 @@
       "path": "/api/v2/marks/create",
       "summary": "Создание метки",
       "description": "Создаёт новую метку на карте. Требуется авторизация. После успешного создания клиенты, подключённые через socket.io, будут оповещены о новой метке.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "auth": true,
       "requestBody": {
         "description": "Данные для создания метки",
         "contentType": "form-data",
         "schema": [
-          { "name": "markName", "type": "string", "required": true, "description": "Название метки (3–100 символов)" },
-          { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание" },
-          { "name": "categoryId", "type": "integer", "required": true, "description": "ID активной категории метки" },
-          { "name": "startAt", "type": "string", "required": true, "description": "Время начала события (ISO 8601 / RFC3339)" },
-          { "name": "endAt", "type": "string", "required": false, "description": "Время окончания события. Если не указано — startAt + 1 час" },
-          { "name": "longitude", "type": "number", "required": true, "description": "Долгота (-180 до 180)" },
-          { "name": "latitude", "type": "number", "required": true, "description": "Широта (-90 до 90)" },
-          { "name": "photos", "type": "file[]", "required": false, "description": "Фотографии метки. До 10 файлов; каждый — до 5 МБ; форматы JPEG, PNG, WebP" }
+          {
+            "name": "markName",
+            "type": "string",
+            "required": true,
+            "description": "Название метки (3–100 символов)"
+          },
+          {
+            "name": "additionalInfo",
+            "type": "string",
+            "required": false,
+            "description": "Дополнительное описание"
+          },
+          {
+            "name": "categoryId",
+            "type": "integer",
+            "required": true,
+            "description": "ID активной категории метки"
+          },
+          {
+            "name": "startAt",
+            "type": "string",
+            "required": true,
+            "description": "Время начала события (ISO 8601 / RFC3339)"
+          },
+          {
+            "name": "endAt",
+            "type": "string",
+            "required": false,
+            "description": "Время окончания события. Если не указано — startAt + 1 час"
+          },
+          {
+            "name": "longitude",
+            "type": "number",
+            "required": true,
+            "description": "Долгота (-180 до 180)"
+          },
+          {
+            "name": "latitude",
+            "type": "number",
+            "required": true,
+            "description": "Широта (-90 до 90)"
+          },
+          {
+            "name": "photos",
+            "type": "file[]",
+            "required": false,
+            "description": "Фотографии метки. До 10 файлов; каждый — до 5 МБ; форматы JPEG, PNG, WebP"
+          }
         ],
         "example": {
           "markName": "Концерт в парке",
@@ -390,26 +779,57 @@
           "statusCode": 201,
           "description": "Метка успешно создана. Возвращается краткая форма метки — для деталей используйте `GET /api/v2/marks/{markID}`",
           "schema": [
-            { "name": "id", "type": "integer", "required": true, "description": "ID созданной метки" },
-            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID созданной метки"
+            },
+            {
+              "name": "markName",
+              "type": "string",
+              "required": true,
+              "description": "Название метки"
+            },
             {
               "name": "geom",
               "type": "object",
               "required": true,
               "description": "Геометрия метки (GeoJSON Point)",
               "children": [
-                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
-                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                {
+                  "name": "type",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип геометрии",
+                  "enum": [
+                    "Point"
+                  ]
+                },
+                {
+                  "name": "coordinates",
+                  "type": "number[]",
+                  "required": true,
+                  "description": "Координаты [lon, lat]"
+                }
               ]
             },
-            { "name": "photos", "type": "string[]", "required": false, "description": "URL загруженных фотографий" }
+            {
+              "name": "photos",
+              "type": "string[]",
+              "required": false,
+              "description": "URL загруженных фотографий"
+            }
           ],
           "example": {
             "id": 42,
             "markName": "Концерт в парке",
             "geom": {
               "type": "Point",
-              "coordinates": [37.6176, 55.7558]
+              "coordinates": [
+                37.6176,
+                55.7558
+              ]
             },
             "photos": [
               "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg",
@@ -418,7 +838,12 @@
           }
         }
       ],
-      "errors": ["unauthorized", "validation-error", "not-found", "conflict"]
+      "errors": [
+        "unauthorized",
+        "validation-error",
+        "not-found",
+        "conflict"
+      ]
     },
     {
       "id": "update-mark",
@@ -426,26 +851,67 @@
       "path": "/api/v2/marks/{markID}",
       "summary": "Обновление метки",
       "description": "Обновляет поля существующей метки. Все поля необязательные — отправляются только те, которые нужно изменить. Можно добавлять новые фото и удалять существующие. Требуется авторизация; обновлять может только владелец или администратор.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "auth": true,
       "parameters": [
-        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID метки",
+          "location": "path",
+          "example": "42"
+        }
       ],
       "requestBody": {
         "description": "Поля для обновления (все необязательные)",
         "contentType": "form-data",
         "schema": [
-          { "name": "markName", "type": "string", "required": false, "description": "Новое название метки" },
-          { "name": "additionalInfo", "type": "string", "required": false, "description": "Новое описание" },
-          { "name": "categoryId", "type": "integer", "required": false, "description": "Новый ID категории" },
-          { "name": "duration", "type": "integer", "required": false, "description": "Новая длительность в часах. Допустимые значения: 12, 24, 36, 48" },
-          { "name": "photos", "type": "file[]", "required": false, "description": "Новые фотографии для добавления" },
-          { "name": "photosToDelete", "type": "string[]", "required": false, "description": "URL фотографий для удаления" }
+          {
+            "name": "markName",
+            "type": "string",
+            "required": false,
+            "description": "Новое название метки"
+          },
+          {
+            "name": "additionalInfo",
+            "type": "string",
+            "required": false,
+            "description": "Новое описание"
+          },
+          {
+            "name": "categoryId",
+            "type": "integer",
+            "required": false,
+            "description": "Новый ID категории"
+          },
+          {
+            "name": "duration",
+            "type": "integer",
+            "required": false,
+            "description": "Новая длительность в часах. Допустимые значения: 12, 24, 36, 48"
+          },
+          {
+            "name": "photos",
+            "type": "file[]",
+            "required": false,
+            "description": "Новые фотографии для добавления"
+          },
+          {
+            "name": "photosToDelete",
+            "type": "string[]",
+            "required": false,
+            "description": "URL фотографий для удаления"
+          }
         ],
         "example": {
           "markName": "Обновлённое название",
           "categoryId": 2,
-          "photosToDelete": ["https://realtimemap.ru/store/photos/marks/2026/04/old-photo.jpg"]
+          "photosToDelete": [
+            "https://realtimemap.ru/store/photos/marks/2026/04/old-photo.jpg"
+          ]
         }
       },
       "responses": [
@@ -453,26 +919,57 @@
           "statusCode": 200,
           "description": "Метка обновлена. Возвращается краткая форма метки — для деталей используйте `GET /api/v2/marks/{markID}`",
           "schema": [
-            { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
-            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID метки"
+            },
+            {
+              "name": "markName",
+              "type": "string",
+              "required": true,
+              "description": "Название метки"
+            },
             {
               "name": "geom",
               "type": "object",
               "required": true,
               "description": "Геометрия метки (GeoJSON Point)",
               "children": [
-                { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
-                { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                {
+                  "name": "type",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип геометрии",
+                  "enum": [
+                    "Point"
+                  ]
+                },
+                {
+                  "name": "coordinates",
+                  "type": "number[]",
+                  "required": true,
+                  "description": "Координаты [lon, lat]"
+                }
               ]
             },
-            { "name": "photos", "type": "string[]", "required": false, "description": "Актуальные URL фотографий" }
+            {
+              "name": "photos",
+              "type": "string[]",
+              "required": false,
+              "description": "Актуальные URL фотографий"
+            }
           ],
           "example": {
             "id": 42,
             "markName": "Обновлённое название",
             "geom": {
               "type": "Point",
-              "coordinates": [37.6176, 55.7558]
+              "coordinates": [
+                37.6176,
+                55.7558
+              ]
             },
             "photos": [
               "https://realtimemap.ru/store/photos/marks/2026/04/photo2.jpg"
@@ -480,7 +977,12 @@
           }
         }
       ],
-      "errors": ["unauthorized", "forbidden", "validation-error", "not-found"]
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "validation-error",
+        "not-found"
+      ]
     },
     {
       "id": "delete-mark",
@@ -488,10 +990,19 @@
       "path": "/api/v2/marks/{markID}",
       "summary": "Удаление метки",
       "description": "Удаляет метку по ID. Требуется авторизация; удалять может только владелец или администратор.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "auth": true,
       "parameters": [
-        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID метки",
+          "location": "path",
+          "example": "42"
+        }
       ],
       "responses": [
         {
@@ -499,20 +1010,40 @@
           "description": "Метка успешно удалена"
         }
       ],
-      "errors": ["unauthorized", "forbidden", "not-found"]
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "not-found"
+      ]
     },
     {
       "id": "admin-get-all-marks",
       "method": "GET",
       "path": "/api/v2/admin/mark/",
       "summary": "Все метки (админ)",
-      "description": "Возвращает все метки с пагинацией. Доступно только администраторам.",
-      "tags": ["Админ"],
+      "description": "ВНИМАНИЕ: обработчик отсутствует в коде сервиса — запрос вернёт 404. Возвращает все метки с пагинацией. Доступно только администраторам.",
+      "tags": [
+        "Админ"
+      ],
       "auth": true,
       "pagination": "page",
       "parameters": [
-        { "name": "page", "type": "integer", "required": false, "description": "Номер страницы (по умолчанию 1)", "location": "query", "example": "1" },
-        { "name": "pageSize", "type": "integer", "required": false, "description": "Количество элементов на странице (1–100, по умолчанию 10)", "location": "query", "example": "10" }
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "description": "Номер страницы (по умолчанию 1)",
+          "location": "query",
+          "example": "1"
+        },
+        {
+          "name": "pageSize",
+          "type": "integer",
+          "required": false,
+          "description": "Количество элементов на странице (1–100, по умолчанию 10)",
+          "location": "query",
+          "example": "10"
+        }
       ],
       "responses": [
         {
@@ -525,27 +1056,85 @@
               "required": true,
               "description": "Массив меток (краткая форма)",
               "children": [
-                { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
-                { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID метки"
+                },
+                {
+                  "name": "markName",
+                  "type": "string",
+                  "required": true,
+                  "description": "Название метки"
+                },
                 {
                   "name": "geom",
                   "type": "object",
                   "required": true,
                   "description": "Геометрия (GeoJSON Point)",
                   "children": [
-                    { "name": "type", "type": "string", "required": true, "description": "Тип геометрии", "enum": ["Point"] },
-                    { "name": "coordinates", "type": "number[]", "required": true, "description": "Координаты [lon, lat]" }
+                    {
+                      "name": "type",
+                      "type": "string",
+                      "required": true,
+                      "description": "Тип геометрии",
+                      "enum": [
+                        "Point"
+                      ]
+                    },
+                    {
+                      "name": "coordinates",
+                      "type": "number[]",
+                      "required": true,
+                      "description": "Координаты [lon, lat]"
+                    }
                   ]
                 },
-                { "name": "photos", "type": "string[]", "required": false, "description": "URL фотографий метки" }
+                {
+                  "name": "photos",
+                  "type": "string[]",
+                  "required": false,
+                  "description": "URL фотографий метки"
+                }
               ]
             },
-            { "name": "page", "type": "integer", "required": true, "description": "Текущая страница" },
-            { "name": "pageSize", "type": "integer", "required": true, "description": "Размер страницы" },
-            { "name": "totalPages", "type": "integer", "required": true, "description": "Общее число страниц" },
-            { "name": "total", "type": "integer", "required": true, "description": "Общее число меток" },
-            { "name": "hasNext", "type": "boolean", "required": true, "description": "Есть ли следующая страница" },
-            { "name": "hasPrev", "type": "boolean", "required": true, "description": "Есть ли предыдущая страница" }
+            {
+              "name": "page",
+              "type": "integer",
+              "required": true,
+              "description": "Текущая страница"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "required": true,
+              "description": "Размер страницы"
+            },
+            {
+              "name": "totalPages",
+              "type": "integer",
+              "required": true,
+              "description": "Общее число страниц"
+            },
+            {
+              "name": "total",
+              "type": "integer",
+              "required": true,
+              "description": "Общее число меток"
+            },
+            {
+              "name": "hasNext",
+              "type": "boolean",
+              "required": true,
+              "description": "Есть ли следующая страница"
+            },
+            {
+              "name": "hasPrev",
+              "type": "boolean",
+              "required": true,
+              "description": "Есть ли предыдущая страница"
+            }
           ],
           "example": {
             "items": [
@@ -554,7 +1143,10 @@
                 "markName": "Концерт в парке",
                 "geom": {
                   "type": "Point",
-                  "coordinates": [37.6176, 55.7558]
+                  "coordinates": [
+                    37.6176,
+                    55.7558
+                  ]
                 },
                 "photos": []
               }
@@ -568,7 +1160,11 @@
           }
         }
       ],
-      "errors": ["unauthorized", "forbidden"]
+      "errors": [
+        "unauthorized",
+        "forbidden"
+      ],
+      "deprecated": true
     },
     {
       "id": "share-mark",
@@ -576,23 +1172,39 @@
       "path": "/api/v2/accrual/{markID}/share",
       "summary": "Поделиться меткой",
       "description": "Увеличивает счётчик «поделились» (sharedCount) для метки на 1 и возвращает актуальное значение. Авторизация не требуется. Инкремент выполняется атомарно на стороне БД.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "parameters": [
-        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID метки",
+          "location": "path",
+          "example": "42"
+        }
       ],
       "responses": [
         {
           "statusCode": 200,
           "description": "Счётчик увеличен. Возвращается новое значение счётчика",
           "schema": [
-            { "name": "count", "type": "integer", "required": true, "description": "Актуальное количество «поделились» после инкремента" }
+            {
+              "name": "count",
+              "type": "integer",
+              "required": true,
+              "description": "Актуальное количество «поделились» после инкремента"
+            }
           ],
           "example": {
             "count": 17
           }
         }
       ],
-      "errors": ["not-found"]
+      "errors": [
+        "not-found"
+      ]
     },
     {
       "id": "like-mark",
@@ -600,19 +1212,43 @@
       "path": "/api/v2/accrual/{markID}/like",
       "summary": "Поставить лайк метке",
       "description": "Ставит лайк текущего пользователя на метку. Требуется авторизация. Возвращает актуальное состояние реакций метки с метаданными для отрисовки на клиенте. Повторный лайк той же метки тем же пользователем не создаёт дубликат.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "auth": true,
       "parameters": [
-        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID метки",
+          "location": "path",
+          "example": "42"
+        }
       ],
       "responses": [
         {
           "statusCode": 200,
           "description": "Лайк поставлен. Возвращается актуальное состояние реакций",
           "schema": [
-            { "name": "count", "type": "integer", "required": true, "description": "Актуальное количество лайков метки" },
-            { "name": "isLiked", "type": "boolean", "required": true, "description": "Поставлен ли лайк текущим пользователем (после операции — true)" },
-            { "name": "canLike", "type": "boolean", "required": true, "description": "Может ли пользователь поставить лайк (= !isLiked)" }
+            {
+              "name": "count",
+              "type": "integer",
+              "required": true,
+              "description": "Актуальное количество лайков метки"
+            },
+            {
+              "name": "isLiked",
+              "type": "boolean",
+              "required": true,
+              "description": "Поставлен ли лайк текущим пользователем (после операции — true)"
+            },
+            {
+              "name": "canLike",
+              "type": "boolean",
+              "required": true,
+              "description": "Может ли пользователь поставить лайк (= !isLiked)"
+            }
           ],
           "example": {
             "count": 42,
@@ -621,7 +1257,10 @@
           }
         }
       ],
-      "errors": ["unauthorized", "not-found"]
+      "errors": [
+        "unauthorized",
+        "not-found"
+      ]
     },
     {
       "id": "unlike-mark",
@@ -629,19 +1268,43 @@
       "path": "/api/v2/accrual/{markID}/like",
       "summary": "Убрать лайк с метки",
       "description": "Снимает лайк текущего пользователя с метки. Требуется авторизация. Операция идемпотентна — снятие отсутствующего лайка не приводит к ошибке. Возвращает актуальное состояние реакций метки.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "auth": true,
       "parameters": [
-        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID метки",
+          "location": "path",
+          "example": "42"
+        }
       ],
       "responses": [
         {
           "statusCode": 200,
           "description": "Лайк снят. Возвращается актуальное состояние реакций",
           "schema": [
-            { "name": "count", "type": "integer", "required": true, "description": "Актуальное количество лайков метки" },
-            { "name": "isLiked", "type": "boolean", "required": true, "description": "Поставлен ли лайк текущим пользователем (после операции — false)" },
-            { "name": "canLike", "type": "boolean", "required": true, "description": "Может ли пользователь поставить лайк (= !isLiked)" }
+            {
+              "name": "count",
+              "type": "integer",
+              "required": true,
+              "description": "Актуальное количество лайков метки"
+            },
+            {
+              "name": "isLiked",
+              "type": "boolean",
+              "required": true,
+              "description": "Поставлен ли лайк текущим пользователем (после операции — false)"
+            },
+            {
+              "name": "canLike",
+              "type": "boolean",
+              "required": true,
+              "description": "Может ли пользователь поставить лайк (= !isLiked)"
+            }
           ],
           "example": {
             "count": 41,
@@ -650,7 +1313,10 @@
           }
         }
       ],
-      "errors": ["unauthorized", "not-found"]
+      "errors": [
+        "unauthorized",
+        "not-found"
+      ]
     },
     {
       "id": "mark-stat",
@@ -658,20 +1324,49 @@
       "path": "/api/v2/accrual/{markID}/stat",
       "summary": "Статистика метки",
       "description": "Возвращает агрегированную статистику метки: количество лайков и «поделились», отформатированные для отображения (напр. \"1.2 K\", \"3.4 M\"). Авторизация опциональна: при наличии токена в ответ добавляются метаданные для текущего пользователя (isLiked/canLike). Без токена isLiked всегда false, canLike — true.",
-      "tags": ["Метки"],
+      "tags": [
+        "Метки"
+      ],
       "auth": false,
       "parameters": [
-        { "name": "markID", "type": "integer", "required": true, "description": "ID метки", "location": "path", "example": "42" }
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID метки",
+          "location": "path",
+          "example": "42"
+        }
       ],
       "responses": [
         {
           "statusCode": 200,
           "description": "Статистика метки",
           "schema": [
-            { "name": "likes", "type": "string", "required": true, "description": "Количество лайков, отформатированное для отображения (напр. \"1.2 K\")" },
-            { "name": "shares", "type": "string", "required": true, "description": "Количество «поделились», отформатированное для отображения" },
-            { "name": "isLiked", "type": "boolean", "required": true, "description": "Поставлен ли лайк текущим пользователем. false для анонимного запроса" },
-            { "name": "canLike", "type": "boolean", "required": true, "description": "Может ли пользователь поставить лайк (= !isLiked)" }
+            {
+              "name": "likes",
+              "type": "string",
+              "required": true,
+              "description": "Количество лайков, отформатированное для отображения (напр. \"1.2 K\")"
+            },
+            {
+              "name": "shares",
+              "type": "string",
+              "required": true,
+              "description": "Количество «поделились», отформатированное для отображения"
+            },
+            {
+              "name": "isLiked",
+              "type": "boolean",
+              "required": true,
+              "description": "Поставлен ли лайк текущим пользователем. false для анонимного запроса"
+            },
+            {
+              "name": "canLike",
+              "type": "boolean",
+              "required": true,
+              "description": "Может ли пользователь поставить лайк (= !isLiked)"
+            }
           ],
           "example": {
             "likes": "1.2 K",
@@ -681,7 +1376,9 @@
           }
         }
       ],
-      "errors": ["not-found"]
+      "errors": [
+        "not-found"
+      ]
     },
     {
       "id": "create-category",
@@ -689,15 +1386,32 @@
       "path": "/api/v2/category",
       "summary": "Создание категории",
       "description": "Создаёт новую категорию меток. Доступно только администраторам. Иконка — изображение до 5 МБ (jpeg, png, webp, svg).",
-      "tags": ["Категории"],
+      "tags": [
+        "Категории"
+      ],
       "auth": true,
       "requestBody": {
         "description": "Данные категории",
         "contentType": "form-data",
         "schema": [
-          { "name": "category_name", "type": "string", "required": true, "description": "Название категории (макс. 64 символа)" },
-          { "name": "color", "type": "string", "required": true, "description": "HEX-цвет категории (формат #RRGGBB, макс. 7 символов)" },
-          { "name": "icon", "type": "file", "required": true, "description": "Иконка категории (jpeg, png, webp, svg; макс. 5 МБ)" }
+          {
+            "name": "category_name",
+            "type": "string",
+            "required": true,
+            "description": "Название категории (макс. 64 символа)"
+          },
+          {
+            "name": "color",
+            "type": "string",
+            "required": true,
+            "description": "HEX-цвет категории (формат #RRGGBB, макс. 7 символов)"
+          },
+          {
+            "name": "icon",
+            "type": "file",
+            "required": true,
+            "description": "Иконка категории (jpeg, png, webp, svg; макс. 5 МБ)"
+          }
         ],
         "example": {
           "category_name": "Мероприятия",
@@ -710,10 +1424,30 @@
           "statusCode": 201,
           "description": "Категория создана",
           "schema": [
-            { "name": "id", "type": "integer", "required": true, "description": "ID категории" },
-            { "name": "categoryName", "type": "string", "required": true, "description": "Название" },
-            { "name": "color", "type": "string", "required": true, "description": "HEX-цвет" },
-            { "name": "icon", "type": "string", "required": true, "description": "URL иконки" }
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID категории"
+            },
+            {
+              "name": "categoryName",
+              "type": "string",
+              "required": true,
+              "description": "Название"
+            },
+            {
+              "name": "color",
+              "type": "string",
+              "required": true,
+              "description": "HEX-цвет"
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "required": true,
+              "description": "URL иконки"
+            }
           ],
           "example": {
             "id": 3,
@@ -723,7 +1457,185 @@
           }
         }
       ],
-      "errors": ["unauthorized", "forbidden", "validation-error", "conflict"]
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "validation-error",
+        "conflict"
+      ]
+    },
+    {
+      "id": "get-categories",
+      "method": "GET",
+      "path": "/api/v2/category/all",
+      "summary": "Список категорий",
+      "description": "Возвращает все доступные категории меток. Авторизация не требуется.",
+      "tags": [
+        "Категории"
+      ],
+      "auth": false,
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Массив категорий",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID категории"
+            },
+            {
+              "name": "categoryName",
+              "type": "string",
+              "required": true,
+              "description": "Название категории"
+            },
+            {
+              "name": "color",
+              "type": "string",
+              "required": true,
+              "description": "Цвет категории (HEX)"
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "required": true,
+              "description": "Иконка категории"
+            }
+          ],
+          "example": [
+            {
+              "id": 1,
+              "categoryName": "Достопримечательность",
+              "color": "#4CAF50",
+              "icon": "landmark"
+            }
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "get-user-marks",
+      "method": "GET",
+      "path": "/api/v2/marks/{markID}/list",
+      "summary": "Метки пользователя",
+      "description": "Возвращает метки, созданные пользователем, с постраничной навигацией. Несмотря на имя параметра markID, в пути передаётся ID пользователя — так исторически сложилось в схеме путей.",
+      "tags": [
+        "Метки"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID пользователя (не метки)",
+          "location": "path",
+          "example": "12"
+        },
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "description": "Номер страницы, по умолчанию 1",
+          "location": "query",
+          "example": "1"
+        },
+        {
+          "name": "pageSize",
+          "type": "integer",
+          "required": false,
+          "description": "Размер страницы",
+          "location": "query",
+          "example": "20"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Страница меток пользователя",
+          "schema": [
+            {
+              "name": "items",
+              "type": "array",
+              "required": true,
+              "description": "Массив меток"
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "required": true,
+              "description": "Текущая страница"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "required": true,
+              "description": "Размер страницы"
+            },
+            {
+              "name": "totalPages",
+              "type": "integer",
+              "required": true,
+              "description": "Всего страниц"
+            },
+            {
+              "name": "total",
+              "type": "integer",
+              "required": true,
+              "description": "Всего записей"
+            },
+            {
+              "name": "hasNext",
+              "type": "boolean",
+              "required": true,
+              "description": "Есть следующая страница"
+            },
+            {
+              "name": "hasPrev",
+              "type": "boolean",
+              "required": true,
+              "description": "Есть предыдущая страница"
+            }
+          ],
+          "example": {
+            "items": [],
+            "page": 1,
+            "pageSize": 20,
+            "totalPages": 0,
+            "total": 0,
+            "hasNext": false,
+            "hasPrev": false
+          }
+        }
+      ],
+      "errors": [
+        "validation-error"
+      ]
+    },
+    {
+      "id": "create-mark-test",
+      "method": "POST",
+      "path": "/api/v2/create-test",
+      "summary": "Создание метки (тестовый обработчик)",
+      "description": "Альтернативный обработчик создания метки, используется для отладки. Контракт совпадает с POST /api/v2/marks/create. Требует авторизации.",
+      "tags": [
+        "Метки"
+      ],
+      "auth": true,
+      "responses": [
+        {
+          "statusCode": 201,
+          "description": "Метка создана",
+          "schema": []
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error"
+      ]
     },
     {
       "id": "health",
@@ -731,14 +1643,29 @@
       "path": "/mark/health",
       "summary": "Health-check",
       "description": "Проверка доступности сервиса и подключения к базе данных. Возвращает 200 если БД доступна, иначе 503.",
-      "tags": ["Служебные"],
+      "tags": [
+        "Служебные"
+      ],
       "responses": [
         {
           "statusCode": 200,
           "description": "Сервис и БД работают",
           "schema": [
-            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["healthy"] },
-            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Состояние сервиса",
+              "enum": [
+                "healthy"
+              ]
+            },
+            {
+              "name": "service",
+              "type": "string",
+              "required": true,
+              "description": "Имя сервиса"
+            }
           ],
           "example": {
             "status": "healthy",
@@ -749,13 +1676,59 @@
           "statusCode": 503,
           "description": "БД недоступна",
           "schema": [
-            { "name": "status", "type": "string", "required": true, "description": "Состояние сервиса", "enum": ["unhealthy"] },
-            { "name": "service", "type": "string", "required": true, "description": "Имя сервиса" }
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Состояние сервиса",
+              "enum": [
+                "unhealthy"
+              ]
+            },
+            {
+              "name": "service",
+              "type": "string",
+              "required": true,
+              "description": "Имя сервиса"
+            }
           ],
           "example": {
             "status": "unhealthy",
             "service": "mark-service"
           }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "static-store",
+      "method": "GET",
+      "path": "/store/{filepath}",
+      "summary": "Статические файлы",
+      "description": "Раздача загруженных файлов из локального хранилища сервиса. Путь после /store/ соответствует пути файла в хранилище.",
+      "tags": [
+        "Служебные"
+      ],
+      "parameters": [
+        {
+          "name": "filepath",
+          "type": "string",
+          "required": true,
+          "description": "Относительный путь к файлу в хранилище",
+          "location": "path",
+          "example": "photos/marks/1/photo.jpg"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Содержимое файла (binary)",
+          "schema": []
+        },
+        {
+          "statusCode": 404,
+          "description": "Файл не найден",
+          "schema": []
         }
       ],
       "errors": []
