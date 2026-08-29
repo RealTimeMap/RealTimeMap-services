@@ -30,8 +30,8 @@ ARG TARGETARCH
 # BUILD_JOBS  — сколько пакетов Go компилирует одновременно (go build -p).
 # GOMAXPROCS  — сколько ОС-потоков использует сам компилятор.
 # Пусто = без ограничений (все ядра). Пример: --build-arg BUILD_JOBS=2
-ARG BUILD_JOBS=
-ARG GOMAXPROCS=
+ARG BUILD_JOBS=2
+ARG GOMAXPROCS=2
 
 COPY pkg/ ./pkg/
 COPY services/${SERVICE}/ ./services/${SERVICE}/
@@ -64,7 +64,10 @@ RUN apk add --no-cache ca-certificates tzdata wget && \
 WORKDIR /app
 
 COPY --from=builder --chown=appuser:appgroup /out/service /app/service
-COPY --chown=appuser:appgroup services/${SERVICE}/config/config.yaml ./config/config.yaml
+
+# config.yaml намеренно НЕ копируется в образ: он содержит реальные креды,
+# лежит только на сервере и монтируется внутрь через volume (см. compose).
+# Пустой /app/config создан выше — точка монтирования.
 
 USER appuser
 EXPOSE 8080

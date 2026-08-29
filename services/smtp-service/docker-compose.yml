@@ -35,6 +35,8 @@ services:
       - "traefik.http.routers.smtp-emails.tls=true"
 
       - "traefik.http.services.smtp.loadbalancer.server.port=8080"
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
     networks:
       - web
       - service-network
