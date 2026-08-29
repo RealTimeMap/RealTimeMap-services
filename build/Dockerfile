@@ -30,8 +30,8 @@ ARG TARGETARCH
 # BUILD_JOBS  — сколько пакетов Go компилирует одновременно (go build -p).
 # GOMAXPROCS  — сколько ОС-потоков использует сам компилятор.
 # Пусто = без ограничений (все ядра). Пример: --build-arg BUILD_JOBS=2
-ARG BUILD_JOBS=
-ARG GOMAXPROCS=
+ARG BUILD_JOBS=2
+ARG GOMAXPROCS=2
 
 COPY pkg/ ./pkg/
 COPY services/${SERVICE}/ ./services/${SERVICE}/
