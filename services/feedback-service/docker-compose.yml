@@ -43,6 +43,8 @@ services:
       - "traefik.http.routers.feedback-list.tls=true"
 
       - "traefik.http.services.feedback.loadbalancer.server.port=8080"
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
     networks:
       - web
       - service-network

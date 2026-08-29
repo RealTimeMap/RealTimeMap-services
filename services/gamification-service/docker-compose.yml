@@ -77,6 +77,7 @@ services:
       - "traefik.http.services.gamification.loadbalancer.server.port=8080"
 
     volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
       - gamification_store_data:/app/store
     networks:
       - web

@@ -64,7 +64,10 @@ RUN apk add --no-cache ca-certificates tzdata wget && \
 WORKDIR /app
 
 COPY --from=builder --chown=appuser:appgroup /out/service /app/service
-COPY --chown=appuser:appgroup services/${SERVICE}/config/config.yaml ./config/config.yaml
+
+# config.yaml намеренно НЕ копируется в образ: он содержит реальные креды,
+# лежит только на сервере и монтируется внутрь через volume (см. compose).
+# Пустой /app/config создан выше — точка монтирования.
 
 USER appuser
 EXPOSE 8080

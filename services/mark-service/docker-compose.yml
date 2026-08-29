@@ -164,6 +164,7 @@ services:
       - "traefik.http.services.mark.loadbalancer.sticky.cookie.secure=true"
 
     volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
       - mark_store_data:/app/store
 
     networks:

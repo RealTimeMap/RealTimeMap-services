@@ -84,6 +84,8 @@ services:
       # Service configuration
       - "traefik.http.services.comment.loadbalancer.server.port=8080"
 
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
     networks:
       - web
       - internal-comment
