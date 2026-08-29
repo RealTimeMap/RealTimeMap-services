@@ -119,3 +119,8 @@ fabric.properties
 /services/docs-service/node_modules
 /services/docs-service/dist
 /services/*/photos
+/graphify-out
+/docs
+/.scratch
+/.agents
+/.idea
