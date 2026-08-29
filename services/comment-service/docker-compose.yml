@@ -1,6 +1,7 @@
 services:
 
   comment-service:
+    image: ghcr.io/realtimemap/comment-service:${TAG:-latest}
     build:
       context: ../..
       dockerfile: build/Dockerfile
@@ -94,4 +95,5 @@ networks:
     external: true
   service-network:
     external: true
+    name: service-network
   internal-comment:

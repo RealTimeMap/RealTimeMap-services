@@ -1,6 +1,7 @@
 services:
 
   smtp-service:
+    image: ghcr.io/realtimemap/smtp-service:${TAG:-latest}
     build:
       context: ../..
       dockerfile: build/Dockerfile
@@ -44,5 +45,6 @@ networks:
     external: true
   service-network:
     external: true
+    name: service-network
   kafka-network:
     external: true

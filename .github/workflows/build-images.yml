@@ -1,0 +1,116 @@
+name: Build & push service images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'go.mod'
+      - 'go.sum'
+      - 'pkg/**'
+      - 'services/**'
+      - 'build/Dockerfile'
+      - '.github/workflows/build-images.yml'
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Какой сервис собрать (all — все шесть)'
+        required: true
+        default: all
+        type: choice
+        options: [all, mark-service, comment-service, feedback-service, gamification-service, smtp-service, social-service]
+      tag:
+        description: 'Дополнительный тег помимо latest и SHA'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: realtimemap
+
+jobs:
+  # ------------------------------------------------------------------
+  # Определяем, какие сервисы пересобирать.
+  # Изменения в pkg/, go.mod, go.sum или самом Dockerfile затрагивают
+  # все сервисы монорепы — тогда собираем всё.
+  # ------------------------------------------------------------------
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.pick.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: pick
+        shell: bash
+        run: |
+          ALL='["mark-service","comment-service","feedback-service","gamification-service","smtp-service","social-service"]'
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.service }}" = "all" ]; then
+              echo "services=$ALL" >> "$GITHUB_OUTPUT"
+            else
+              echo "services=[\"${{ inputs.service }}\"]" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only HEAD^ HEAD)
+
+          # общий код -> пересобираем все сервисы
+          if echo "$CHANGED" | grep -qE '^(go\.(mod|sum)|pkg/|build/Dockerfile)'; then
+            echo "services=$ALL" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          LIST=""
+          for s in mark-service comment-service feedback-service gamification-service smtp-service social-service; do
+            if echo "$CHANGED" | grep -q "^services/$s/"; then
+              LIST="$LIST\"$s\","
+            fi
+          done
+          echo "services=[${LIST%,}]" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.service }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: build/Dockerfile
+          build-args: SERVICE=${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # кэш слоёв между запусками — go mod download не повторяется
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max

@@ -1,5 +1,6 @@
 services:
   social-service:
+    image: ghcr.io/realtimemap/social-service:${TAG:-latest}
     build:
       context: ../..
       dockerfile: build/Dockerfile

@@ -26,6 +26,12 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM deps AS builder
 ARG SERVICE
 ARG TARGETARCH
+# Ограничение нагрузки на CPU при сборке.
+# BUILD_JOBS  — сколько пакетов Go компилирует одновременно (go build -p).
+# GOMAXPROCS  — сколько ОС-потоков использует сам компилятор.
+# Пусто = без ограничений (все ядра). Пример: --build-arg BUILD_JOBS=2
+ARG BUILD_JOBS=
+ARG GOMAXPROCS=
 
 COPY pkg/ ./pkg/
 COPY services/${SERVICE}/ ./services/${SERVICE}/
@@ -36,8 +42,10 @@ COPY services/${SERVICE}/ ./services/${SERVICE}/
 # -trimpath убирает пути сборочной машины из бинарника
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} \
+    env CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} \
+    ${GOMAXPROCS:+GOMAXPROCS=${GOMAXPROCS}} \
     go build -trimpath -ldflags='-w -s' \
+    ${BUILD_JOBS:+-p ${BUILD_JOBS}} \
     -o /out/service \
     ./services/${SERVICE}/cmd/${SERVICE}
 
