@@ -1,6 +1,7 @@
 services:
 
   gamification-service:
+    image: ghcr.io/realtimemap/gamification-service:${TAG:-latest}
     build:
       context: ../..
       dockerfile: build/Dockerfile
