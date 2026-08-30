@@ -18,7 +18,7 @@ services:
       - "traefik.enable=true"
 
       # CORS preflight для /api/v2/emails/*
-      - "traefik.http.routers.smtp-options.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/emails(/.*)?$`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.smtp-options.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/`) && Method(`OPTIONS`)"
       - "traefik.http.routers.smtp-options.entrypoints=websecure"
       - "traefik.http.routers.smtp-options.priority=200"
       - "traefik.http.routers.smtp-options.service=smtp"
@@ -27,12 +27,21 @@ services:
 
       # Все ручки требуют администратора: отправка писем с домена проекта
       # открытым эндпоинтом — это открытый релей.
-      - "traefik.http.routers.smtp-emails.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/emails(/.*)?$`)"
-      - "traefik.http.routers.smtp-emails.entrypoints=websecure"
-      - "traefik.http.routers.smtp-emails.priority=100"
-      - "traefik.http.routers.smtp-emails.service=smtp"
-      - "traefik.http.routers.smtp-emails.middlewares=cors-headers@file,auth-check@file"
-      - "traefik.http.routers.smtp-emails.tls=true"
+      - "traefik.http.routers.smtp-admin.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/admin(/.*)?$`)"
+      - "traefik.http.routers.smtp-admin.entrypoints=websecure"
+      - "traefik.http.routers.smtp-admin.priority=100"
+      - "traefik.http.routers.smtp-admin.service=smtp"
+      - "traefik.http.routers.smtp-admin.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.smtp-admin.tls=true"
+
+      # Все ручки требуют администратора: отправка писем с домена проекта
+      # открытым эндпоинтом — это открытый релей.
+      - "traefik.http.routers.smtp-admin.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/service(/.*)?$`)"
+      - "traefik.http.routers.smtp-admin.entrypoints=websecure"
+      - "traefik.http.routers.smtp-admin.priority=100"
+      - "traefik.http.routers.smtp-admin.service=smtp"
+      - "traefik.http.routers.smtp-admin.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.smtp-admin.tls=true"
 
       - "traefik.http.services.smtp.loadbalancer.server.port=8080"
     volumes:
