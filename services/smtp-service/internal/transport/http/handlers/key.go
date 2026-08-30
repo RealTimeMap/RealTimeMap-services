@@ -40,7 +40,7 @@ func (h *ApiKeyHandler) Create(c *gin.Context) {
 		validation.AbortWithBindingError(c, err)
 		return
 	}
-	res, err := h.service.CreateToken(c.Request.Context(), key.CreateKeyParams{
+	token, err := h.service.CreateToken(c.Request.Context(), key.CreateKeyParams{
 		Name:      req.Name,
 		ExpiresAt: req.ExpiresAt,
 	})
@@ -48,5 +48,5 @@ func (h *ApiKeyHandler) Create(c *gin.Context) {
 		middleware.HandleError(c, err, h.logger)
 		return
 	}
-	c.JSON(http.StatusOK, res) // TODO объект ответа
+	c.JSON(http.StatusOK, ApiKeyResponse{ApiKey: token})
 }
