@@ -27,6 +27,11 @@ func RegisterRoutes(g *gin.Engine, di *app.Container) {
 		Emails:  di.Emails,
 		Events:  di.Events,
 		Emailer: di.Emailer,
+		KeySrv:  di.KeyService,
+		Logger:  di.Logger,
+	})
+	handlers.NewApiKeyHandler(api, handlers.ApiKeyDeps{
+		Service: di.KeyService,
 		Logger:  di.Logger,
 	})
 

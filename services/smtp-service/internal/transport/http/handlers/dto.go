@@ -127,3 +127,8 @@ func toEventResponses(list []email.Event) []EventResponse {
 	}
 	return out
 }
+
+type ApiKeyCreateRequest struct {
+	Name      string     `json:"name" binding:"required"`
+	ExpiresAt *time.Time `json:"expiresAt" binding:"omitempty"`
+}

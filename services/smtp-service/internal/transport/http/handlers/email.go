@@ -14,6 +14,8 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/email"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/key"
+	smtpmiddleware "github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/transport/http/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -24,6 +26,7 @@ type EmailHandlerDeps struct {
 	Events  email.EventRepository
 	Emailer *email.Service
 
+	KeySrv *key.ApiKeyService
 	Logger *zap.Logger
 }
 
@@ -31,8 +34,8 @@ type EmailHandler struct {
 	emails  email.Repository
 	events  email.EventRepository
 	emailer *email.Service
-
-	logger *zap.Logger
+	keySrv  *key.ApiKeyService
+	logger  *zap.Logger
 }
 
 func NewEmailHandler(g *gin.RouterGroup, deps EmailHandlerDeps) {
@@ -40,17 +43,21 @@ func NewEmailHandler(g *gin.RouterGroup, deps EmailHandlerDeps) {
 		emails:  deps.Emails,
 		events:  deps.Events,
 		emailer: deps.Emailer,
+		keySrv:  deps.KeySrv,
 		logger:  deps.Logger,
 	}
 
-	r := g.Group("/emails")
+	a := g.Group("/emails/admin", auth.AdminOnly())
 	{
-		// Отправка писем с домена проекта доступна только администраторам:
-		// открытая ручка — это открытый релей.
-		r.POST("", auth.AdminOnly(), h.Send)
-		r.GET("", auth.AdminOnly(), h.List)
-		r.GET("/:id", auth.AdminOnly(), h.Get)
-		r.GET("/:id/events", auth.AdminOnly(), h.Events)
+		a.POST("", h.Send)
+		a.GET("", h.List)
+		a.GET("/:id", h.Get)
+		a.GET("/:id/events", h.Events)
+	}
+
+	s := g.Group("/service/emails", smtpmiddleware.ApiKeyRequiredMiddleware(h.keySrv))
+	{
+		s.POST("", h.Send)
 	}
 }
 

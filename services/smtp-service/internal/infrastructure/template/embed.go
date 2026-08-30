@@ -40,6 +40,10 @@ var registry = map[string]meta{
 		subject:      "Добро пожаловать в RealTimeMap, {{.username}}!",
 		requiredData: []string{"username"},
 	},
+	"newTask": {
+		subject:      "Назначена новая задача: {{ .taskId }}!",
+		requiredData: []string{"username", "taskId", "assignee", "status", "title", "description", "priority", "type"},
+	},
 }
 
 // Provider отдаёт шаблоны, встроенные в бинарь.
