@@ -5,6 +5,7 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/email"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/key"
 	domaintemplate "github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/template"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/infrastructure/mailer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/infrastructure/persistence/postgres"
@@ -44,6 +45,8 @@ type Container struct {
 	// остальными серверами по общему сигналу.
 	Workers *worker.Pool
 	Reaper  *worker.Reaper
+
+	KeyService *key.ApiKeyService
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) (*Container, error) {
@@ -95,16 +98,20 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) (*Contain
 		DailyLimit:   cfg.Worker.DailyLimit,
 	}, emails, events, limiter, newSender, logger)
 
+	keyRepo := postgres.NewPgApiKeyRepository(db, logger)
+	keySrv := key.NewApiKeyService(keyRepo, logger)
+
 	return &Container{
-		Config:    cfg,
-		Logger:    logger,
-		DB:        db,
-		Emails:    emails,
-		Events:    events,
-		Renderer:  renderer,
-		Emailer:   email.NewService(emails, events, renderer, cfg.Worker.MaxAttempt, logger),
-		NewSender: newSender,
-		Workers:   workers,
-		Reaper:    worker.NewReaper(cfg.Worker.ReaperInterval, emails, logger),
+		Config:     cfg,
+		Logger:     logger,
+		DB:         db,
+		Emails:     emails,
+		Events:     events,
+		Renderer:   renderer,
+		Emailer:    email.NewService(emails, events, renderer, cfg.Worker.MaxAttempt, logger),
+		NewSender:  newSender,
+		Workers:    workers,
+		Reaper:     worker.NewReaper(cfg.Worker.ReaperInterval, emails, logger),
+		KeyService: keySrv,
 	}, nil
 }

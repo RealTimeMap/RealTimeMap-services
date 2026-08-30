@@ -9,6 +9,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/email"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/key"
 	httpTransport "github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/transport/http"
 	kafkatransport "github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/transport/kafka"
 	"go.uber.org/zap"
@@ -22,7 +23,7 @@ func main() {
 	db := database.MustNew(cfg.Database.ToPkg(), log)
 	defer database.Close(db)
 
-	if err := db.AutoMigrate(&email.Email{}, &email.Event{}); err != nil {
+	if err := db.AutoMigrate(&email.Email{}, &email.Event{}, &key.Model{}); err != nil {
 		log.Fatal("failed to run migrations", zap.Error(err))
 	}
 
