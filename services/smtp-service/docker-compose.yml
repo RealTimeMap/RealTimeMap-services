@@ -17,31 +17,46 @@ services:
     labels:
       - "traefik.enable=true"
 
-      # CORS preflight для /api/v2/emails/*
-      - "traefik.http.routers.smtp-options.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/`) && Method(`OPTIONS`)"
+      # CORS preflight для ручек сервиса
+      - "traefik.http.routers.smtp-options.rule=Host(`realtimemap.ru`) && (PathPrefix(`/api/v2/emails/`) || PathPrefix(`/api/v2/service/`) || PathPrefix(`/api/v2/keys/`)) && Method(`OPTIONS`)"
       - "traefik.http.routers.smtp-options.entrypoints=websecure"
       - "traefik.http.routers.smtp-options.priority=200"
       - "traefik.http.routers.smtp-options.service=smtp"
       - "traefik.http.routers.smtp-options.middlewares=cors-headers@file"
       - "traefik.http.routers.smtp-options.tls=true"
 
-      # Все ручки требуют администратора: отправка писем с домена проекта
-      # открытым эндпоинтом — это открытый релей.
-      - "traefik.http.routers.smtp-admin.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/admin(/.*)?$`)"
+      # /api/v2/emails/admin[/*] — отправка и просмотр писем.
+      - "traefik.http.routers.smtp-admin.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/emails/admin(/.*)?$`)"
       - "traefik.http.routers.smtp-admin.entrypoints=websecure"
       - "traefik.http.routers.smtp-admin.priority=100"
       - "traefik.http.routers.smtp-admin.service=smtp"
       - "traefik.http.routers.smtp-admin.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.smtp-admin.tls=true"
 
-      # Все ручки требуют администратора: отправка писем с домена проекта
-      # открытым эндпоинтом — это открытый релей.
-      - "traefik.http.routers.smtp-admin.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/service(/.*)?$`)"
-      - "traefik.http.routers.smtp-admin.entrypoints=websecure"
-      - "traefik.http.routers.smtp-admin.priority=100"
-      - "traefik.http.routers.smtp-admin.service=smtp"
-      - "traefik.http.routers.smtp-admin.middlewares=cors-headers@file,auth-check@file"
-      - "traefik.http.routers.smtp-admin.tls=true"
+      # POST /api/v2/keys/create — выпуск API-ключей, тоже под администратором.
+      - "traefik.http.routers.smtp-keys.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/keys/`)"
+      - "traefik.http.routers.smtp-keys.entrypoints=websecure"
+      - "traefik.http.routers.smtp-keys.priority=100"
+      - "traefik.http.routers.smtp-keys.service=smtp"
+      - "traefik.http.routers.smtp-keys.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.smtp-keys.tls=true"
+
+      # POST /api/v2/service/emails — межсервисная отправка.
+      # Аутентификация идёт по API-ключу в самом сервисе.
+      - "traefik.http.routers.smtp-service-api.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/service/emails`)"
+      - "traefik.http.routers.smtp-service-api.entrypoints=websecure"
+      - "traefik.http.routers.smtp-service-api.priority=100"
+      - "traefik.http.routers.smtp-service-api.service=smtp"
+      - "traefik.http.routers.smtp-service-api.middlewares=cors-headers@file"
+      - "traefik.http.routers.smtp-service-api.tls=true"
+
+      # GET /smtp/health — health check (публичный)
+      - "traefik.http.routers.smtp-health.rule=Host(`realtimemap.ru`) && Path(`/smtp/health`) && Method(`GET`)"
+      - "traefik.http.routers.smtp-health.entrypoints=websecure"
+      - "traefik.http.routers.smtp-health.priority=10"
+      - "traefik.http.routers.smtp-health.service=smtp"
+      - "traefik.http.routers.smtp-health.middlewares=cors-headers@file"
+      - "traefik.http.routers.smtp-health.tls=true"
 
       - "traefik.http.services.smtp.loadbalancer.server.port=8080"
     volumes:
