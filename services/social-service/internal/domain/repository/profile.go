@@ -14,4 +14,5 @@ type ProfileRepository interface {
 	Create(ctx context.Context, profile *model.Profile) (*model.Profile, error)
 	Update(ctx context.Context, userID uint, fields map[string]any) (*model.Profile, error)
 	Exist(ctx context.Context, id uint) (bool, error)
+	UpdateSettings(ctx context.Context, obj *model.Profile) error
 }

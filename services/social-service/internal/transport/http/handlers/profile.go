@@ -12,6 +12,7 @@ import (
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	profileservice "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http/dto"
 	"github.com/gin-gonic/gin"
@@ -40,6 +41,8 @@ func RegisterProfileHandler(g *gin.RouterGroup, deps ProfileDeps) {
 		profileGroup.GET("/me", auth.AuthRequired(), handler.GetMyProfile)
 		profileGroup.PATCH("/me", auth.AuthRequired(), handler.UpdateMyProfile)
 		profileGroup.GET("/search", handler.SearchProfile)
+		profileGroup.GET("/settings", auth.AuthRequired(), handler.GetSettings)
+		profileGroup.PATCH("/settings", auth.AuthRequired(), handler.UpdateSettings)
 		profileGroup.GET("/:profileID", middleware.Exist(handler.service.Exist, handler.logger, "profileID"), handler.GetDetailProfile)
 	}
 }
@@ -148,4 +151,42 @@ func (h *ProfileHandler) UpdateMyProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.NewPersonalProfileResponse(updated))
+}
+
+func (h *ProfileHandler) GetSettings(c *gin.Context) {
+	userData, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	prof, err := h.service.GetProfileSettings(c.Request.Context(), uint(userData.UserID))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewProfileSettingsResponse(prof))
+}
+
+func (h *ProfileHandler) UpdateSettings(c *gin.Context) {
+	userData, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	var req dto.UpdateProfileSettingsRequest
+	if err := c.ShouldBind(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	prof, err := h.service.UpdateSettings(c.Request.Context(), uint(userData.UserID), profileservice.UpdateSettingsParams{
+		ShowInSearch:   req.ShowInSearch,
+		PrivateProfile: req.PrivateProfile,
+	})
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewProfileSettingsResponse(prof))
+
 }

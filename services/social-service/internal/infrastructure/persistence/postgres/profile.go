@@ -138,3 +138,7 @@ func (r *PgProfileRepository) GetProfilesByIDs(ctx context.Context, ids []uint) 
 
 	return profiles, nil
 }
+
+func (r *PgProfileRepository) UpdateSettings(ctx context.Context, obj *model.Profile) error {
+	return r.db.WithContext(ctx).Model(obj).Updates(obj).Error
+}

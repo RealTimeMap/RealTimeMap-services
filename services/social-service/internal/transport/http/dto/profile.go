@@ -110,3 +110,20 @@ type ProfileUpdateRequest struct {
 	Username *string `form:"username" binding:"omitempty,min=2,max=32"`
 	Tag      *string `form:"tag" binding:"omitempty"`
 }
+
+type ProfileSettingsResponse struct {
+	ShowInSearch   bool `json:"showInSearch"`
+	PrivateProfile bool `json:"privateProfile"`
+}
+
+func NewProfileSettingsResponse(obj *model.Profile) ProfileSettingsResponse {
+	return ProfileSettingsResponse{
+		ShowInSearch:   obj.PrivacySettings.ShowInSearch,
+		PrivateProfile: obj.IsPrivate,
+	}
+}
+
+type UpdateProfileSettingsRequest struct {
+	ShowInSearch   *bool `json:"showInSearch" binding:"omitempty"`
+	PrivateProfile *bool `json:"privateProfile" binding:"omitempty"`
+}
