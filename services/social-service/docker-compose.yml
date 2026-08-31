@@ -25,12 +25,20 @@ services:
       - "traefik.http.routers.social-options.tls=true"
 
       # GET /api/v2/profile/me - мой профиль (с auth)
-      - "traefik.http.routers.social-me.rule=Host(`realtimemap.ru`) && Path(`/api/v2/profile/me`) && Method(`GET`) || Method(`PATCH`)"
+      - "traefik.http.routers.social-me.rule=Host(`realtimemap.ru`) && Path(`/api/v2/profile/me`) && (Method(`GET`) || Method(`PATCH`))"
       - "traefik.http.routers.social-me.entrypoints=websecure"
       - "traefik.http.routers.social-me.priority=100"
       - "traefik.http.routers.social-me.service=social"
       - "traefik.http.routers.social-me.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.social-me.tls=true"
+
+      # GET|PATCH /api/v2/profile/settings - настройки приватности (с auth)
+      - "traefik.http.routers.social-settings.rule=Host(`realtimemap.ru`) && Path(`/api/v2/profile/settings`) && (Method(`GET`) || Method(`PATCH`))"
+      - "traefik.http.routers.social-settings.entrypoints=websecure"
+      - "traefik.http.routers.social-settings.priority=100"
+      - "traefik.http.routers.social-settings.service=social"
+      - "traefik.http.routers.social-settings.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-settings.tls=true"
 
       # GET /api/v2/profile/search - поиск профилей (публичный)
       - "traefik.http.routers.social-search.rule=Host(`realtimemap.ru`) && Path(`/api/v2/profile/search`) && Method(`GET`)"

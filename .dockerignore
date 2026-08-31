@@ -11,10 +11,8 @@
 .vscode
 *.iml
 
-# Frontend-сервис: свой Dockerfile, в Go-сборку не входит
-services/docs-service
-
-# Node
+# Node — тяжёлые артефакты. Сами исходники docs-service нужны в контексте:
+# у него свой Dockerfile, который собирается из корня репозитория.
 **/node_modules
 **/dist
 **/*.log

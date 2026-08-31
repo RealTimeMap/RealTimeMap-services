@@ -220,3 +220,31 @@ func (s *Service) SearchProfiles(ctx context.Context, input *SearchProfilesInput
 func (s *Service) Exist(ctx context.Context, userID uint) (bool, error) {
 	return s.profileRepo.Exist(ctx, userID)
 }
+
+func (s *Service) GetProfileSettings(ctx context.Context, userID uint) (*model.Profile, error) {
+	return s.profileRepo.GetProfile(ctx, userID)
+}
+
+type UpdateSettingsParams struct {
+	ShowInSearch   *bool
+	PrivateProfile *bool
+}
+
+func (s *Service) UpdateSettings(ctx context.Context, userID uint, params UpdateSettingsParams) (*model.Profile, error) {
+	prof, err := s.profileRepo.GetProfile(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.ShowInSearch != nil && prof.PrivacySettings.ShowInSearch != *params.ShowInSearch {
+		prof.PrivacySettings.ShowInSearch = *params.ShowInSearch
+	}
+	if params.PrivateProfile != nil && prof.PrivacySettings.ShowInSearch != *params.PrivateProfile {
+		prof.IsPrivate = *params.PrivateProfile
+	}
+
+	if err := s.profileRepo.UpdateSettings(ctx, prof); err != nil {
+		return nil, err
+	}
+	return prof, nil
+}
