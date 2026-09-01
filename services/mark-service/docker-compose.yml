@@ -104,13 +104,13 @@ services:
       - "traefik.http.routers.accrual-unlike.tls=true"
 
       # GET /api/v2/accrual/:markID/stat - статистика метки (публичный, auth опционален)
-      # TODO: временно без ForwardAuth — isLiked для залогиненных вернётся false,
-      #       пока не появится optional-auth middleware, прокидывающий X-User-* без 401
+      # auth-optional прокидывает X-User-* при валидном токене и не режет анонима 401,
+      # благодаря чему isLiked/canLike отражают реакцию залогиненного пользователя.
       - "traefik.http.routers.accrual-stat.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/accrual/[0-9]+/stat$`) && Method(`GET`)"
       - "traefik.http.routers.accrual-stat.entrypoints=websecure"
       - "traefik.http.routers.accrual-stat.priority=98"
       - "traefik.http.routers.accrual-stat.service=mark"
-      - "traefik.http.routers.accrual-stat.middlewares=cors-headers@file"
+      - "traefik.http.routers.accrual-stat.middlewares=cors-headers@file,auth-optional@file"
       - "traefik.http.routers.accrual-stat.tls=true"
 
       # POST /api/v2/category/ - создание категории (с auth)

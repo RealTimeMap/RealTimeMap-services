@@ -83,6 +83,20 @@ http:
           - "X-User-Admin"
         authRequestHeaders:
           - "Authorization"
+    # ForwardAuth для публичных маршрутов, где авторизация необязательна.
+    # В отличие от auth-check всегда отвечает 200: аноним — не ошибка.
+    # Заголовки X-User-* проставляются только при валидном токене, поэтому
+    # pkg/middleware/auth.AuthOptional корректно отличает гостя от юзера.
+    auth-optional:
+      forwardAuth:
+        address: "http://realtime-map-backend:8001/api/v2/auth/token-validate-optional"
+        authResponseHeaders:
+          - "X-User-Id"
+          - "X-User-Name"
+          - "X-User-Admin"
+          - "X-User-Anonymous"
+        authRequestHeaders:
+          - "Authorization"
     strip-rttask:
       stripPrefix:
         prefixes:
