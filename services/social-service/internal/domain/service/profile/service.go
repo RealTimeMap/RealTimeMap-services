@@ -15,6 +15,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// TODO ПЕРЕПИСАТЬ, ЗАДАЧА ВИСИТ В ТАСК МЕНЕДЖЕРЕ
+
 // ProgressGetter интерфейс для получения геймификационного прогресса
 type ProgressGetter interface {
 	GetUserProgress(ctx context.Context, userID uint) (*model.Progress, error)
@@ -239,7 +241,7 @@ func (s *Service) UpdateSettings(ctx context.Context, userID uint, params Update
 	if params.ShowInSearch != nil && prof.PrivacySettings.ShowInSearch != *params.ShowInSearch {
 		prof.PrivacySettings.ShowInSearch = *params.ShowInSearch
 	}
-	if params.PrivateProfile != nil && prof.PrivacySettings.ShowInSearch != *params.PrivateProfile {
+	if params.PrivateProfile != nil && prof.IsPrivate != *params.PrivateProfile {
 		prof.IsPrivate = *params.PrivateProfile
 	}
 
