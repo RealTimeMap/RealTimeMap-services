@@ -140,5 +140,8 @@ func (r *PgProfileRepository) GetProfilesByIDs(ctx context.Context, ids []uint) 
 }
 
 func (r *PgProfileRepository) UpdateSettings(ctx context.Context, obj *model.Profile) error {
-	return r.db.WithContext(ctx).Model(obj).Updates(obj).Error
+	return r.db.WithContext(ctx).
+		Model(obj).
+		Select("is_private", "privacy_settings").
+		Updates(obj).Error
 }
