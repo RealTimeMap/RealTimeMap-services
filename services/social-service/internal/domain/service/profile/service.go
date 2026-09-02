@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strings"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
@@ -212,7 +213,7 @@ func (s *Service) SearchProfiles(ctx context.Context, input *SearchProfilesInput
 
 	input.Pagination.Defaults()
 
-	profiles, total, err := s.profileRepo.GetProfiles(ctx, input.Username, input.Pagination)
+	profiles, total, err := s.profileRepo.GetProfiles(ctx, strings.ToLower(input.Username), input.Pagination)
 	if err != nil {
 		return nil, 0, err
 	}

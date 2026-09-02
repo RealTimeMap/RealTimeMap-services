@@ -55,7 +55,7 @@ func (r *PgProfileRepository) GetProfiles(ctx context.Context, search string, pa
 		Where("is_private = false AND privacy_settings->>'showInSearch' = 'true'")
 
 	if search != "" {
-		query = query.Where("username ILIKE ?", "%"+search+"%")
+		query = query.Where("LOWER(username) ILIKE ? OR LOWER(tag) ILIKE  ?", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := query.Count(&count).Error
@@ -64,9 +64,7 @@ func (r *PgProfileRepository) GetProfiles(ctx context.Context, search string, pa
 	}
 
 	q := query.Offset(params.Offset()).Limit(params.Limit())
-	if search == "" {
-		q = q.Order("RANDOM()")
-	} else {
+	if search != "" {
 		q = q.Order("username")
 	}
 

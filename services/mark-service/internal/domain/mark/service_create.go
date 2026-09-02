@@ -9,7 +9,7 @@ import (
 
 // Create Создание новой метки
 func (s *Service) Create(ctx context.Context, user ctxHelper.UserInput, input CreateMarkParams) (*Mark, error) {
-	// 1. Валидация входных данных
+	// 1. Валидация входных данных + in feature: проверка расстояния метки и текущего положения пользователя
 	if err := s.validateInput(ctx, user.UserID, input); err != nil {
 		return nil, err
 	}
