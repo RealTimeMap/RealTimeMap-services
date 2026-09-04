@@ -110,4 +110,4 @@ tls:
     default:
       defaultCertificate:
         certFile: /etc/letsencrypt/live/realtimemap.ru/fullchain.pem
-        keyFile: /etc/letsencrypt/live/real
+        keyFile: /etc/letsencrypt/live/realtimemap.ru/privkey.pem

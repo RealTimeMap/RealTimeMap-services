@@ -13,6 +13,7 @@ type AchievementRepository interface {
 	GetByCode(ctx context.Context, code string) (*model.Achievement, error)
 	ListUnlockableByEvent(ctx context.Context, userID uint, eventType string) ([]model.Achievement, error)
 	ListNearestByUser(ctx context.Context, userID uint, limit int) ([]NearestAchievement, error)
+	List(ctx context.Context, params pagination.Params) ([]*model.Achievement, error)
 }
 
 type NearestAchievement struct {

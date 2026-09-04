@@ -5,7 +5,7 @@
       "method": "GET",
       "path": "/api/v2/level/",
       "summary": "Получить список уровней",
-      "description": "Возвращает все уровни системы геймификации с информацией о необходимом опыте для достижения каждого уровня. Результат кэшируется (TTL 15 минут).",
+      "description": "Возвращает все уровни системы геймификации с информацией о необходимом опыте для достижения каждого уровня. Результат кэшируется (TTL 15 минут).\n\nМаршрут зарегистрирован с завершающим слэшем: запрос к /api/v2/level без слэша вернёт редирект 301 на /api/v2/level/.",
       "tags": [
         "Уровни"
       ],
@@ -61,7 +61,7 @@
       "method": "POST",
       "path": "/api/v2/achievement/create",
       "summary": "Создать достижение",
-      "description": "Создаёт новое достижение в системе. Достижение привязывается к типу события (triggerEvent) и активируется, когда счётчик действий пользователя достигает порога (threshold). Опционально может быть звеном цепочки прогрессий через nextId. Требуется роль администратора.",
+      "description": "Создаёт новое достижение в системе. Достижение привязывается к типу события (triggerEvent) и активируется, когда счётчик действий пользователя достигает порога (threshold). Опционально может быть звеном цепочки прогрессий через nextId.\n\nДоступ только для администратора: проверка идёт по заголовкам X-User-ID и X-User-Admin — 401 при отсутствующем или некорректном X-User-ID, 403 если пользователь не администратор.",
       "tags": [
         "Достижения"
       ],
@@ -254,11 +254,307 @@
       ]
     },
     {
+      "id": "get-all-achievements",
+      "method": "GET",
+      "path": "/api/v2/achievement/all",
+      "summary": "Получить каталог всех достижений",
+      "description": "Возвращает каталог достижений системы. Цепочки прогрессий схлопываются: на верхнем уровне отдаются только корневые достижения — те, на которые не ссылается через nextId ни одно другое достижение. Следующая ступень цепочки вкладывается в поле next и не дублируется отдельным элементом массива.\n\nГлубина вложенности ограничена одним уровнем: у вложенного в next достижения поле next не заполняется, а ступени глубже второй в ответ не попадают вовсе. Например, если в системе есть цепочка 1 → 2 → 3 и самостоятельное достижение 4, ответ будет содержать два элемента: достижение 1 с вложенным 2 и достижение 4. Достижение 3 не возвращается.\n\nЕсли родительское достижение мягко удалено (deleted_at), его дочернее достижение снова считается корневым и появляется на верхнем уровне.\n\nПараметры page и pageSize применяются к корневым достижениям, поэтому размер страницы соответствует количеству элементов в ответе. Ответ возвращается голым массивом — без обёртки items и без метаданных пагинации (total, totalPages и т.д.). Сортировка — по возрастанию id.",
+      "tags": [
+        "Достижения"
+      ],
+      "pagination": "page",
+      "parameters": [
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "description": "Номер страницы (по умолчанию 1)",
+          "location": "query",
+          "example": "1"
+        },
+        {
+          "name": "pageSize",
+          "type": "integer",
+          "required": false,
+          "description": "Размер страницы (1–100, по умолчанию 10)",
+          "location": "query",
+          "example": "10"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Массив корневых достижений с вложенной следующей ступенью",
+          "schema": [
+            {
+              "name": "[]",
+              "type": "object[]",
+              "required": true,
+              "description": "Массив корневых достижений (голый массив, без обёртки)",
+              "children": [
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID достижения"
+                },
+                {
+                  "name": "code",
+                  "type": "string",
+                  "required": true,
+                  "description": "Машинный код"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true,
+                  "description": "Название"
+                },
+                {
+                  "name": "desc",
+                  "type": "string",
+                  "required": true,
+                  "description": "Описание"
+                },
+                {
+                  "name": "triggerEventType",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип триггерного события"
+                },
+                {
+                  "name": "threshold",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Порог получения"
+                },
+                {
+                  "name": "icon",
+                  "type": "string",
+                  "required": true,
+                  "description": "URL иконки"
+                },
+                {
+                  "name": "reward",
+                  "type": "object",
+                  "required": false,
+                  "description": "XP-награда. Отсутствует, если награда не задана",
+                  "children": [
+                    {
+                      "name": "id",
+                      "type": "integer",
+                      "required": true,
+                      "description": "ID награды"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string",
+                      "required": true,
+                      "description": "Код награды"
+                    },
+                    {
+                      "name": "amount",
+                      "type": "integer",
+                      "required": true,
+                      "description": "Количество XP"
+                    }
+                  ]
+                },
+                {
+                  "name": "next",
+                  "type": "object",
+                  "required": false,
+                  "description": "Следующая ступень цепочки. Вложенность ограничена одним уровнем — у этого объекта поле next отсутствует. У достижений вне цепочки поле отсутствует"
+                }
+              ]
+            }
+          ],
+          "example": [
+            {
+              "id": 15,
+              "code": "map_explorer_bronze",
+              "title": "Картограф (бронза)",
+              "desc": "Создайте 10 меток на карте",
+              "triggerEventType": "mark.created",
+              "threshold": 10,
+              "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+              "reward": {
+                "id": 2,
+                "code": "mark.created",
+                "amount": 100
+              },
+              "next": {
+                "id": 16,
+                "code": "map_explorer_silver",
+                "title": "Картограф (серебро)",
+                "desc": "Создайте 50 меток",
+                "triggerEventType": "mark.created",
+                "threshold": 50,
+                "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon2.jpg",
+                "reward": {
+                  "id": 5,
+                  "code": "mark.created.silver",
+                  "amount": 250
+                }
+              }
+            },
+            {
+              "id": 7,
+              "code": "first_comment",
+              "title": "Первый комментарий",
+              "desc": "Оставьте первый комментарий",
+              "triggerEventType": "comment.created",
+              "threshold": 1,
+              "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/cmt.jpg",
+              "reward": {
+                "id": 3,
+                "code": "comment.created",
+                "amount": 50
+              }
+            }
+          ]
+        }
+      ],
+      "errors": [
+        "validation-error",
+        "internal-error"
+      ]
+    },
+    {
+      "id": "get-achievement-info",
+      "method": "GET",
+      "path": "/api/v2/achievement/{achID}",
+      "summary": "Получить достижение по ID",
+      "description": "Возвращает одно достижение по его идентификатору вместе с XP-наградой и следующей ступенью цепочки в поле next (если она задана). Ответ — голый объект достижения, без обёртки.",
+      "tags": [
+        "Достижения"
+      ],
+      "parameters": [
+        {
+          "name": "achID",
+          "type": "integer",
+          "required": true,
+          "description": "ID достижения",
+          "location": "path",
+          "example": "15"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Данные достижения",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID достижения"
+            },
+            {
+              "name": "code",
+              "type": "string",
+              "required": true,
+              "description": "Машинный код"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Название"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Описание"
+            },
+            {
+              "name": "triggerEventType",
+              "type": "string",
+              "required": true,
+              "description": "Тип триггерного события"
+            },
+            {
+              "name": "threshold",
+              "type": "integer",
+              "required": true,
+              "description": "Порог получения"
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "required": true,
+              "description": "URL иконки"
+            },
+            {
+              "name": "reward",
+              "type": "object",
+              "required": false,
+              "description": "XP-награда",
+              "children": [
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID награды"
+                },
+                {
+                  "name": "code",
+                  "type": "string",
+                  "required": true,
+                  "description": "Код награды"
+                },
+                {
+                  "name": "amount",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Количество XP"
+                }
+              ]
+            },
+            {
+              "name": "next",
+              "type": "object",
+              "required": false,
+              "description": "Следующая ступень цепочки прогрессии (если задана)"
+            }
+          ],
+          "example": {
+            "id": 15,
+            "code": "map_explorer_bronze",
+            "title": "Картограф (бронза)",
+            "desc": "Создайте 10 меток на карте",
+            "triggerEventType": "mark.created",
+            "threshold": 10,
+            "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+            "reward": {
+              "id": 2,
+              "code": "mark.created",
+              "amount": 100
+            },
+            "next": {
+              "id": 16,
+              "code": "map_explorer_silver",
+              "title": "Картограф (серебро)",
+              "desc": "Создайте 50 меток",
+              "triggerEventType": "mark.created",
+              "threshold": 50,
+              "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon2.jpg"
+            }
+          }
+        }
+      ],
+      "errors": [
+        "validation-error",
+        "not-found"
+      ]
+    },
+    {
       "id": "get-user-achievements",
       "method": "GET",
-      "path": "/api/v2/achievement/{userID}",
+      "path": "/api/v2/achievement/user/{userID}",
       "summary": "Получить достижения пользователя",
-      "description": "Возвращает список полученных пользователем достижений с пагинацией. Прогрессии (цепочки достижений Bronze → Silver → Gold) схлопываются — возвращается только верхняя достигнутая ступень с информацией о следующей цели через поле next. Одиночные достижения (без цепочки) возвращаются как есть с next: null.",
+      "description": "Возвращает список полученных пользователем достижений с пагинацией. Прогрессии (цепочки достижений Bronze → Silver → Gold) схлопываются — возвращается только верхняя достигнутая ступень с информацией о следующей цели через поле next. Одиночные достижения (без цепочки) возвращаются без поля next.\n\nОбратите внимание: значения page и pageSize в ответе повторяют параметры ровно так, как их прислал клиент. Если параметры не переданы, в ответе будут page: 0 и pageSize: 0, хотя выборка фактически выполняется с page=1 и pageSize=10.",
       "tags": [
         "Достижения"
       ],
@@ -281,12 +577,12 @@
           "example": "1"
         },
         {
-          "name": "limit",
+          "name": "pageSize",
           "type": "integer",
           "required": false,
-          "description": "Размер страницы (по умолчанию 20)",
+          "description": "Размер страницы (1–100, по умолчанию 10)",
           "location": "query",
-          "example": "20"
+          "example": "10"
         }
       ],
       "responses": [
@@ -389,6 +685,42 @@
                   "description": "Дата получения достижения (ISO 8601)"
                 }
               ]
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "required": true,
+              "description": "Номер текущей страницы (значение, переданное клиентом)"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "required": true,
+              "description": "Размер страницы (значение, переданное клиентом)"
+            },
+            {
+              "name": "totalPages",
+              "type": "integer",
+              "required": true,
+              "description": "Общее количество страниц"
+            },
+            {
+              "name": "total",
+              "type": "integer",
+              "required": true,
+              "description": "Общее количество полученных достижений"
+            },
+            {
+              "name": "hasNext",
+              "type": "boolean",
+              "required": true,
+              "description": "Есть ли следующая страница"
+            },
+            {
+              "name": "hasPrev",
+              "type": "boolean",
+              "required": true,
+              "description": "Есть ли предыдущая страница"
             }
           ],
           "example": {
@@ -436,7 +768,13 @@
                 },
                 "unlockedAt": "2026-05-10T09:30:00Z"
               }
-            ]
+            ],
+            "page": 1,
+            "pageSize": 10,
+            "totalPages": 1,
+            "total": 2,
+            "hasNext": false,
+            "hasPrev": false
           }
         }
       ],
@@ -447,7 +785,7 @@
     {
       "id": "get-user-nearest-achievements",
       "method": "GET",
-      "path": "/api/v2/achievement/{userID}/nearest",
+      "path": "/api/v2/achievement/user/{userID}/nearest",
       "summary": "Ближайшие достижения пользователя",
       "description": "Возвращает топ-5 достижений, к получению которых пользователь ближе всего, отсортированных по проценту прогресса (current/threshold) по убыванию. Учитываются только начатые (с count > 0) и ещё не полученные достижения. Для цепочек прогрессий возвращается только самая близкая ступень — следующие видны через поле next. Лимит фиксирован константой на стороне сервиса и не настраивается через параметры.",
       "tags": [
@@ -478,7 +816,7 @@
                   "name": "achievement",
                   "type": "object",
                   "required": true,
-                  "description": "Данные достижения (структура как в /achievement/{userID})"
+                  "description": "Данные достижения (структура как в /achievement/user/{userID})"
                 },
                 {
                   "name": "current",

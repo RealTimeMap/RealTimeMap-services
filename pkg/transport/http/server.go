@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -44,7 +45,11 @@ func NewServer(cfg Config, logger *zap.Logger) *Server {
 		headers = defaultAllowHeaders
 	}
 
-	router := gin.Default()
+	// gin.New() вместо gin.Default(): стандартные gin.Logger()/gin.Recovery()
+	// пишут в собственном текстовом формате мимо zap, из-за чего такие записи
+	// попадают в Grafana без уровня (unknown).
+	router := gin.New()
+	router.Use(middleware.ZapLogger(logger), middleware.ZapRecovery(logger))
 	router.HandleMethodNotAllowed = true
 	router.Use(cors.New(cors.Config{
 		CustomSchemas:    []string{"capacitor://", "ionic://"},

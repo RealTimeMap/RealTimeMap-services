@@ -45,7 +45,6 @@ func main() {
 	grpcServer, err := grpcserver.NewServer(cfg.GrpcServer, log, func(s *grpc.Server) {
 		markstat.RegisterMarkStatsServiceServer(s, container.MarkStatServer)
 	})
-
 	if err != nil {
 		log.Fatal("Failed to start Mark Service", zap.Error(err))
 	}
