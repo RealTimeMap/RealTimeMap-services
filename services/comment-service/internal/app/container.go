@@ -69,7 +69,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Contain
 	// Use cases
 	commentUseCases := &comment_action.Application{
 		CreateComment: comment_action.NewCreateCommentHandler(commentService, profileAdapter, publisher, logger),
-		GetComments:   comment_action.NewGetCommentsHandler(commentService, profileAdapter, logger),
+		GetComments:   comment_action.NewGetCommentsHandler(commentService, profileAdapter, reactionRepo, logger),
 		UpdateComment: comment_action.NewUpdateCommentHandler(commentService, profileAdapter, logger),
 		DeleteComment: comment_action.NewDeleteCommentHandler(commentService, logger),
 	}

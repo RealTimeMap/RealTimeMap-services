@@ -36,8 +36,11 @@ type Comment struct {
 	EntityType EntityType `gorm:"size:32;not null;index:idx_entity"`
 	EntityID   uint       `gorm:"not null;index:idx_entity"`
 
-	Status     CommentStatus `gorm:"type:varchar(20);not null;default:'active'"`
-	LikesCount uint          `gorm:"default:0"`
+	Status CommentStatus `gorm:"type:varchar(20);not null;default:'active'"`
+	// LikesCount вычисляется подзапросом из таблицы reactions при выборке
+	// (как и RepliesCount). Колонка в comments не поддерживалась в актуальном
+	// состоянии при лайке, поэтому источником истины считаем сами реакции.
+	LikesCount uint `gorm:"->"`
 
 	Depth uint `gorm:"not null; default:0"`
 

@@ -28,4 +28,8 @@ type CommentFilter struct {
 	EntityID uint
 	Sort     SortOrder
 	ParentID *uint
+
+	// ViewerID — пользователь, от лица которого читается лента.
+	// nil для гостя: в этом случае флаги isLiked/canLike всегда false.
+	ViewerID *uint
 }

@@ -15,7 +15,13 @@ type CommentParams struct {
 	Cursor *uint  `form:"cursor"`
 }
 
+// ToFilter собирает фильтр для гостя — читатель не задан.
 func (p CommentParams) ToFilter(entityID uint, parentID *uint) comment.CommentFilter {
+	return p.ToFilterFor(entityID, parentID, nil)
+}
+
+// ToFilterFor собирает фильтр от лица читателя viewerID (nil — гость).
+func (p CommentParams) ToFilterFor(entityID uint, parentID *uint, viewerID *uint) comment.CommentFilter {
 	limit := p.Limit
 	if limit <= 0 || limit > 50 {
 		limit = 20
@@ -33,6 +39,7 @@ func (p CommentParams) ToFilter(entityID uint, parentID *uint) comment.CommentFi
 		Entity:   p.Entity,
 		EntityID: entityID,
 		ParentID: parentID,
+		ViewerID: viewerID,
 	}
 }
 
@@ -54,6 +61,8 @@ type Meta struct {
 	HaveReplies  bool                  `json:"haveReplies"`
 	RepliesCount int64                 `json:"repliesCount"`
 	Status       comment.CommentStatus `json:"status"`
+	IsLiked      bool                  `json:"isLiked"`
+	CanLike      bool                  `json:"canLike"`
 }
 
 type AuthorResponse struct {
@@ -87,6 +96,8 @@ func NewCommentResponse(res comment_action.CommentResult) CommentResponse {
 			HaveReplies:  res.Meta.HaveReplies,
 			RepliesCount: res.Meta.RepliesCount,
 			Status:       res.Meta.Status,
+			IsLiked:      res.Meta.IsLiked,
+			CanLike:      res.Meta.CanLike,
 		},
 	}
 }

@@ -51,7 +51,10 @@ func (r *PgCommentRepository) GetComments(ctx context.Context, filters comment.C
 	var comments []*comment.Comment
 
 	query := DBFromCtx(ctx, r.db).
-		Select("*, (SELECT COUNT(*) FROM comments r WHERE r.parent_id = comments.id AND r.deleted_at IS NULL AND r.status = ?) AS replies_count", comment.CommentActive).
+		Select(`*,
+			(SELECT COUNT(*) FROM comments r WHERE r.parent_id = comments.id AND r.deleted_at IS NULL AND r.status = ?) AS replies_count,
+			(SELECT COUNT(*) FROM reactions rc WHERE rc.comment_id = comments.id) AS likes_count`,
+			comment.CommentActive).
 		Where("entity_type = ? AND entity_id = ?", filters.Entity, filters.EntityID)
 
 	if filters.ParentID != nil {
