@@ -93,3 +93,29 @@ func (r *PgReactionRepository) IsLiked(ctx context.Context, commentID, userID ui
 	}
 	return exists, nil
 }
+
+// LikedByUser возвращает множество лайкнутых пользователем комментариев из
+// переданного списка — одним запросом на страницу вместо IsLiked в цикле.
+func (r *PgReactionRepository) LikedByUser(ctx context.Context, commentIDs []uint, userID uint) (map[uint]bool, error) {
+	r.logger.Info("start PgReactionRepository.LikedByUser")
+
+	liked := make(map[uint]bool, len(commentIDs))
+	if len(commentIDs) == 0 || userID == 0 {
+		return liked, nil
+	}
+
+	var ids []uint
+	err := DBFromCtx(ctx, r.db).
+		Model(&reaction.Reaction{}).
+		Where("user_id = ? AND comment_id IN ?", userID, commentIDs).
+		Pluck("comment_id", &ids).Error
+	if err != nil {
+		r.logger.Error("error PgReactionRepository.LikedByUser", zap.Error(err))
+		return nil, err
+	}
+
+	for _, id := range ids {
+		liked[id] = true
+	}
+	return liked, nil
+}

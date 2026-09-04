@@ -105,12 +105,6 @@
               "description": "Количество лайков"
             },
             {
-              "name": "dislikes",
-              "type": "integer",
-              "required": true,
-              "description": "Количество дизлайков"
-            },
-            {
               "name": "meta",
               "type": "object",
               "required": true,
@@ -143,6 +137,18 @@
                     "active",
                     "deleted"
                   ]
+                },
+                {
+                  "name": "isLiked",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Лайкнут ли комментарий текущим пользователем. В ответе на создание/обновление всегда false"
+                },
+                {
+                  "name": "canLike",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Может ли текущий пользователь поставить лайк. В ответе на создание/обновление всегда false — актуальное значение приходит в списке комментариев"
                 }
               ]
             }
@@ -157,12 +163,13 @@
               "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
             },
             "likes": 0,
-            "dislikes": 0,
             "meta": {
               "canReply": true,
               "haveReplies": false,
               "repliesCount": 0,
-              "status": "active"
+              "status": "active",
+              "isLiked": false,
+              "canLike": false
             }
           }
         }
@@ -179,7 +186,7 @@
       "method": "GET",
       "path": "/api/v2/{id}/comments",
       "summary": "Получить комментарии сущности",
-      "description": "Возвращает список корневых комментариев для указанной сущности с курсорной пагинацией. Тип сущности передаётся через query-параметр entity.",
+      "description": "Возвращает список корневых комментариев для указанной сущности с курсорной пагинацией. Тип сущности передаётся через query-параметр entity.\n\nАвторизация опциональная. Запрос доступен анониму, но при передаче валидного Bearer-токена поля meta.isLiked и meta.canLike рассчитываются по лайкам текущего пользователя; без токена оба поля всегда false. Само наличие или отсутствие токена на доступность и состав остальных полей не влияет.\n\nПоле likes отражает актуальное число реакций и пересчитывается при каждой выборке, поэтому сразу после лайка список показывает новое значение.",
       "tags": [
         "Комментарии"
       ],
@@ -288,12 +295,6 @@
                   "description": "Количество лайков"
                 },
                 {
-                  "name": "dislikes",
-                  "type": "integer",
-                  "required": true,
-                  "description": "Количество дизлайков"
-                },
-                {
                   "name": "meta",
                   "type": "object",
                   "required": true,
@@ -326,6 +327,18 @@
                         "active",
                         "deleted"
                       ]
+                    },
+                    {
+                      "name": "isLiked",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Лайкнул ли текущий пользователь этот комментарий. Для анонимного запроса всегда false"
+                    },
+                    {
+                      "name": "canLike",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Может ли текущий пользователь поставить лайк: true, если авторизован и ещё не лайкал. Для анонимного запроса всегда false"
                     }
                   ]
                 }
@@ -350,12 +363,13 @@
                   "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
                 },
                 "likes": 3,
-                "dislikes": 0,
                 "meta": {
                   "canReply": true,
                   "haveReplies": true,
                   "repliesCount": 2,
-                  "status": "active"
+                  "status": "active",
+                  "isLiked": true,
+                  "canLike": false
                 }
               }
             ],
@@ -372,7 +386,7 @@
       "method": "GET",
       "path": "/api/v2/{id}/comments/{parentID}/replies",
       "summary": "Получить ответы на комментарий",
-      "description": "Возвращает список ответов (вложенных комментариев) для указанного родительского комментария с курсорной пагинацией.",
+      "description": "Возвращает список ответов (вложенных комментариев) для указанного родительского комментария с курсорной пагинацией.\n\nАвторизация опциональная, как и для списка комментариев: при валидном Bearer-токене поля meta.isLiked и meta.canLike считаются по лайкам текущего пользователя, без токена оба равны false.",
       "tags": [
         "Комментарии"
       ],
@@ -489,12 +503,6 @@
                   "description": "Количество лайков"
                 },
                 {
-                  "name": "dislikes",
-                  "type": "integer",
-                  "required": true,
-                  "description": "Количество дизлайков"
-                },
-                {
                   "name": "meta",
                   "type": "object",
                   "required": true,
@@ -527,6 +535,18 @@
                         "active",
                         "deleted"
                       ]
+                    },
+                    {
+                      "name": "isLiked",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Лайкнул ли текущий пользователь этот ответ. Для анонимного запроса всегда false"
+                    },
+                    {
+                      "name": "canLike",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Может ли текущий пользователь поставить лайк: true, если авторизован и ещё не лайкал. Для анонимного запроса всегда false"
                     }
                   ]
                 }
@@ -551,12 +571,13 @@
                   "avatar": ""
                 },
                 "likes": 1,
-                "dislikes": 0,
                 "meta": {
                   "canReply": false,
                   "haveReplies": false,
                   "repliesCount": 0,
-                  "status": "active"
+                  "status": "active",
+                  "isLiked": false,
+                  "canLike": true
                 }
               }
             ],
@@ -660,12 +681,6 @@
               "description": "Количество лайков"
             },
             {
-              "name": "dislikes",
-              "type": "integer",
-              "required": true,
-              "description": "Количество дизлайков"
-            },
-            {
               "name": "meta",
               "type": "object",
               "required": true,
@@ -698,6 +713,18 @@
                     "active",
                     "deleted"
                   ]
+                },
+                {
+                  "name": "isLiked",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Лайкнут ли комментарий текущим пользователем. В ответе на создание/обновление всегда false"
+                },
+                {
+                  "name": "canLike",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Может ли текущий пользователь поставить лайк. В ответе на создание/обновление всегда false — актуальное значение приходит в списке комментариев"
                 }
               ]
             }
@@ -712,12 +739,13 @@
               "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
             },
             "likes": 3,
-            "dislikes": 0,
             "meta": {
               "canReply": true,
               "haveReplies": true,
               "repliesCount": 2,
-              "status": "active"
+              "status": "active",
+              "isLiked": false,
+              "canLike": false
             }
           }
         }
@@ -818,7 +846,7 @@
       "method": "DELETE",
       "path": "/api/v2/{id}/comments/reaction",
       "summary": "Снять лайк",
-      "description": "Снимает ранее поставленный лайк с комментария. Требует авторизации.",
+      "description": "Снимает ранее поставленный лайк с комментария. Требует авторизации. Операция идемпотентна: если лайка не было, запрос всё равно вернёт 200 с актуальным likesCount.",
       "tags": [
         "Реакции"
       ],

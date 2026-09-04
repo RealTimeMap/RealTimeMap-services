@@ -31,9 +31,11 @@ func InitCommentHandler(g *gin.RouterGroup, deps CommentDeps) {
 	{
 		r.POST("/comments", auth.AuthRequired(), h.CreateComment)
 
-		r.GET("/:id/comments", h.GetComments)
+		// AuthOptional: гость проходит дальше, у авторизованного в контекст
+		// попадает userID — от него зависят флаги meta.isLiked/meta.canLike.
+		r.GET("/:id/comments", auth.AuthOptional(), h.GetComments)
 
-		r.GET("/:id/comments/:parentID/replies", h.GetReplies)
+		r.GET("/:id/comments/:parentID/replies", auth.AuthOptional(), h.GetReplies)
 
 		r.DELETE("/:id/comments", auth.AuthRequired(), h.DeleteComment)
 
@@ -84,12 +86,23 @@ func (h *commentHandler) GetComments(c *gin.Context) {
 		return
 	}
 
-	page, err := h.useCases.GetComments.Handle(c.Request.Context(), req.ToFilter(entityID, nil))
+	page, err := h.useCases.GetComments.Handle(c.Request.Context(), req.ToFilterFor(entityID, nil, viewerID(c)))
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 	c.JSON(http.StatusOK, dto.NewCursorPaginateResponse(page))
+}
+
+// viewerID возвращает id читателя, проставленный auth.AuthOptional,
+// или nil для гостя.
+func viewerID(c *gin.Context) *uint {
+	id, err := ctxhelper.GetUserID(c)
+	if err != nil || id == 0 {
+		return nil
+	}
+	uid := uint(id)
+	return &uid
 }
 
 func (h *commentHandler) GetReplies(c *gin.Context) {
@@ -112,7 +125,7 @@ func (h *commentHandler) GetReplies(c *gin.Context) {
 		return
 	}
 
-	page, err := h.useCases.GetComments.Handle(c.Request.Context(), req.ToFilter(entityID, &parentID))
+	page, err := h.useCases.GetComments.Handle(c.Request.Context(), req.ToFilterFor(entityID, &parentID, viewerID(c)))
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
