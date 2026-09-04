@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
@@ -36,6 +37,7 @@ func (r *PgAchievementRepository) Create(ctx context.Context, achievement *model
 	}
 	return achievement, nil
 }
+
 func (r *PgAchievementRepository) GetByID(ctx context.Context, id uint) (*model.Achievement, error) {
 	var achievement *model.Achievement
 	err := r.db.WithContext(ctx).
@@ -169,4 +171,37 @@ func (r *PgAchievementRepository) ListUnlockableByEvent(ctx context.Context, use
 		return nil, err
 	}
 	return achievements, nil
+}
+
+// List возвращает только корневые достижения — те, на которые не ссылается
+// ни одно другое через next_id. Следующий уровень цепочки подгружается в Next,
+// вложенность ограничена одним уровнем: у Next поле Next не заполняется.
+func (r *PgAchievementRepository) List(ctx context.Context, params pagination.Params) ([]*model.Achievement, error) {
+	var objs []*model.Achievement
+	off, lim := params.ForSql()
+	err := r.db.WithContext(ctx).
+		Model(&model.Achievement{}).
+		Preload("Reward").
+		Preload("Next").
+		Preload("Next.Reward").
+		Where(`NOT EXISTS (
+            SELECT 1 FROM achievements parent
+            WHERE parent.next_id = achievements.id
+              AND parent.deleted_at IS NULL
+        )`).
+		Order("achievements.id").
+		Offset(off).
+		Limit(lim).
+		Find(&objs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Обрезаем всё глубже первого уровня вложенности
+	for _, obj := range objs {
+		if obj.Next != nil {
+			obj.Next.Next = nil
+		}
+	}
+	return objs, nil
 }

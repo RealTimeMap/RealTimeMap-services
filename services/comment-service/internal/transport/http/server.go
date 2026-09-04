@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -17,7 +18,10 @@ type Server struct {
 }
 
 func NewServer(port int, logger *zap.Logger) *Server {
-	router := gin.Default()
+	// gin.New() вместо gin.Default(): доступ-логи и паники пишутся через zap,
+	// иначе записи HTTP-слоя приходят в Grafana без уровня (unknown).
+	router := gin.New()
+	router.Use(middleware.ZapLogger(logger), middleware.ZapRecovery(logger))
 
 	return &Server{
 		httpServer: &http.Server{

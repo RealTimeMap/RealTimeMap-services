@@ -19,6 +19,8 @@ type Service interface {
 	OnEvent(ctx context.Context, userID uint, eventType string)
 	GetAchievements(ctx context.Context, userID uint, params pagination.Params) ([]*model.UserAchievement, int64, error)
 	GetNearestAchievements(ctx context.Context, userID uint) ([]repository.NearestAchievement, error)
+	GetAchievent(ctx context.Context, achID uint) (*model.Achievement, error)
+	GetAllAchievements(ctx context.Context, params pagination.Params) ([]*model.Achievement, error)
 }
 
 type Input struct {
@@ -48,7 +50,8 @@ type service struct {
 func New(achievementRepo repository.AchievementRepository, rewardRepo repository.XPRewardRepository,
 	userAchievementRepo repository.UserAchievementRepository, xpOperator *xp.XPOperator,
 	store storage.Storage, photoValidator *mediavalidator.PhotoValidator,
-	logger *zap.Logger) Service {
+	logger *zap.Logger,
+) Service {
 	return &service{
 		achievementRepo:     achievementRepo,
 		rewardRepo:          rewardRepo,
@@ -162,4 +165,20 @@ func (s *service) GetAchievements(ctx context.Context, userID uint, params pagin
 // GetNearestAchievements ближайшие к получению достижения пользователя
 func (s *service) GetNearestAchievements(ctx context.Context, userID uint) ([]repository.NearestAchievement, error) {
 	return s.achievementRepo.ListNearestByUser(ctx, userID, NearestAchievementsLimit)
+}
+
+func (s *service) GetAchievent(ctx context.Context, achID uint) (*model.Achievement, error) {
+	s.logger.Info("srart GetAchievent", zap.Uint("AchID", achID))
+
+	ach, err := s.achievementRepo.GetByID(ctx, achID)
+	if err != nil {
+		return nil, err
+	}
+
+	return ach, nil
+}
+
+func (s *service) GetAllAchievements(ctx context.Context, params pagination.Params) ([]*model.Achievement, error) {
+	params.Defaults()
+	return s.achievementRepo.List(ctx, params)
 }

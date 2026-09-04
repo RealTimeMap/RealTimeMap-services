@@ -34,8 +34,13 @@ func InitAchievementHandler(g *gin.RouterGroup, deps AchievementDeps) {
 	r := g.Group("/achievement")
 	{
 		r.POST("/create", auth.AdminOnly(), h.CreateAchievement)
-		r.GET("/:userID", h.GetUserAchievements)
-		r.GET("/:userID/nearest", h.GetUserNearlyAchievements)
+		r.GET("/:achID", h.GetAchievmentInfo)
+		r.GET("/all", h.GetAllAchievents)
+		u := r.Group("/user/:userID")
+		{
+			u.GET("", h.GetUserAchievements)
+			u.GET("/nearest", h.GetUserNearlyAchievements)
+		}
 	}
 }
 
@@ -95,11 +100,9 @@ func (h *handler) CreateAchievement(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"achievement": ToAchievementResponse(achievement),
 	})
-
 }
 
 func (h *handler) GetAchievements(c *gin.Context) {
-
 }
 
 func (h *handler) GetUserAchievements(c *gin.Context) {
@@ -139,4 +142,37 @@ func (h *handler) GetUserNearlyAchievements(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"items": ToNearestAchievementResponseList(items),
 	})
+}
+
+func (h *handler) GetAchievmentInfo(c *gin.Context) {
+	achID, err := middleware.ParsePathParams(c, "achID")
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	res, err := h.service.GetAchievent(c.Request.Context(), achID)
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, ToAchievementResponse(res))
+}
+
+func (h *handler) GetAllAchievents(c *gin.Context) {
+	var req pagination.Params
+	if err := c.ShouldBind(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	achs, err := h.service.GetAllAchievements(c.Request.Context(), req)
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	res := ToAchievementResponseList(achs)
+	c.JSON(http.StatusOK, res)
 }
