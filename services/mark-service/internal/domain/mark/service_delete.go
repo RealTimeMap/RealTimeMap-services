@@ -10,9 +10,6 @@ func (s *Service) DeleteMark(ctx context.Context, userID, markID uint) error {
 	if err != nil {
 		return err
 	}
-	if !obj.DeletedAt.Valid {
-		return ErrMarkNotFound(markID)
-	}
 
 	if err := s.checkOwnerShip(obj, userID); err != nil {
 		return err
