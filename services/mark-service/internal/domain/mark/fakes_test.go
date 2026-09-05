@@ -82,11 +82,13 @@ type fakeMarkRepo struct {
 	userMarks      []*Mark
 	userMarksCount int64
 	userMarksErr   error
+	deleteErr      error
 
 	// Записанные аргументы вызовов.
 	createdMark   *Mark
 	updatedMark   *Mark
 	updatedID     uint
+	deletedID     uint
 	gotFilter     Filter
 	gotUserID     uint
 	gotPagination pagination.Params
@@ -135,9 +137,10 @@ func (f *fakeMarkRepo) Exist(_ context.Context, _ uint) (bool, error) {
 	return true, nil
 }
 
-func (f *fakeMarkRepo) Delete(_ context.Context, _ uint) error {
+func (f *fakeMarkRepo) Delete(_ context.Context, id uint) error {
 	f.deleteCalls++
-	return nil
+	f.deletedID = id
+	return f.deleteErr
 }
 
 func (f *fakeMarkRepo) GetByID(_ context.Context, _ uint) (*Mark, error) {

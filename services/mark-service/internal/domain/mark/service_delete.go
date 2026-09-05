@@ -15,5 +15,5 @@ func (s *Service) DeleteMark(ctx context.Context, userID, markID uint) error {
 		return err
 	}
 
-	return nil
+	return s.markRepo.Delete(ctx, markID)
 }
