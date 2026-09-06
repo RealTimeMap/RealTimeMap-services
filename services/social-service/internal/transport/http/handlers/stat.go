@@ -91,12 +91,12 @@ func RegisterStatHandler(g *gin.RouterGroup, deps StatDeps) {
 //}
 
 func (h *StatHandler) GetProfileSummaryStat(c *gin.Context, pID uint) {
-	marks, friends, subs, err := h.service.GetProfileSummaryStat(c.Request.Context(), pID)
+	marks, friends, subs, subscriptions, err := h.service.GetProfileSummaryStat(c.Request.Context(), pID)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	res := dto.NewSummaryProfileStat(marks, friends, subs)
+	res := dto.NewSummaryProfileStat(marks, friends, subs, subscriptions)
 	c.JSON(http.StatusOK, res)
 }
 

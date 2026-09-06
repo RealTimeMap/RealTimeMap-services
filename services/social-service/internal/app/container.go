@@ -14,6 +14,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/blockeduser"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/friendship"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/subscription"
 	progressadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/progress"
 	markstatadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/persistence/postgres"
@@ -37,6 +38,9 @@ type Container struct {
 
 	FriendshipRepo    repository.FriendShipRepository
 	FriendshipService *friendship.Service
+
+	SubscriptionRepo    repository.SubscriptionRepository
+	SubscriptionService *subscription.Service
 
 	Storage storage.Storage
 
@@ -101,19 +105,22 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	profileRepo := postgres.NewPgProfileRepository(db, logger)
 	profileService := profile.NewProfileService(profileRepo, store, photoValidator, progressPort, logger)
 	friendRepo := postgres.NewPgFriendshipRepository(db, logger)
-	profileStatService := profile.NewStatService(markStatPort, friendRepo, logger)
+	subscriptionRepo := postgres.NewPgSubscriptionRepository(db, logger)
+	profileStatService := profile.NewStatService(markStatPort, friendRepo, subscriptionRepo, logger)
 	profileHandler := profilegrpc.NewHandler(profileService, logger)
 
 	redisCli := getRedisCli(cfg.Redis)
 
 	blockedUserRepo := postgres.NewPgBlockedUserRepository(db, logger)
-	blockedUserService := blockeduser.NewService(blockedUserRepo, profileRepo, logger)
+	txm := txmanager.NewTxManager(db)
+
+	blockedUserService := blockeduser.NewService(blockedUserRepo, profileRepo, subscriptionRepo, &txm, logger)
 
 	friendshipService := friendship.NewService(friendRepo, profileRepo, blockedUserRepo, logger)
 
-	// V2
+	subscriptionService := subscription.NewService(subscriptionRepo, profileRepo, blockedUserRepo, logger)
 
-	txm := txmanager.NewTxManager(db)
+	// V2
 
 	chatRepoV2 := postgres.NewChatRepository(db, logger)
 	chatParticipantRepoV2 := postgres.NewChatParticipantRepository(db, logger)
@@ -155,6 +162,9 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 		FriendshipRepo:    friendRepo,
 		FriendshipService: friendshipService,
+
+		SubscriptionRepo:    subscriptionRepo,
+		SubscriptionService: subscriptionService,
 
 		Storage: store,
 

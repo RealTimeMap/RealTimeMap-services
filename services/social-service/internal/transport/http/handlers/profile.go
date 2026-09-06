@@ -14,6 +14,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	profileservice "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/subscription"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http/dto"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -22,18 +23,23 @@ import (
 type ProfileDeps struct {
 	Service *profileservice.Service
 
+	SubscriptionService *subscription.Service
+
 	Logger *zap.Logger
 }
 type ProfileHandler struct {
 	service *profileservice.Service
+
+	subscriptionService *subscription.Service
 
 	logger *zap.Logger
 }
 
 func RegisterProfileHandler(g *gin.RouterGroup, deps ProfileDeps) {
 	handler := &ProfileHandler{
-		service: deps.Service,
-		logger:  deps.Logger,
+		service:             deps.Service,
+		subscriptionService: deps.SubscriptionService,
+		logger:              deps.Logger,
 	}
 
 	profileGroup := g.Group("")
@@ -43,7 +49,7 @@ func RegisterProfileHandler(g *gin.RouterGroup, deps ProfileDeps) {
 		profileGroup.GET("/search", handler.SearchProfile)
 		profileGroup.GET("/settings", auth.AuthRequired(), handler.GetSettings)
 		profileGroup.PATCH("/settings", auth.AuthRequired(), handler.UpdateSettings)
-		profileGroup.GET("/:profileID", middleware.Exist(handler.service.Exist, handler.logger, "profileID"), handler.GetDetailProfile)
+		profileGroup.GET("/:profileID", auth.AuthOptional(), middleware.Exist(handler.service.Exist, handler.logger, "profileID"), handler.GetDetailProfile)
 	}
 }
 
@@ -99,7 +105,24 @@ func (h *ProfileHandler) GetDetailProfile(c *gin.Context) {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	c.JSON(http.StatusOK, dto.NewPersonalProfileResponseWithGamification(profile, progress))
+
+	response := dto.NewPersonalProfileResponseWithGamification(profile, progress)
+
+	// Признак подписки имеет смысл только для чужого профиля, открытого
+	// авторизованным пользователем: анониму подписываться нечем, а на себя
+	// подписка запрещена. В остальных случаях поле не отдаётся вовсе.
+	if viewerID, err := helper.GetUserID(c); err == nil && uint(viewerID) != uint(pID) {
+		subscribed, err := h.subscriptionService.IsSubscribed(c.Request.Context(), uint(viewerID), uint(pID))
+		if err != nil {
+			// Профиль важнее флага: при сбое отдаём профиль без isSubscribed.
+			h.logger.Warn("failed to resolve subscription state",
+				zap.Int("viewer_id", viewerID), zap.Int("profile_id", pID), zap.Error(err))
+		} else {
+			response = response.WithSubscribed(subscribed)
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *ProfileHandler) UpdateMyProfile(c *gin.Context) {

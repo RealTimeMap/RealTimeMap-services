@@ -1,20 +1,24 @@
 package http
 
 import (
+	"github.com/gin-gonic/gin"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/http/handlers"
-	"github.com/gin-gonic/gin"
 )
 
 func RegisterRoutes(g *gin.Engine, container *app.Container) {
-	api := g.Group("/api/v2")
+	api := g.Group("/api/v2", auth.NotBanned())
 
 	profile := api.Group("/profile")
+
 	// Основные роуты под профиль
 	handlers.RegisterProfileHandler(profile, handlers.ProfileDeps{
-		Service: container.ProfileService,
-		Logger:  container.Logger,
+		Service:             container.ProfileService,
+		SubscriptionService: container.SubscriptionService,
+		Logger:              container.Logger,
 	})
 	// Вспомогательные роуты для статистики профиля
 	handlers.RegisterStatHandler(profile, handlers.StatDeps{
@@ -31,6 +35,11 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 
 	handlers.RegisterFriendshipHandler(api, handlers.FriendshipDeps{
 		Service: container.FriendshipService,
+		Logger:  container.Logger,
+	})
+
+	handlers.RegisterSubscriptionHandler(api, handlers.SubscriptionDeps{
+		Service: container.SubscriptionService,
 		Logger:  container.Logger,
 	})
 
