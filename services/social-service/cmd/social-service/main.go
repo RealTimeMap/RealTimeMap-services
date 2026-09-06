@@ -35,7 +35,7 @@ func main() {
 	}, log)
 	defer database.Close(db)
 
-	db.AutoMigrate(&model.Profile{}, &model.Friendship{}, &model.BlockedUser{}, &chat.Chat{}, &chat.ChatParticipant{}, &message.Message{})
+	db.AutoMigrate(&model.Profile{}, &model.Friendship{}, &model.BlockedUser{}, &model.Subscription{}, &chat.Chat{}, &chat.ChatParticipant{}, &message.Message{})
 
 	container := app.NewContainer(cfg, db, log)
 	defer container.Close()

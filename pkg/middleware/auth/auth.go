@@ -47,3 +47,23 @@ func AuthOptional() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func NotBanned() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		isBanned, err := strconv.ParseBool(c.GetHeader("X-User-Ban"))
+		if err != nil {
+			isBanned = false
+		}
+
+		if isBanned {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error":   "account_banned",
+				"details": "Аккаунт заблокирован за нарушение правил платформы",
+			})
+			return
+		}
+
+		c.Set(UserIsBannedKey, isBanned)
+		c.Next()
+	}
+}

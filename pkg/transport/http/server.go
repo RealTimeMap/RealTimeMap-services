@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 )
 
 // Config конфиг для env/yaml заточенный под работу с HTTP

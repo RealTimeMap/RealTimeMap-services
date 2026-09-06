@@ -8,16 +8,18 @@ import (
 )
 
 type SummaryProfileStat struct {
-	MarkCount        string `json:"markCount"`
-	FriendsCount     string `json:"friendsCount"`
-	SubscribersCount string `json:"subscribersCount"`
+	MarkCount          string `json:"markCount"`
+	FriendsCount       string `json:"friendsCount"`
+	SubscribersCount   string `json:"subscribersCount"`
+	SubscriptionsCount string `json:"subscriptionsCount"`
 }
 
-func NewSummaryProfileStat(marks, friends, subs int64) SummaryProfileStat {
+func NewSummaryProfileStat(marks, friends, subs, subscriptions int64) SummaryProfileStat {
 	return SummaryProfileStat{
-		MarkCount:        utils.FormatNumber(marks),
-		FriendsCount:     utils.FormatNumber(friends),
-		SubscribersCount: utils.FormatNumber(subs),
+		MarkCount:          utils.FormatNumber(marks),
+		FriendsCount:       utils.FormatNumber(friends),
+		SubscribersCount:   utils.FormatNumber(subs),
+		SubscriptionsCount: utils.FormatNumber(subscriptions),
 	}
 }
 

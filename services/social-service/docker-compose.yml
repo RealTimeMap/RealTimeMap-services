@@ -135,6 +135,32 @@ services:
       - "traefik.http.routers.social-friends.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.social-friends.tls=true"
 
+      # ===== ПОДПИСКИ (/api/v2/subscriptions) =====
+
+      # CORS preflight OPTIONS для подписок — без auth-check.
+      - "traefik.http.routers.social-subs-options.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/subscriptions`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.social-subs-options.entrypoints=websecure"
+      - "traefik.http.routers.social-subs-options.priority=210"
+      - "traefik.http.routers.social-subs-options.service=social"
+      - "traefik.http.routers.social-subs-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.social-subs-options.tls=true"
+
+      # GET /api/v2/subscriptions — мои подписки (точный путь без слэша)
+      - "traefik.http.routers.social-subs-list.rule=Host(`realtimemap.ru`) && Path(`/api/v2/subscriptions`) && Method(`GET`)"
+      - "traefik.http.routers.social-subs-list.entrypoints=websecure"
+      - "traefik.http.routers.social-subs-list.priority=120"
+      - "traefik.http.routers.social-subs-list.service=social"
+      - "traefik.http.routers.social-subs-list.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-subs-list.tls=true"
+
+      # /api/v2/subscriptions/* — subscribe, unsubscribe, subscribers, status/:profileID
+      - "traefik.http.routers.social-subs.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/subscriptions/`)"
+      - "traefik.http.routers.social-subs.entrypoints=websecure"
+      - "traefik.http.routers.social-subs.priority=100"
+      - "traefik.http.routers.social-subs.service=social"
+      - "traefik.http.routers.social-subs.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.social-subs.tls=true"
+
       # /socket.io/* — WebSocket чата. auth-check валидирует Bearer на handshake и
       # вклеивает X-User-Id/X-User-Name; socket-сервер читает их из Handshake().Headers.
       # forwardAuth срабатывает на HTTP GET Upgrade — этого достаточно, дальше туннель.

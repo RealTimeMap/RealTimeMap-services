@@ -6,6 +6,7 @@ import (
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/stats/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
 	"go.uber.org/zap"
 )
@@ -22,32 +23,50 @@ type MarkStatGetter interface {
 type StatService struct {
 	markStat   MarkStatGetter
 	friendRepo repository.FriendShipRepository
+	subsRepo   repository.SubscriptionRepository
 	logger     *zap.Logger
 }
 
-func NewStatService(markStat MarkStatGetter, friendRepo repository.FriendShipRepository, logger *zap.Logger) *StatService {
+func NewStatService(
+	markStat MarkStatGetter,
+	friendRepo repository.FriendShipRepository,
+	subsRepo repository.SubscriptionRepository,
+	logger *zap.Logger,
+) *StatService {
 	return &StatService{
 		markStat:   markStat,
 		friendRepo: friendRepo,
+		subsRepo:   subsRepo,
 		logger:     logger,
 	}
 }
 
-// GetProfileSummaryStat Формирует Summary статистику для отображения в профиле
-func (s *StatService) GetProfileSummaryStat(ctx context.Context, userID uint) (int64, int64, int64, error) {
+// GetProfileSummaryStat Формирует Summary статистику для отображения в профиле.
+// Возвращает: метки, друзья, подписчики (входящие), подписки (исходящие).
+func (s *StatService) GetProfileSummaryStat(ctx context.Context, userID uint) (int64, int64, int64, int64, error) {
 	s.logger.Info("StatService.GetProfileSummaryStat", zap.Uint("user_id", userID))
 
 	marksCount, err := s.markStat.GetUserMarksCount(ctx, userID)
 	if err != nil {
-		s.logger.Warn("failed to get marks count")
+		s.logger.Warn("failed to get marks count", zap.Error(err))
 	}
 
-	friendCount, subsCount, err := s.friendRepo.CountFriendAndSubs(ctx, userID)
+	friendCount, err := s.friendRepo.CountFriends(ctx, userID, model.Accepted)
 	if err != nil {
-		s.logger.Warn("failed to get marks count")
+		s.logger.Warn("failed to get friends count", zap.Error(err))
 	}
 
-	return marksCount, friendCount, subsCount, nil
+	subsCount, err := s.subsRepo.CountSubscribers(ctx, userID)
+	if err != nil {
+		s.logger.Warn("failed to get subscribers count", zap.Error(err))
+	}
+
+	subscriptionsCount, err := s.subsRepo.CountSubscriptions(ctx, userID)
+	if err != nil {
+		s.logger.Warn("failed to get subscriptions count", zap.Error(err))
+	}
+
+	return marksCount, friendCount, subsCount, subscriptionsCount, nil
 }
 
 // GetUserMonthlyActivity Формирует данные для предоставления графика активности по месяцам в течении текущего года

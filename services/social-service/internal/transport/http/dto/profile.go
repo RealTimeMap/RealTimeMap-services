@@ -62,6 +62,10 @@ type PersonalProfileResponse struct {
 	BaseProfileResponse
 	Settings     UserSettings          `json:"settings"`
 	Gamification *GamificationResponse `json:"gamification,omitempty"`
+	// IsSubscribed заполняется только для чужого профиля, запрошенного
+	// авторизованным пользователем. Для анонима и для своего профиля поле
+	// отсутствует: nil здесь означает «неприменимо», а не «не подписан».
+	IsSubscribed *bool `json:"isSubscribed,omitempty"`
 }
 
 func NewPersonalProfileResponse(data *model.Profile) *PersonalProfileResponse {
@@ -75,6 +79,13 @@ func NewPersonalProfileResponse(data *model.Profile) *PersonalProfileResponse {
 func NewPersonalProfileResponseWithGamification(data *model.Profile, progress *model.Progress) *PersonalProfileResponse {
 	r := NewPersonalProfileResponse(data)
 	r.Gamification = NewGamificationResponse(progress)
+	return r
+}
+
+// WithSubscribed проставляет признак подписки текущего пользователя на
+// просматриваемый профиль.
+func (r *PersonalProfileResponse) WithSubscribed(subscribed bool) *PersonalProfileResponse {
+	r.IsSubscribed = &subscribed
 	return r
 }
 

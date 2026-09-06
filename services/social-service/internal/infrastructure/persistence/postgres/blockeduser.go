@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
@@ -25,9 +26,16 @@ func NewPgBlockedUserRepository(db *gorm.DB, logger *zap.Logger) repository.Bloc
 		logger: logger,
 	}
 }
+
+// dbCtx возвращает транзакцию из контекста (если сервис обернул вызов в
+// txmanager.WithTx) либо собственный пул.
+func (r *PgBlockedUserRepository) dbCtx(ctx context.Context) *gorm.DB {
+	return txmanager.DBFromCtx(ctx, r.db)
+}
+
 func (r *PgBlockedUserRepository) GetByID(ctx context.Context, userID uint, blockedUserID uint) (*model.BlockedUser, error) {
 	var user *model.BlockedUser
-	err := r.db.WithContext(ctx).Where("user_id = ? AND blocked_user_id = ?", userID, blockedUserID).First(&user).Error
+	err := r.dbCtx(ctx).Where("user_id = ? AND blocked_user_id = ?", userID, blockedUserID).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domainerrors.BlockedUserNotFound(blockedUserID)
@@ -40,7 +48,7 @@ func (r *PgBlockedUserRepository) GetByID(ctx context.Context, userID uint, bloc
 
 func (r *PgBlockedUserRepository) ExistsBetween(ctx context.Context, userID, otherID uint) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&model.BlockedUser{}).
+	err := r.dbCtx(ctx).Model(&model.BlockedUser{}).
 		Where("(user_id = ? AND blocked_user_id = ?) OR (user_id = ? AND blocked_user_id = ?)",
 			userID, otherID, otherID, userID).
 		Count(&count).Error
@@ -56,7 +64,7 @@ func (r *PgBlockedUserRepository) Block(ctx context.Context, userID, blockedUser
 		BlockedUserID: blockedUserID,
 	}
 
-	result := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+	result := r.dbCtx(ctx).Clauses(clause.OnConflict{
 		DoNothing: true,
 	}).Create(payload)
 
@@ -68,14 +76,14 @@ func (r *PgBlockedUserRepository) Block(ctx context.Context, userID, blockedUser
 }
 
 func (r *PgBlockedUserRepository) Unblock(ctx context.Context, data *model.BlockedUser) error {
-	err := r.db.WithContext(ctx).Delete(&data).Error
+	err := r.dbCtx(ctx).Delete(&data).Error
 	return err
 }
 
 func (r *PgBlockedUserRepository) GetBlockedUsers(ctx context.Context, userID uint, params pagination.Params) ([]uint, int64, error) {
 	var users []uint
 	var count int64
-	query := r.db.WithContext(ctx).Model(&model.BlockedUser{}).
+	query := r.dbCtx(ctx).Model(&model.BlockedUser{}).
 		Where("user_id = ?", userID)
 
 	err := query.Count(&count).Error

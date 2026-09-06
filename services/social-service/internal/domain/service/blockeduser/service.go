@@ -3,6 +3,7 @@ package blockeduser
 import (
 	"context"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/domainerrors"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
@@ -13,14 +14,25 @@ type Service struct {
 	repo repository.BlockedUserRepository
 
 	profileRepo repository.ProfileRepository
+	subsRepo    repository.SubscriptionRepository
+
+	txm *txmanager.TxManager
 
 	logger *zap.Logger
 }
 
-func NewService(repo repository.BlockedUserRepository, profileRepo repository.ProfileRepository, logger *zap.Logger) *Service {
+func NewService(
+	repo repository.BlockedUserRepository,
+	profileRepo repository.ProfileRepository,
+	subsRepo repository.SubscriptionRepository,
+	txm *txmanager.TxManager,
+	logger *zap.Logger,
+) *Service {
 	return &Service{
 		repo:        repo,
 		profileRepo: profileRepo,
+		subsRepo:    subsRepo,
+		txm:         txm,
 		logger:      logger,
 	}
 }
@@ -35,14 +47,20 @@ func (s *Service) BlockUser(ctx context.Context, userID, blockedUserID uint) err
 		return err
 	}
 
-	created, err := s.repo.Block(ctx, userID, blockedUserID)
-	if err != nil {
-		return err
-	}
-	if !created {
-		return domainerrors.UserAlreadyBlocked(blockedUserID)
-	}
-	return nil
+	// Блокировка и разрыв подписок — одна операция: иначе при сбое второго
+	// шага заблокированный остался бы подписчиком без возможности отписаться
+	// (подписаться заново ему уже запрещает checkNotBlocked).
+	return s.txm.WithTx(ctx, func(ctx context.Context) error {
+		created, err := s.repo.Block(ctx, userID, blockedUserID)
+		if err != nil {
+			return err
+		}
+		if !created {
+			return domainerrors.UserAlreadyBlocked(blockedUserID)
+		}
+
+		return s.subsRepo.DeleteBetween(ctx, userID, blockedUserID)
+	})
 }
 
 func (s *Service) UnBlockUser(ctx context.Context, userID, blockedUserID uint) error {
