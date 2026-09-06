@@ -1,7 +1,8 @@
 package auth
 
 const (
-	UserIDKey      = "userID"
-	UsernameKey    = "userName"
-	UserIsAdminKey = "isAdmin"
+	UserIDKey       = "userID"
+	UsernameKey     = "userName"
+	UserIsAdminKey  = "isAdmin"
+	UserIsBannedKey = "isBanned"
 )
