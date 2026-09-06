@@ -51,14 +51,19 @@ func AuthOptional() gin.HandlerFunc {
 func NotBanned() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		isBanned, err := strconv.ParseBool(c.GetHeader("X-User-Ban"))
+		reason := c.GetHeader("X-User-Ban-Reason")
+		banText := c.GetHeader("X-User-Ban-Detail")
+		banTime := c.GetHeader("X-User-Ban-Time")
 		if err != nil {
 			isBanned = false
 		}
 
 		if isBanned {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error":   "account_banned",
-				"details": "Аккаунт заблокирован за нарушение правил платформы",
+				"error":       "account_banned",
+				"details":     banText,
+				"reason":      reason,
+				"bannedUntil": banTime,
 			})
 			return
 		}
