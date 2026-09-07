@@ -381,7 +381,7 @@
       "method": "GET",
       "path": "/api/v2/profile/{profileID}",
       "summary": "Получить профиль по ID",
-      "description": "Возвращает полный профиль пользователя с данными геймификации (если доступны). Публичный endpoint.",
+      "description": "Возвращает полный профиль пользователя с данными геймификации (если доступны). Публичный endpoint.\n\nПоле isSubscribed отдаётся только авторизованному пользователю при просмотре чужого профиля и показывает, подписан ли он на этот профиль. Для анонимного запроса и при просмотре собственного профиля поле отсутствует в ответе.",
       "tags": [
         "Профили"
       ],
@@ -469,6 +469,12 @@
                   "description": "Процент прогресса"
                 }
               ]
+            },
+            {
+              "name": "isSubscribed",
+              "type": "boolean",
+              "required": false,
+              "description": "Подписан ли текущий пользователь на этот профиль. Отсутствует для анонима и для своего профиля"
             }
           ],
           "example": {
@@ -484,7 +490,8 @@
               "currentXp": 1500,
               "xpForNextLevel": 2000,
               "progressPercent": 75.0
-            }
+            },
+            "isSubscribed": true
           }
         }
       ],
@@ -843,6 +850,240 @@
             "total": 2,
             "hasNext": false,
             "hasPrev": false
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error"
+      ]
+    },
+    {
+      "id": "subscribe-user",
+      "method": "POST",
+      "path": "/api/v2/subscriptions/subscribe",
+      "summary": "Подписаться на профиль",
+      "description": "Оформляет одностороннюю подписку текущего пользователя на указанный профиль. Подтверждение владельцем не требуется — подписка активна сразу.\n\nПодписка не связана с дружбой: взаимная подписка двух пользователей друзьями их не делает, а существующая дружба не создаёт подписку автоматически.\n\nПодписка невозможна, если между пользователями есть блокировка в любую сторону (403), а также на самого себя (409). Повторная подписка возвращает 409. Требует авторизации.",
+      "tags": [
+        "Подписки"
+      ],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "ID профиля, на который оформляется подписка",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "userId",
+            "type": "integer",
+            "required": true,
+            "description": "ID целевого профиля"
+          }
+        ],
+        "example": {
+          "userId": 5
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Подписка успешно оформлена"
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error",
+        "forbidden",
+        "conflict",
+        "not-found"
+      ]
+    },
+    {
+      "id": "unsubscribe-user",
+      "method": "POST",
+      "path": "/api/v2/subscriptions/unsubscribe",
+      "summary": "Отписаться от профиля",
+      "description": "Отменяет ранее оформленную подписку текущего пользователя на указанный профиль. Если подписки не существует, возвращается 404. Требует авторизации.",
+      "tags": [
+        "Подписки"
+      ],
+      "auth": true,
+      "parameters": [],
+      "requestBody": {
+        "description": "ID профиля, на который оформляется подписка",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "userId",
+            "type": "integer",
+            "required": true,
+            "description": "ID целевого профиля"
+          }
+        ],
+        "example": {
+          "userId": 5
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Подписка успешно отменена"
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error",
+        "not-found"
+      ]
+    },
+    {
+      "id": "get-my-subscriptions",
+      "method": "GET",
+      "path": "/api/v2/subscriptions",
+      "summary": "Мои подписки",
+      "description": "Возвращает профили, на которые подписан текущий пользователь (исходящие подписки), с пагинацией. Сортировка — от новых подписок к старым. Требует авторизации.",
+      "tags": [
+        "Подписки"
+      ],
+      "auth": true,
+      "pagination": "page",
+      "parameters": [
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "description": "Номер страницы (по умолчанию 1)",
+          "location": "query",
+          "example": "1"
+        },
+        {
+          "name": "pageSize",
+          "type": "integer",
+          "required": false,
+          "description": "Размер страницы (1–100, по умолчанию 10)",
+          "location": "query",
+          "example": "10"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список профилей с пагинацией",
+          "schemaRef": "profile",
+          "example": {
+            "items": [
+              {
+                "userId": 5,
+                "username": "traveler",
+                "avatar": "",
+                "isPrivate": false
+              }
+            ],
+            "page": 1,
+            "pageSize": 10,
+            "totalPages": 1,
+            "total": 1,
+            "hasNext": false,
+            "hasPrev": false
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error"
+      ]
+    },
+    {
+      "id": "get-my-subscribers",
+      "method": "GET",
+      "path": "/api/v2/subscriptions/subscribers",
+      "summary": "Мои подписчики",
+      "description": "Возвращает профили, подписанные на текущего пользователя (входящие подписки), с пагинацией. Сортировка — от новых подписчиков к старым.\n\nЭто же число отдаётся как subscribersCount в сводной статистике профиля. Требует авторизации.",
+      "tags": [
+        "Подписки"
+      ],
+      "auth": true,
+      "pagination": "page",
+      "parameters": [
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "description": "Номер страницы (по умолчанию 1)",
+          "location": "query",
+          "example": "1"
+        },
+        {
+          "name": "pageSize",
+          "type": "integer",
+          "required": false,
+          "description": "Размер страницы (1–100, по умолчанию 10)",
+          "location": "query",
+          "example": "10"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список профилей с пагинацией",
+          "schemaRef": "profile",
+          "example": {
+            "items": [
+              {
+                "userId": 5,
+                "username": "traveler",
+                "avatar": "",
+                "isPrivate": false
+              }
+            ],
+            "page": 1,
+            "pageSize": 10,
+            "totalPages": 1,
+            "total": 1,
+            "hasNext": false,
+            "hasPrev": false
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error"
+      ]
+    },
+    {
+      "id": "get-subscription-status",
+      "method": "GET",
+      "path": "/api/v2/subscriptions/status/{profileID}",
+      "summary": "Статус подписки на профиль",
+      "description": "Возвращает признак того, подписан ли текущий пользователь на указанный профиль. Предназначен для отрисовки состояния кнопки подписки на чужом профиле. Требует авторизации.",
+      "tags": [
+        "Подписки"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "profileID",
+          "type": "integer",
+          "required": true,
+          "description": "ID проверяемого профиля",
+          "location": "path",
+          "example": "5"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Признак наличия подписки",
+          "schema": [
+            {
+              "name": "subscribed",
+              "type": "boolean",
+              "required": true,
+              "description": "true, если текущий пользователь подписан на профиль"
+            }
+          ],
+          "example": {
+            "subscribed": true
           }
         }
       ],
@@ -1588,7 +1829,7 @@
           "schema": [
             {
               "name": "markCount",
-              "type": "number",
+              "type": "string",
               "required": true,
               "description": "Общее количество созданных меток (с пороговым округлением)"
             },
@@ -1602,13 +1843,20 @@
               "name": "subscribersCount",
               "type": "string",
               "required": true,
-              "description": "Общее количество подписчиков (с пороговым округлением)"
+              "description": "Количество подписчиков пользователя (сколько подписано на него), отформатировано"
+            },
+            {
+              "name": "subscriptionsCount",
+              "type": "string",
+              "required": true,
+              "description": "Количество подписок пользователя (на скольких он подписан), отформатировано"
             }
           ],
           "example": {
-            "markCount": 27,
+            "markCount": "27",
             "friendsCount": "14",
-            "subscribersCount": "1.5 K"
+            "subscribersCount": "1.5 K",
+            "subscriptionsCount": "12"
           }
         }
       ],
