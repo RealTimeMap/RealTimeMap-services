@@ -10,9 +10,9 @@ import (
 )
 
 func RegisterRoutes(g *gin.Engine, container *app.Container) {
-	api := g.Group("/api/v2", auth.NotBanned())
+	api := g.Group("/api/v2")
 
-	profile := api.Group("/profile")
+	profile := api.Group("/profile", auth.NotBanned())
 
 	// Основные роуты под профиль
 	handlers.RegisterProfileHandler(profile, handlers.ProfileDeps{
