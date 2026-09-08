@@ -35,4 +35,42 @@ func (r *PgPersonalMarkRepository) Create(ctx context.Context, obj *personal.Mod
 	return r.dbCtx(ctx).Create(obj).Error
 }
 
-func (r *PgPersonalMarkRepository) List(ctx context.Context, userID uint)
+func (r *PgPersonalMarkRepository) List(ctx context.Context, userID uint, since *uint, upTo uint, limit int) (personal.Changes, error) {
+	r.logger.Info("start List", zap.String("layer", "postgres repo"))
+
+	q := r.db.WithContext(ctx).
+		Unscoped().
+		Where("user_id = ?", userID).
+		Where("revision <= ?", upTo).
+		Where("revision ASC").
+		Limit(limit + 1)
+
+	if since != nil {
+		q = q.Where("revision > ?", *since)
+	} else {
+		q = q.Where("deleted_at IS NULL")
+	}
+
+	var objs []personal.Model
+
+	if err := q.Preload("Groups").Find(&objs).Error; err != nil {
+		return personal.Changes{}, err
+	}
+
+	out := personal.Changes{Marks: []personal.Model{}, Removed: []uint{}, Cursor: upTo}
+
+	if len(objs) > limit {
+		objs = objs[:limit]
+		out.HasMore = true
+		out.Cursor = objs[len(objs)-1].Revision
+	}
+
+	for _, m := range objs {
+		if m.DeletedAt.Valid {
+			out.Removed = append(out.Removed, m.ID)
+		} else {
+			out.Marks = append(out.Marks, m)
+		}
+	}
+	return out, nil
+}

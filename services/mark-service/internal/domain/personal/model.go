@@ -40,3 +40,10 @@ type Revision struct {
 	UserID   uint `gorm:"primaryKey;autoIncrement:false"`
 	Revision uint `gorm:"not null;default:0"`
 }
+
+type Changes struct {
+	Marks   []Model
+	Removed []uint
+	Cursor  uint
+	HasMore bool
+}
