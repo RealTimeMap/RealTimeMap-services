@@ -20,12 +20,21 @@ grpc:
   user_service: "localhost:50052"  # Для Docker: "user-service:50051"
 
 storage:
-  type: "local"
-  base_path: "./store"      # Для локальной разработки | Docker: "/app/store"
-  base_url: "http://localhost:8080/store"
+  # Локальный запуск: сервис на хосте, MinIO в докере с пробросом 9000.
+  # В докере значение переопределяется через ENV STORAGE_ENDPOINT=rtm_minio:9000.
+  endpoint: "localhost:9000"
+  bucket: "rtm-media"
+  access_key_id: ""       # ENV: STORAGE_ACCESS_KEY_ID (не коммитить)
+  secret_access_key: ""   # ENV: STORAGE_SECRET_ACCESS_KEY (не коммитить)
+  region: "us-east-1"
+  use_ssl: false
+  # base_url обязан совпадать во ВСЕХ сервисах одного окружения: иначе один и
+  # тот же объект получит разные URL и дедупликация потеряет смысл на выдаче.
+  # Прод/докер: https://realtimemap.ru/files (ENV STORAGE_BASE_URL).
+  base_url: "http://localhost:9000/rtm-media"
 
 kafka:
   enabled: false            # ENV: KAFKA_ENABLED (false для dev без Kafka)
   brokers:
     - "localhost:9092"      # Для локальной разработки | Docker: "kafka:29092"
-  producerTopic: "mark-service.events"  # ENV: KAFKA_PRODUCER_TOPIC
+  producerTopic: "mark_action-service.events"  # ENV: KAFKA_PRODUCER_TOPIC

@@ -3,9 +3,11 @@ package postgres
 import (
 	"context"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 )
 
 type PgPersonalMarkRepository struct {
@@ -21,12 +23,16 @@ func NewPgPersonalMarkRepository(db *gorm.DB, logger *zap.Logger) personal.Repos
 	}
 }
 
+// dbCtx возвращает транзакцию из контекста (если сервис обернул вызов в
+// txmanager.WithTx) либо собственный пул.
+func (r *PgPersonalMarkRepository) dbCtx(ctx context.Context) *gorm.DB {
+	return txmanager.DBFromCtx(ctx, r.db)
+}
+
 func (r *PgPersonalMarkRepository) Create(ctx context.Context, obj *personal.Model) error {
 	r.logger.Info("start Create", zap.String("layer", "postgres repo"))
 
-	err := r.db.WithContext(ctx).Create(&obj).Error
-	if err != nil {
-		return err
-	}
-	return nil
+	return r.dbCtx(ctx).Create(obj).Error
 }
+
+func (r *PgPersonalMarkRepository) List(ctx context.Context, userID uint)

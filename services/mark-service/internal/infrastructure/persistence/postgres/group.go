@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
 	"go.uber.org/zap"
@@ -23,9 +24,15 @@ func NewPgGroupRepository(db *gorm.DB, logger *zap.Logger) group.Repository {
 	}
 }
 
+// dbCtx возвращает транзакцию из контекста (если сервис обернул вызов в
+// txmanager.WithTx) либо собственный пул.
+func (r *PgGroupRepository) dbCtx(ctx context.Context) *gorm.DB {
+	return txmanager.DBFromCtx(ctx, r.db)
+}
+
 func (r *PgGroupRepository) Create(ctx context.Context, obj *group.Model) error {
 	r.logger.Info("start Create", zap.String("layer", "postgres repo"))
-	err := r.db.WithContext(ctx).Create(obj).Error
+	err := r.dbCtx(ctx).Create(obj).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return group.ErrAlreadyExistGroup(obj.Name)
@@ -43,7 +50,7 @@ func (r *PgGroupRepository) List(ctx context.Context, userID uint, params pagina
 	r.logger.Info("start List", zap.String("layer", "postgres repo"))
 	var count int64
 	var objs []*group.Model
-	err := r.db.WithContext(ctx).
+	err := r.dbCtx(ctx).
 		Model(&group.Model{}).
 		Where("user_id = ?", userID).
 		Offset(params.Offset()).
@@ -65,7 +72,7 @@ func (r *PgGroupRepository) GetBatch(ctx context.Context, userID uint, ids []uin
 	r.logger.Info("start GetBatch", zap.String("layer", "postgres repo"), zap.Any("ids", ids))
 	var objs []*group.Model
 
-	err := r.db.WithContext(ctx).Where("user_id = ? AND id IN ?", userID, ids).Find(&objs).Error
+	err := r.dbCtx(ctx).Where("user_id = ? AND id IN ?", userID, ids).Find(&objs).Error
 	if err != nil {
 		return nil, err
 	}

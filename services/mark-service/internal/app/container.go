@@ -1,22 +1,27 @@
 package app
 
 import (
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+
 	pkgprofile "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/profile"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/category"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/group"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_interaction"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_stat"
-	category2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
-
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/personal"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
+	category2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
+	personalsrv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
+	groupsrv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
 	grpcstat "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/socket"
-	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type Container struct {
@@ -28,6 +33,8 @@ type Container struct {
 	MarkUseCases            *mark_action.Application
 	MarkInteractionUseCases *mark_interaction.Application
 	CategoryUseCases        *category.Application
+	GroupUseCases           *group.Application
+	PersonalUseCases        *personal.Application
 
 	// grpc
 	MarkStatServer *grpcstat.Handler
@@ -36,7 +43,7 @@ type Container struct {
 
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
 	// Создание вспомогательных компонентов
-	//imageValidator := mediavalidator.NewPhotoValidator()
+	// imageValidator := mediavalidator.NewPhotoValidator()
 	store, err := storage.NewMinIOStorage(cfg.Storage, log)
 	if err != nil {
 		panic(err)
@@ -69,16 +76,23 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		log.Fatal("Profile client initialization failed", zap.Error(err))
 	}
 
+	// Транзакции
+	manager := txmanager.NewTxManager(db)
 	// Создание доменных репозиториев
 	statRepo := postgres.NewPgMarkStatRepository(db, log)
 	markRepo := postgres.NewMarkRepositoryV2(db, log)
 	categoryRepo := postgres.NewCategoryRepository(db, log)
 	interactRepo := postgres.NewPgLikeRepository(db, log)
+	groupRepo := postgres.NewPgGroupRepository(db, log)
+	personalRepo := postgres.NewPgPersonalMarkRepository(db, log)
+	revisionRepo := postgres.NewPgRevisionRepository(db, log)
 	// Создание доменных сервисов
 	statService := mark.NewStatService(statRepo, log)
 	markService := mark.NewService(markRepo, categoryRepo, store, log)
 	categoryService := category2.NewService(categoryRepo)
 	accrualService := mark.NewAccrualService(markRepo, interactRepo, log)
+	groupSrv := groupsrv.NewService(groupRepo, log)
+	personalSrv := personalsrv.NewService(personalRepo, groupRepo, revisionRepo, manager, store, log)
 	// USE CASE
 
 	markUseCases := &mark_action.Application{
@@ -104,9 +118,18 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		GetStat:     mark_interaction.NewGetStatHandler(accrualService, log),
 	}
 
+	groupCases := &group.Application{
+		Create: group.NewCreateGroupHandler(groupSrv, log),
+		List:   group.NewListGroupHandler(groupSrv, log),
+	}
+
 	categoryUseCases := &category.Application{
 		Create: category.NewCreateCategoryCommand(categoryService, log),
 		Get:    category.NewGetterCategoryHandler(categoryService, log),
+	}
+
+	personalUseCases := &personal.Application{
+		Create: personal.NewCreatePersonalHandler(personalSrv, log),
 	}
 	// Сокеты
 	socketServer := socket.New(socket.Deps{MarkUseCases: markUseCases, Logger: log})
@@ -124,8 +147,9 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		MarkStatServer:          markStatGrpc,
 		MarkInteractionUseCases: markAccrualCases,
 		CategoryUseCases:        categoryUseCases,
+		GroupUseCases:           groupCases,
+		PersonalUseCases:        personalUseCases,
 
 		Logger: log,
 	}
-
 }

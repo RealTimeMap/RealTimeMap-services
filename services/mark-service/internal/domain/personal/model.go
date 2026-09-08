@@ -1,16 +1,18 @@
 package personal
 
 import (
+	"gorm.io/gorm"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
-	"gorm.io/gorm"
 )
 
 type Model struct {
 	// Системная информация
 	gorm.Model
-	UserID uint
-	Geom   types.Point `gorm:"type:geometry(POINT,4326);not null"`
+	Revision uint        `gorm:"not null;index:idx_marks_owner_rev,priority:2"`
+	UserID   uint        `gorm:"not null;index:idx_marks_owner_rev,priority:1"`
+	Geom     types.Point `gorm:"type:geometry(POINT,4326);not null"`
 
 	// Списки к которому присвоена метка
 	Groups []*group.Model `gorm:"many2many:personal_marks_groups"`
@@ -32,4 +34,9 @@ type Model struct {
 
 func (Model) TableName() string {
 	return "personal_marks"
+}
+
+type Revision struct {
+	UserID   uint `gorm:"primaryKey;autoIncrement:false"`
+	Revision uint `gorm:"not null;default:0"`
 }

@@ -3,27 +3,32 @@ package personal
 import (
 	"context"
 
+	"go.uber.org/zap"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
-	"go.uber.org/zap"
 )
 
 type Service struct {
-	repo      Repository
-	groupRepo group.Repository
-
-	store  storage.Storage
-	logger *zap.Logger
+	repo         Repository
+	groupRepo    group.Repository
+	revisionRepo RevisionRepository
+	store        storage.Storage
+	tx           txmanager.TxManager
+	logger       *zap.Logger
 }
 
-func NewService(repo Repository, groupRepo group.Repository, store storage.Storage, logger *zap.Logger) *Service {
+func NewService(repo Repository, groupRepo group.Repository, revisionRepo RevisionRepository, tx txmanager.TxManager, store storage.Storage, logger *zap.Logger) *Service {
 	return &Service{
-		repo:      repo,
-		groupRepo: groupRepo,
-		store:     store,
-		logger:    logger,
+		repo:         repo,
+		groupRepo:    groupRepo,
+		revisionRepo: revisionRepo,
+		tx:           tx,
+		store:        store,
+		logger:       logger,
 	}
 }
 

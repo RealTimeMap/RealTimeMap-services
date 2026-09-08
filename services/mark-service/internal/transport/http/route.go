@@ -6,6 +6,11 @@ import (
 	"mime/multipart"
 	"sync"
 
+	"github.com/gin-gonic/gin"
+	"github.com/mmcloughlin/geohash"
+	"github.com/paulmach/orb"
+	"go.uber.org/zap"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
@@ -18,23 +23,26 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	dto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/handlers"
-	"github.com/gin-gonic/gin"
-	"github.com/mmcloughlin/geohash"
-	"github.com/paulmach/orb"
-	"go.uber.org/zap"
 
 	http2 "net/http"
 )
 
 func RegisterRoutes(g *gin.Engine, container *app.Container) {
-	api := g.Group("/api/v2")
+	api := g.Group("/api/v2", auth.NotBanned())
 
 	// endpoints
 
 	handlers.InitCategoryHandler(api, container.CategoryUseCases, container.Logger)
 	handlers.InitMarkHandler(api, handlers.MarkDeps{UseCases: container.MarkUseCases, Logger: container.Logger})
 	handlers.InitAccrualHandler(api, handlers.AccrualDeps{UseCases: container.MarkInteractionUseCases, Logger: container.Logger})
-
+	handlers.InitGroupHandler(api, handlers.GroupDeps{
+		UseCases: container.GroupUseCases,
+		Logger:   container.Logger,
+	})
+	handlers.InitPersonalMarkHandler(api, handlers.PersonalDeps{
+		UseCase: container.PersonalUseCases,
+		Logger:  container.Logger,
+	})
 	// Health
 	health := http.HealthHandler("mark_action-service", container.DB)
 	g.GET("/mark/health", health)
@@ -48,7 +56,6 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 
 	g.GET("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
 	g.POST("/socket.io/*any", gin.WrapH(container.Socket.HttpHandler()))
-
 }
 
 type H struct {

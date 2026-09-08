@@ -44,14 +44,16 @@ func NewCreatePersonalHandler(creator Creator, logger *zap.Logger) *CreatePerson
 }
 
 type PersonalMarkResult struct {
-	ID     uint
-	UserID uint
+	ID       uint `json:"id"`
+	UserID   uint `json:"userId"`
+	Revision uint `json:"revision"`
 }
 
 func toPersonalMarkResult(obj *srv.Model) PersonalMarkResult {
 	return PersonalMarkResult{
-		ID:     obj.ID,
-		UserID: obj.UserID,
+		ID:       obj.ID,
+		UserID:   obj.UserID,
+		Revision: obj.Revision,
 	}
 }
 
