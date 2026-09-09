@@ -32,7 +32,7 @@
   {
     "id": "comment-service",
     "name": "comment-service",
-    "description": "Сервис комментариев к сущностям приложения с поддержкой ответов и реакций.",
+    "description": "Сервис комментариев к сущностям приложения с поддержкой ответов и лайков.",
     "protocols": ["http"],
     "availableEnvs": ["dev", "staging", "prod"],
     "healthPath": "/comment/health",
@@ -43,7 +43,7 @@
     "id": "gamification-service",
     "name": "gamification-service",
     "description": "Сервис геймификации: уровни, опыт, достижения пользователей.",
-    "protocols": ["http", "kafka"],
+    "protocols": ["http", "kafka", "grpc"],
     "availableEnvs": ["dev", "staging", "prod"],
     "healthPath": "/gamification/health",
     "team": "Backend",

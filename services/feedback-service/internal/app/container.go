@@ -13,6 +13,10 @@ type Container struct {
 	BugCases *bugcases.Application
 	Logger   *zap.Logger
 	DB       *gorm.DB
+
+	// ServiceApiKey — ключ межсервисных маршрутов. Транспорт берёт его
+	// отсюда, чтобы не тянуть весь конфиг в слой маршрутов.
+	ServiceApiKey string
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) (*Container, error) {
@@ -21,11 +25,14 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) (*Contain
 	bugUseCases := &bugcases.Application{
 		Create: bugcases.NewCreatorBugHandler(bugService, logger),
 		List:   bugcases.NewListBugHandler(bugService, logger),
+		Get:    bugcases.NewGetBugHandler(bugService, logger),
+		Link:   bugcases.NewLinkBugHandler(bugService, logger),
 	}
 
 	return &Container{
-		BugCases: bugUseCases,
-		Logger:   logger,
-		DB:       db,
+		BugCases:      bugUseCases,
+		Logger:        logger,
+		DB:            db,
+		ServiceApiKey: cfg.ServiceApiKey,
 	}, nil
 }

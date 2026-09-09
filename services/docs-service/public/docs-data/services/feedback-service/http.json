@@ -257,6 +257,1063 @@
       ]
     },
     {
+      "id": "service-list-bugs",
+      "method": "GET",
+      "path": "/api/v2/service/bugs",
+      "summary": "Перечень багов для привязки к задаче",
+      "description": "Отдаёт баги, которые можно взять в работу задачей таск-менеджера. По умолчанию это только открытые (new, in work) и ещё не занятые другой задачей: именно их имеет смысл предлагать при создании задачи типа bug. Логи в перечень не попадают — они весят прилично и нужны только при чтении одного бага.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет.",
+          "location": "header"
+        },
+        {
+          "name": "tag",
+          "type": "string",
+          "required": false,
+          "location": "query",
+          "description": "Фильтр по категории бага"
+        },
+        {
+          "name": "pageSize",
+          "type": "integer",
+          "required": false,
+          "location": "query",
+          "description": "Размер страницы, максимум 100"
+        },
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "location": "query",
+          "description": "Номер страницы, начиная с единицы"
+        },
+        {
+          "name": "includeClosed",
+          "type": "boolean",
+          "required": false,
+          "location": "query",
+          "description": "Не отбрасывать закрытые и отменённые баги"
+        },
+        {
+          "name": "includeLinked",
+          "type": "boolean",
+          "required": false,
+          "location": "query",
+          "description": "Не отбрасывать баги, уже привязанные к задаче"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Перечень багов",
+          "schema": [
+            {
+              "name": "items",
+              "type": "array",
+              "required": true,
+              "description": "Баги, доступные для привязки",
+              "children": [
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Идентификатор бага"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string",
+                  "required": true,
+                  "description": "Дата отправки отчёта (ISO 8601)"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true,
+                  "description": "Заголовок бага"
+                },
+                {
+                  "name": "desc",
+                  "type": "string",
+                  "required": true,
+                  "description": "Текст отчёта от пользователя"
+                },
+                {
+                  "name": "tag",
+                  "type": "string",
+                  "required": true,
+                  "description": "Категория бага",
+                  "enum": [
+                    "feature",
+                    "ui",
+                    "logic"
+                  ]
+                },
+                {
+                  "name": "status",
+                  "type": "string",
+                  "required": true,
+                  "description": "Статус бага",
+                  "enum": [
+                    "new",
+                    "in work",
+                    "closed",
+                    "canceled"
+                  ]
+                },
+                {
+                  "name": "platform",
+                  "type": "string",
+                  "required": true,
+                  "description": "Платформа устройства"
+                },
+                {
+                  "name": "build",
+                  "type": "string",
+                  "required": true,
+                  "description": "Версия сборки приложения"
+                },
+                {
+                  "name": "hasLogs",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "К отчёту приложен журнал"
+                },
+                {
+                  "name": "userId",
+                  "type": "integer",
+                  "required": false,
+                  "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+                },
+                {
+                  "name": "taskId",
+                  "type": "integer",
+                  "required": false,
+                  "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+                },
+                {
+                  "name": "os",
+                  "type": "string",
+                  "required": false,
+                  "description": "ОС и её версия"
+                },
+                {
+                  "name": "resolution",
+                  "type": "string",
+                  "required": false,
+                  "description": "Разрешение экрана строкой вида 1080x2400"
+                },
+                {
+                  "name": "battery",
+                  "type": "number",
+                  "required": false,
+                  "description": "Заряд батареи на момент отправки"
+                }
+              ]
+            }
+          ],
+          "example": {
+            "items": [
+              {
+                "id": 5,
+                "createdAt": "2026-08-01T10:11:47Z",
+                "title": "Маркер не обновляется после смены фильтра",
+                "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+                "tag": "logic",
+                "status": "in work",
+                "platform": "Android 13",
+                "build": "0.1.3",
+                "hasLogs": true,
+                "userId": 123,
+                "taskId": 52,
+                "os": "Android 13",
+                "resolution": "1080x2400",
+                "battery": 0.68
+              }
+            ]
+          }
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
+      "id": "service-get-bug",
+      "method": "GET",
+      "path": "/api/v2/service/bugs/{id}",
+      "summary": "Баг целиком: обстановка и логи",
+      "description": "Отдаёт один баг со всеми подробностями отчёта — версией ОС, разрешением экрана, зарядом батареи и журналом приложения. Отдельно от перечня: эти данные нужны тому, кто уже открыл задачу и разбирается в отчёте.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет.",
+          "location": "header"
+        },
+        {
+          "name": "id",
+          "type": "integer",
+          "required": true,
+          "location": "path",
+          "description": "Идентификатор бага"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Баг со всеми подробностями",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "Идентификатор бага"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата отправки отчёта (ISO 8601)"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок бага"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Текст отчёта от пользователя"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория бага",
+              "enum": [
+                "feature",
+                "ui",
+                "logic"
+              ]
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус бага",
+              "enum": [
+                "new",
+                "in work",
+                "closed",
+                "canceled"
+              ]
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Платформа устройства"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": true,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "hasLogs",
+              "type": "boolean",
+              "required": true,
+              "description": "К отчёту приложен журнал"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+            },
+            {
+              "name": "taskId",
+              "type": "integer",
+              "required": false,
+              "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана строкой вида 1080x2400"
+            },
+            {
+              "name": "battery",
+              "type": "number",
+              "required": false,
+              "description": "Заряд батареи на момент отправки"
+            },
+            {
+              "name": "logs",
+              "type": "array",
+              "required": true,
+              "description": "Журнал приложения на момент отправки отчёта"
+            },
+            {
+              "name": "width",
+              "type": "integer",
+              "required": false,
+              "description": "Ширина экрана, разобранная из resolution"
+            },
+            {
+              "name": "height",
+              "type": "integer",
+              "required": false,
+              "description": "Высота экрана, разобранная из resolution"
+            }
+          ],
+          "example": {
+            "id": 5,
+            "createdAt": "2026-08-01T10:11:47Z",
+            "title": "Маркер не обновляется после смены фильтра",
+            "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+            "tag": "logic",
+            "status": "in work",
+            "platform": "Android 13",
+            "build": "0.1.3",
+            "hasLogs": true,
+            "userId": 123,
+            "taskId": 52,
+            "os": "Android 13",
+            "resolution": "1080x2400",
+            "battery": 0.68,
+            "logs": [
+              "init map",
+              "filter changed",
+              "marker stale"
+            ],
+            "width": 1080,
+            "height": 2400
+          }
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 404,
+          "description": "Бага с таким идентификатором нет"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
+      "id": "service-link-bug",
+      "method": "PUT",
+      "path": "/api/v2/service/bugs/{id}/task",
+      "summary": "Привязать баг к задаче",
+      "description": "Отмечает баг занятым задачей таск-менеджера и переводит его в in work. Привязка и статус меняются вместе: баг, взятый в задачу, по определению в работе. Повторный вызов с той же задачей ошибкой не считается — результат от этого не меняется.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет.",
+          "location": "header"
+        },
+        {
+          "name": "id",
+          "type": "integer",
+          "required": true,
+          "location": "path",
+          "description": "Идентификатор бага"
+        }
+      ],
+      "requestBody": {
+        "description": "Задача, в которой баг будут вести",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "taskId",
+            "type": "integer",
+            "required": true,
+            "description": "Идентификатор задачи в таск-менеджере"
+          }
+        ],
+        "example": {
+          "taskId": 52
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Баг привязан",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "Идентификатор бага"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата отправки отчёта (ISO 8601)"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок бага"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Текст отчёта от пользователя"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория бага",
+              "enum": [
+                "feature",
+                "ui",
+                "logic"
+              ]
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус бага",
+              "enum": [
+                "new",
+                "in work",
+                "closed",
+                "canceled"
+              ]
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Платформа устройства"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": true,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "hasLogs",
+              "type": "boolean",
+              "required": true,
+              "description": "К отчёту приложен журнал"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+            },
+            {
+              "name": "taskId",
+              "type": "integer",
+              "required": false,
+              "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана строкой вида 1080x2400"
+            },
+            {
+              "name": "battery",
+              "type": "number",
+              "required": false,
+              "description": "Заряд батареи на момент отправки"
+            }
+          ],
+          "example": {
+            "id": 5,
+            "createdAt": "2026-08-01T10:11:47Z",
+            "title": "Маркер не обновляется после смены фильтра",
+            "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+            "tag": "logic",
+            "status": "in work",
+            "platform": "Android 13",
+            "build": "0.1.3",
+            "hasLogs": true,
+            "userId": 123,
+            "taskId": 52,
+            "os": "Android 13",
+            "resolution": "1080x2400",
+            "battery": 0.68
+          }
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 404,
+          "description": "Бага с таким идентификатором нет"
+        },
+        {
+          "statusCode": 409,
+          "description": "Баг уже привязан к другой задаче либо закрыт и в работу не берётся"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
+      "id": "service-unlink-bug",
+      "method": "DELETE",
+      "path": "/api/v2/service/bugs/{id}/task",
+      "summary": "Освободить конкретный баг",
+      "description": "Снимает привязку с бага и возвращает его в перечень свободных. Нужен, когда задача меняет баг: прежний уже не найти по идентификатору задачи — её привязка указывает на новый. Закрытый баг обратно не открывается: работа над ним завершена, и отвязка этого не отменяет.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет.",
+          "location": "header"
+        },
+        {
+          "name": "id",
+          "type": "integer",
+          "required": true,
+          "location": "path",
+          "description": "Идентификатор бага"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Привязка снята",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "Идентификатор бага"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата отправки отчёта (ISO 8601)"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок бага"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Текст отчёта от пользователя"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория бага",
+              "enum": [
+                "feature",
+                "ui",
+                "logic"
+              ]
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус бага",
+              "enum": [
+                "new",
+                "in work",
+                "closed",
+                "canceled"
+              ]
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Платформа устройства"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": true,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "hasLogs",
+              "type": "boolean",
+              "required": true,
+              "description": "К отчёту приложен журнал"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+            },
+            {
+              "name": "taskId",
+              "type": "integer",
+              "required": false,
+              "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана строкой вида 1080x2400"
+            },
+            {
+              "name": "battery",
+              "type": "number",
+              "required": false,
+              "description": "Заряд батареи на момент отправки"
+            }
+          ],
+          "example": {
+            "id": 5,
+            "createdAt": "2026-08-01T10:11:47Z",
+            "title": "Маркер не обновляется после смены фильтра",
+            "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+            "tag": "logic",
+            "status": "new",
+            "platform": "Android 13",
+            "build": "0.1.3",
+            "hasLogs": true,
+            "userId": 123,
+            "taskId": null,
+            "os": "Android 13",
+            "resolution": "1080x2400",
+            "battery": 0.68
+          }
+        },
+        {
+          "statusCode": 204,
+          "description": "Баг не был привязан — менять нечего"
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 404,
+          "description": "Бага с таким идентификатором нет"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
+      "id": "service-unlink-bug-by-task",
+      "method": "DELETE",
+      "path": "/api/v2/service/bugs/task/{taskId}",
+      "summary": "Освободить баг, который вела задача",
+      "description": "Снимает привязку по идентификатору задачи. Вызывается, когда задачу удалили или баг отвязали вручную. Задача без бага — штатный случай, тогда ответ 204.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет.",
+          "location": "header"
+        },
+        {
+          "name": "taskId",
+          "type": "integer",
+          "required": true,
+          "location": "path",
+          "description": "Идентификатор задачи в таск-менеджере"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Привязка снята",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "Идентификатор бага"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата отправки отчёта (ISO 8601)"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок бага"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Текст отчёта от пользователя"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория бага",
+              "enum": [
+                "feature",
+                "ui",
+                "logic"
+              ]
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус бага",
+              "enum": [
+                "new",
+                "in work",
+                "closed",
+                "canceled"
+              ]
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Платформа устройства"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": true,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "hasLogs",
+              "type": "boolean",
+              "required": true,
+              "description": "К отчёту приложен журнал"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+            },
+            {
+              "name": "taskId",
+              "type": "integer",
+              "required": false,
+              "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана строкой вида 1080x2400"
+            },
+            {
+              "name": "battery",
+              "type": "number",
+              "required": false,
+              "description": "Заряд батареи на момент отправки"
+            }
+          ],
+          "example": {
+            "id": 5,
+            "createdAt": "2026-08-01T10:11:47Z",
+            "title": "Маркер не обновляется после смены фильтра",
+            "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+            "tag": "logic",
+            "status": "new",
+            "platform": "Android 13",
+            "build": "0.1.3",
+            "hasLogs": true,
+            "userId": 123,
+            "taskId": null,
+            "os": "Android 13",
+            "resolution": "1080x2400",
+            "battery": 0.68
+          }
+        },
+        {
+          "statusCode": 204,
+          "description": "У задачи не было бага"
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
+      "id": "service-sync-bug-status",
+      "method": "PATCH",
+      "path": "/api/v2/service/bugs/task/{taskId}/status",
+      "summary": "Перенести статус задачи на баг",
+      "description": "Обратная синхронизация: задача — источник истины для бага, который в ней ведут. Задачу взяли в работу — баг in work, задачу завершили — баг closed. Задача без привязанного бага ничего не меняет и получает 204.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет.",
+          "location": "header"
+        },
+        {
+          "name": "taskId",
+          "type": "integer",
+          "required": true,
+          "location": "path",
+          "description": "Идентификатор задачи в таск-менеджере"
+        }
+      ],
+      "requestBody": {
+        "description": "Новый статус бага",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "status",
+            "type": "string",
+            "required": true,
+            "description": "Статус бага",
+            "enum": [
+              "new",
+              "in work",
+              "closed",
+              "canceled"
+            ]
+          }
+        ],
+        "example": {
+          "status": "closed"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Статус перенесён",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "Идентификатор бага"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата отправки отчёта (ISO 8601)"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок бага"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Текст отчёта от пользователя"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория бага",
+              "enum": [
+                "feature",
+                "ui",
+                "logic"
+              ]
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус бага",
+              "enum": [
+                "new",
+                "in work",
+                "closed",
+                "canceled"
+              ]
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Платформа устройства"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": true,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "hasLogs",
+              "type": "boolean",
+              "required": true,
+              "description": "К отчёту приложен журнал"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+            },
+            {
+              "name": "taskId",
+              "type": "integer",
+              "required": false,
+              "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана строкой вида 1080x2400"
+            },
+            {
+              "name": "battery",
+              "type": "number",
+              "required": false,
+              "description": "Заряд батареи на момент отправки"
+            }
+          ],
+          "example": {
+            "id": 5,
+            "createdAt": "2026-08-01T10:11:47Z",
+            "title": "Маркер не обновляется после смены фильтра",
+            "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+            "tag": "logic",
+            "status": "closed",
+            "platform": "Android 13",
+            "build": "0.1.3",
+            "hasLogs": true,
+            "userId": 123,
+            "taskId": 52,
+            "os": "Android 13",
+            "resolution": "1080x2400",
+            "battery": 0.68
+          }
+        },
+        {
+          "statusCode": 204,
+          "description": "У задачи нет привязанного бага"
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 422,
+          "description": "Неизвестный статус"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
       "id": "health",
       "method": "GET",
       "path": "/feedback/health",

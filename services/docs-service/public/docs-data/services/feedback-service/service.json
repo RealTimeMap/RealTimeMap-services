@@ -2,9 +2,15 @@
   "id": "feedback-service",
   "name": "feedback-service",
   "description": "Сервис обратной связи rtm. Баги/предложения и исправления, все обрабатывается тут",
-  "fullDescription": "Расширяет функционал пользователя, позволяет им сообщать о багах приложения без сторонних сервисов и форм. Все инкапсулировано прямо в приложение",
-  "protocols": ["http"],
-  "availableEnvs": ["dev", "staging", "prod"],
+  "fullDescription": "Принимает обращения пользователей, приходящие из мобильного и веб клиентов при выявлении проблемы в работе. Для последующего сбора и исправления. Отдельным контуром отдаёт баги таск-менеджеру (RTM-Task): тот забирает перечень открытых багов, привязывает баг к задаче и переносит статус задачи обратно на баг. Эти маршруты живут под /api/v2/service и закрыты ключом сервиса в заголовке X-Api-Key, а не заголовками пользователя.",
+  "protocols": [
+    "http"
+  ],
+  "availableEnvs": [
+    "dev",
+    "staging",
+    "prod"
+  ],
   "healthPath": "/feedback/health",
   "team": "Backend",
   "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/feedback-service"

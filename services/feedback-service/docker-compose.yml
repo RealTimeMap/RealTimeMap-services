@@ -42,6 +42,28 @@ services:
       - "traefik.http.routers.feedback-list.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.feedback-list.tls=true"
 
+      # /api/v2/service/bugs — межсервисные маршруты для таск-менеджера:
+      # перечень открытых багов, привязка бага к задаче и обратная
+      # синхронизация статуса.
+      #
+      # Без auth-check: аутентификация идёт по API-ключу в самом сервисе
+      # (заголовок X-Api-Key), а у фонового вызова пользователя нет — тот
+      # же приём, что у /api/v2/service/emails в smtp-service.
+      - "traefik.http.routers.feedback-service-api.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/service/bugs`)"
+      - "traefik.http.routers.feedback-service-api.entrypoints=websecure"
+      - "traefik.http.routers.feedback-service-api.priority=100"
+      - "traefik.http.routers.feedback-service-api.service=feedback"
+      - "traefik.http.routers.feedback-service-api.middlewares=cors-headers@file"
+      - "traefik.http.routers.feedback-service-api.tls=true"
+
+      # GET /feedback/health — health check (публичный)
+      - "traefik.http.routers.feedback-health.rule=Host(`realtimemap.ru`) && Path(`/feedback/health`) && Method(`GET`)"
+      - "traefik.http.routers.feedback-health.entrypoints=websecure"
+      - "traefik.http.routers.feedback-health.priority=10"
+      - "traefik.http.routers.feedback-health.service=feedback"
+      - "traefik.http.routers.feedback-health.middlewares=cors-headers@file"
+      - "traefik.http.routers.feedback-health.tls=true"
+
       - "traefik.http.services.feedback.loadbalancer.server.port=8080"
     volumes:
       - ./config/config.yaml:/app/config/config.yaml:ro

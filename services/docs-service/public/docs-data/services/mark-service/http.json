@@ -140,22 +140,13 @@
               "name": "geom",
               "type": "object",
               "required": true,
-              "description": "Геометрия метки (GeoJSON Point)",
+              "description": "Координаты метки. Объект с полем Point: [долгота, широта]",
               "children": [
                 {
-                  "name": "type",
-                  "type": "string",
-                  "required": true,
-                  "description": "Тип геометрии",
-                  "enum": [
-                    "Point"
-                  ]
-                },
-                {
-                  "name": "coordinates",
+                  "name": "Point",
                   "type": "number[]",
                   "required": true,
-                  "description": "Координаты [lon, lat]"
+                  "description": "Координаты в порядке [долгота, широта]"
                 }
               ]
             },
@@ -171,8 +162,7 @@
               "id": 42,
               "markName": "Концерт в парке",
               "geom": {
-                "type": "Point",
-                "coordinates": [
+                "Point": [
                   37.6176,
                   55.7558
                 ]
@@ -188,30 +178,21 @@
           "description": "Список кластеров (при zoomLevel < 12)",
           "schema": [
             {
-              "name": "center",
+              "name": "Center",
               "type": "object",
               "required": true,
-              "description": "Центр кластера (GeoJSON Point)",
+              "description": "Центр кластера. Объект с полем Point: [долгота, широта]",
               "children": [
                 {
-                  "name": "type",
-                  "type": "string",
-                  "required": true,
-                  "description": "Тип геометрии",
-                  "enum": [
-                    "Point"
-                  ]
-                },
-                {
-                  "name": "coordinates",
+                  "name": "Point",
                   "type": "number[]",
                   "required": true,
-                  "description": "Координаты [lon, lat]"
+                  "description": "Координаты в порядке [долгота, широта]"
                 }
               ]
             },
             {
-              "name": "count",
+              "name": "Count",
               "type": "integer",
               "required": true,
               "description": "Количество меток в кластере"
@@ -219,14 +200,13 @@
           ],
           "example": [
             {
-              "center": {
-                "type": "Point",
-                "coordinates": [
+              "Center": {
+                "Point": [
                   37.62,
                   55.75
                 ]
               },
-              "count": 15
+              "Count": 15
             }
           ]
         }
@@ -291,22 +271,13 @@
                   "name": "geom",
                   "type": "object",
                   "required": true,
-                  "description": "Геометрия (GeoJSON Point)",
+                  "description": "Координаты метки. Объект с полем Point: [долгота, широта]",
                   "children": [
                     {
-                      "name": "type",
-                      "type": "string",
-                      "required": true,
-                      "description": "Тип геометрии",
-                      "enum": [
-                        "Point"
-                      ]
-                    },
-                    {
-                      "name": "coordinates",
+                      "name": "Point",
                       "type": "number[]",
                       "required": true,
-                      "description": "Координаты [lon, lat]"
+                      "description": "Координаты в порядке [долгота, широта]"
                     }
                   ]
                 },
@@ -361,8 +332,7 @@
                 "id": 42,
                 "markName": "Концерт в парке",
                 "geom": {
-                  "type": "Point",
-                  "coordinates": [
+                  "Point": [
                     37.6176,
                     55.7558
                   ]
@@ -465,22 +435,13 @@
               "name": "geom",
               "type": "object",
               "required": true,
-              "description": "Геометрия метки (GeoJSON Point)",
+              "description": "Координаты метки. Объект с полем Point: [долгота, широта]",
               "children": [
                 {
-                  "name": "type",
-                  "type": "string",
-                  "required": true,
-                  "description": "Тип геометрии",
-                  "enum": [
-                    "Point"
-                  ]
-                },
-                {
-                  "name": "coordinates",
+                  "name": "Point",
                   "type": "number[]",
                   "required": true,
-                  "description": "Координаты [lon, lat]"
+                  "description": "Координаты в порядке [долгота, широта]"
                 }
               ]
             },
@@ -592,8 +553,7 @@
               "icon": "https://realtimemap.ru/store/photos/categories/2026/01/event-icon.png"
             },
             "geom": {
-              "type": "Point",
-              "coordinates": [
+              "Point": [
                 37.6176,
                 55.7558
               ]
@@ -795,22 +755,13 @@
               "name": "geom",
               "type": "object",
               "required": true,
-              "description": "Геометрия метки (GeoJSON Point)",
+              "description": "Координаты метки. Объект с полем Point: [долгота, широта]",
               "children": [
                 {
-                  "name": "type",
-                  "type": "string",
-                  "required": true,
-                  "description": "Тип геометрии",
-                  "enum": [
-                    "Point"
-                  ]
-                },
-                {
-                  "name": "coordinates",
+                  "name": "Point",
                   "type": "number[]",
                   "required": true,
-                  "description": "Координаты [lon, lat]"
+                  "description": "Координаты в порядке [долгота, широта]"
                 }
               ]
             },
@@ -825,8 +776,7 @@
             "id": 42,
             "markName": "Концерт в парке",
             "geom": {
-              "type": "Point",
-              "coordinates": [
+              "Point": [
                 37.6176,
                 55.7558
               ]
@@ -935,22 +885,13 @@
               "name": "geom",
               "type": "object",
               "required": true,
-              "description": "Геометрия метки (GeoJSON Point)",
+              "description": "Координаты метки. Объект с полем Point: [долгота, широта]",
               "children": [
                 {
-                  "name": "type",
-                  "type": "string",
-                  "required": true,
-                  "description": "Тип геометрии",
-                  "enum": [
-                    "Point"
-                  ]
-                },
-                {
-                  "name": "coordinates",
+                  "name": "Point",
                   "type": "number[]",
                   "required": true,
-                  "description": "Координаты [lon, lat]"
+                  "description": "Координаты в порядке [долгота, широта]"
                 }
               ]
             },
@@ -965,8 +906,7 @@
             "id": 42,
             "markName": "Обновлённое название",
             "geom": {
-              "type": "Point",
-              "coordinates": [
+              "Point": [
                 37.6176,
                 55.7558
               ]
@@ -1072,22 +1012,13 @@
                   "name": "geom",
                   "type": "object",
                   "required": true,
-                  "description": "Геометрия (GeoJSON Point)",
+                  "description": "Координаты метки. Объект с полем Point: [долгота, широта]",
                   "children": [
                     {
-                      "name": "type",
-                      "type": "string",
-                      "required": true,
-                      "description": "Тип геометрии",
-                      "enum": [
-                        "Point"
-                      ]
-                    },
-                    {
-                      "name": "coordinates",
+                      "name": "Point",
                       "type": "number[]",
                       "required": true,
-                      "description": "Координаты [lon, lat]"
+                      "description": "Координаты в порядке [долгота, широта]"
                     }
                   ]
                 },
@@ -1142,8 +1073,7 @@
                 "id": 42,
                 "markName": "Концерт в парке",
                 "geom": {
-                  "type": "Point",
-                  "coordinates": [
+                  "Point": [
                     37.6176,
                     55.7558
                   ]
@@ -1630,6 +1560,662 @@
           "statusCode": 201,
           "description": "Метка создана",
           "schema": []
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error"
+      ]
+    },
+    {
+      "id": "create-personal-mark",
+      "method": "POST",
+      "path": "/api/v2/personal/create",
+      "summary": "Создание персональной метки",
+      "description": "Создаёт приватную метку пользователя. Метка видна только владельцу и может быть привязана к его группам. Создание увеличивает ревизию пользователя — новое значение возвращается в ответе и используется для последующей синхронизации.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "requestBody": {
+        "description": "Данные персональной метки",
+        "contentType": "form-data",
+        "schema": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true,
+            "description": "Название метки"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": false,
+            "description": "Описание метки"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": true,
+            "description": "Категория метки"
+          },
+          {
+            "name": "icon",
+            "type": "string",
+            "required": true,
+            "description": "Иконка метки для UI"
+          },
+          {
+            "name": "color",
+            "type": "string",
+            "required": true,
+            "description": "Цвет метки для UI"
+          },
+          {
+            "name": "isVisible",
+            "type": "boolean",
+            "required": false,
+            "description": "Отображать ли метку на карте. По умолчанию false"
+          },
+          {
+            "name": "longitude",
+            "type": "number",
+            "required": true,
+            "description": "Долгота (-180 до 180)"
+          },
+          {
+            "name": "latitude",
+            "type": "number",
+            "required": true,
+            "description": "Широта (-90 до 90)"
+          },
+          {
+            "name": "groupsId",
+            "type": "integer[]",
+            "required": true,
+            "description": "ID групп пользователя, к которым привязывается метка"
+          },
+          {
+            "name": "photos",
+            "type": "file[]",
+            "required": false,
+            "description": "Фотографии метки"
+          }
+        ],
+        "example": {
+          "title": "Любимая кофейня",
+          "description": "Тут хороший фильтр",
+          "category": "food",
+          "icon": "coffee",
+          "color": "#8B5A2B",
+          "isVisible": true,
+          "longitude": 37.6176,
+          "latitude": 55.7558,
+          "groupsId": [
+            1,
+            2
+          ],
+          "photos": "[файлы]"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 201,
+          "description": "Метка создана. Возвращается идентификатор и новая ревизия пользователя.",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID созданной метки"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": true,
+              "description": "ID владельца"
+            },
+            {
+              "name": "revision",
+              "type": "integer",
+              "required": true,
+              "description": "Новая ревизия пользователя после создания"
+            }
+          ],
+          "example": {
+            "id": 12,
+            "userId": 3,
+            "revision": 42
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error",
+        "not-found"
+      ]
+    },
+    {
+      "id": "sync-personal",
+      "method": "GET",
+      "path": "/api/v2/personal/sync",
+      "summary": "Синхронизация персональных данных",
+      "description": "Возвращает изменения персональных меток и групп пользователя с указанной ревизии. Ответ разбит на секции: personalMarks и groups. Без параметра since выполняется первичная синхронизация — возвращаются только активные записи, секция removed остаётся пустой. При переданном since возвращаются изменения с ревизией больше since, включая ID удалённых записей в removed. Если hasMore = true, повторите запрос с since = cursor.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "since",
+          "type": "integer",
+          "required": false,
+          "description": "Ревизия последней успешной синхронизации. Без неё выполняется первичная загрузка без удалённых записей",
+          "location": "query",
+          "example": "41"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": false,
+          "description": "Максимум записей в каждой секции (1–500, по умолчанию 100)",
+          "location": "query",
+          "example": "100"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Изменения по секциям. Клиент применяет upserted и удаляет removed, затем сохраняет cursor.",
+          "schema": [
+            {
+              "name": "sections",
+              "type": "object",
+              "required": true,
+              "description": "Секции изменений по типам сущностей",
+              "children": [
+                {
+                  "name": "personalMarks",
+                  "type": "object",
+                  "required": true,
+                  "description": "Изменения персональных меток",
+                  "children": [
+                    {
+                      "name": "upserted",
+                      "type": "object[]",
+                      "required": true,
+                      "description": "Созданные и изменённые метки",
+                      "children": [
+                        {
+                          "name": "id",
+                          "type": "integer",
+                          "required": true,
+                          "description": "ID метки"
+                        },
+                        {
+                          "name": "revision",
+                          "type": "integer",
+                          "required": true,
+                          "description": "Ревизия, на которой метка была изменена"
+                        },
+                        {
+                          "name": "geom",
+                          "type": "object",
+                          "required": true,
+                          "description": "Координаты метки. Объект с полем Point: [долгота, широта]",
+                          "children": [
+                            {
+                              "name": "Point",
+                              "type": "number[]",
+                              "required": true,
+                              "description": "Координаты в порядке [долгота, широта]"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "title",
+                          "type": "string",
+                          "required": true,
+                          "description": "Название метки"
+                        },
+                        {
+                          "name": "description",
+                          "type": "string",
+                          "required": false,
+                          "description": "Описание метки"
+                        },
+                        {
+                          "name": "category",
+                          "type": "string",
+                          "required": true,
+                          "description": "Категория метки"
+                        },
+                        {
+                          "name": "color",
+                          "type": "string",
+                          "required": true,
+                          "description": "Цвет метки для UI"
+                        },
+                        {
+                          "name": "icon",
+                          "type": "string",
+                          "required": true,
+                          "description": "Иконка метки для UI"
+                        },
+                        {
+                          "name": "isShare",
+                          "type": "boolean",
+                          "required": true,
+                          "description": "Доступна ли метка для шеринга"
+                        },
+                        {
+                          "name": "isVisible",
+                          "type": "boolean",
+                          "required": true,
+                          "description": "Отображается ли метка на карте"
+                        },
+                        {
+                          "name": "groupIds",
+                          "type": "integer[]",
+                          "required": true,
+                          "description": "ID групп, к которым привязана метка"
+                        },
+                        {
+                          "name": "photos",
+                          "type": "object[]",
+                          "required": true,
+                          "description": "Фотографии метки",
+                          "children": [
+                            {
+                              "name": "url",
+                              "type": "string",
+                              "required": true,
+                              "description": "URL фотографии"
+                            },
+                            {
+                              "name": "fileName",
+                              "type": "string",
+                              "required": false,
+                              "description": "Оригинальное имя файла"
+                            },
+                            {
+                              "name": "width",
+                              "type": "integer",
+                              "required": false,
+                              "description": "Ширина в пикселях"
+                            },
+                            {
+                              "name": "height",
+                              "type": "integer",
+                              "required": false,
+                              "description": "Высота в пикселях"
+                            },
+                            {
+                              "name": "mimeType",
+                              "type": "string",
+                              "required": false,
+                              "description": "MIME-тип (image/jpeg, image/png, image/webp)"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "removed",
+                      "type": "integer[]",
+                      "required": true,
+                      "description": "ID удалённых записей. Заполняется только при переданном since"
+                    },
+                    {
+                      "name": "cursor",
+                      "type": "integer",
+                      "required": true,
+                      "description": "Ревизия, до которой секция синхронизирована"
+                    },
+                    {
+                      "name": "hasMore",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Есть ли ещё изменения за пределами limit"
+                    }
+                  ]
+                },
+                {
+                  "name": "groups",
+                  "type": "object",
+                  "required": true,
+                  "description": "Изменения групп",
+                  "children": [
+                    {
+                      "name": "upserted",
+                      "type": "object[]",
+                      "required": true,
+                      "description": "Созданные и изменённые группы",
+                      "children": [
+                        {
+                          "name": "id",
+                          "type": "integer",
+                          "required": true,
+                          "description": "ID группы"
+                        },
+                        {
+                          "name": "revision",
+                          "type": "integer",
+                          "required": true,
+                          "description": "Ревизия, на которой группа была изменена"
+                        },
+                        {
+                          "name": "name",
+                          "type": "string",
+                          "required": true,
+                          "description": "Название группы"
+                        },
+                        {
+                          "name": "description",
+                          "type": "string",
+                          "required": false,
+                          "description": "Описание группы"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "removed",
+                      "type": "integer[]",
+                      "required": true,
+                      "description": "ID удалённых записей. Заполняется только при переданном since"
+                    },
+                    {
+                      "name": "cursor",
+                      "type": "integer",
+                      "required": true,
+                      "description": "Ревизия, до которой секция синхронизирована"
+                    },
+                    {
+                      "name": "hasMore",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Есть ли ещё изменения за пределами limit"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "cursor",
+              "type": "integer",
+              "required": true,
+              "description": "Минимальный курсор по всем секциям. Передайте его как since в следующем запросе"
+            },
+            {
+              "name": "hasMore",
+              "type": "boolean",
+              "required": true,
+              "description": "true, если хотя бы в одной секции остались изменения"
+            },
+            {
+              "name": "updateTo",
+              "type": "integer",
+              "required": true,
+              "description": "Актуальная ревизия пользователя на момент запроса"
+            }
+          ],
+          "example": {
+            "sections": {
+              "personalMarks": {
+                "upserted": [
+                  {
+                    "id": 12,
+                    "revision": 42,
+                    "title": "Любимая кофейня",
+                    "description": "Тут хороший фильтр",
+                    "category": "food",
+                    "color": "#8B5A2B",
+                    "icon": "coffee",
+                    "isShare": false,
+                    "isVisible": true,
+                    "groupIds": [
+                      1
+                    ],
+                    "photos": [
+                      {
+                        "url": "https://cdn.example.com/p/12.jpg",
+                        "mimeType": "image/jpeg"
+                      }
+                    ],
+                    "geom": {
+                      "Point": [
+                        37.6176,
+                        55.7558
+                      ]
+                    }
+                  }
+                ],
+                "removed": [
+                  7
+                ],
+                "cursor": 42,
+                "hasMore": false
+              },
+              "groups": {
+                "upserted": [
+                  {
+                    "id": 1,
+                    "revision": 40,
+                    "name": "Кофейни",
+                    "description": null
+                  }
+                ],
+                "removed": [],
+                "cursor": 42,
+                "hasMore": false
+              }
+            },
+            "cursor": 42,
+            "hasMore": false,
+            "updateTo": 42
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error"
+      ]
+    },
+    {
+      "id": "create-group",
+      "method": "POST",
+      "path": "/api/v2/group/create",
+      "summary": "Создание группы меток",
+      "description": "Создаёт группу для персональных меток пользователя. Название должно быть уникальным в пределах пользователя — при повторе возвращается конфликт. Создание увеличивает ревизию пользователя.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "requestBody": {
+        "description": "Данные группы",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": true,
+            "description": "Название группы. Уникально в пределах пользователя"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": false,
+            "description": "Описание группы"
+          }
+        ],
+        "example": {
+          "name": "Кофейни",
+          "description": "Места с хорошим кофе"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 201,
+          "description": "Группа создана",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID группы"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": true,
+              "description": "ID владельца"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "Название группы"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "required": false,
+              "description": "Описание группы"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата создания (ISO 8601)"
+            }
+          ],
+          "example": {
+            "id": 1,
+            "userId": 3,
+            "name": "Кофейни",
+            "description": "Места с хорошим кофе",
+            "createdAt": "2026-09-09T10:15:00Z"
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "validation-error",
+        "conflict"
+      ]
+    },
+    {
+      "id": "list-groups",
+      "method": "GET",
+      "path": "/api/v2/group/list",
+      "summary": "Список групп пользователя",
+      "description": "Возвращает группы меток текущего пользователя с постраничной пагинацией.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "pagination": "page",
+      "parameters": [
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "description": "Номер страницы (по умолчанию 1)",
+          "location": "query",
+          "example": "1"
+        },
+        {
+          "name": "pageSize",
+          "type": "integer",
+          "required": false,
+          "description": "Количество элементов на странице (1–100, по умолчанию 10)",
+          "location": "query",
+          "example": "10"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список групп пользователя",
+          "schema": [
+            {
+              "name": "items",
+              "type": "object[]",
+              "required": true,
+              "description": "Группы текущей страницы",
+              "children": [
+                {
+                  "name": "id",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID группы"
+                },
+                {
+                  "name": "userId",
+                  "type": "integer",
+                  "required": true,
+                  "description": "ID владельца"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true,
+                  "description": "Название группы"
+                },
+                {
+                  "name": "description",
+                  "type": "string",
+                  "required": false,
+                  "description": "Описание группы"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string",
+                  "required": true,
+                  "description": "Дата создания (ISO 8601)"
+                }
+              ]
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "required": true,
+              "description": "Текущая страница"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "required": true,
+              "description": "Размер страницы"
+            },
+            {
+              "name": "totalPages",
+              "type": "integer",
+              "required": true,
+              "description": "Всего страниц"
+            },
+            {
+              "name": "total",
+              "type": "integer",
+              "required": true,
+              "description": "Всего элементов"
+            }
+          ],
+          "example": {
+            "items": [
+              {
+                "id": 1,
+                "userId": 3,
+                "name": "Кофейни",
+                "description": "Места с хорошим кофе",
+                "createdAt": "2026-09-09T10:15:00Z"
+              }
+            ],
+            "page": 1,
+            "pageSize": 10,
+            "totalPages": 1,
+            "total": 1
+          }
         }
       ],
       "errors": [

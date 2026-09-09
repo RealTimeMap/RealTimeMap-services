@@ -10,8 +10,11 @@ RUN npm ci
 # Копируем исходный код
 COPY services/docs-service/ ./
 
-# Сборка продакшн билда с base path для traefik
-ENV VITE_BASE=/docs-ui/
+# Base path сборки. На собственном поддомене (docs.realtimemap.ru) SPA живёт
+# в корне, поэтому "/". Значение нужно менять только если документацию снова
+# повесят на подпуть основного домена — тогда, например, --build-arg VITE_BASE=/docs-ui/
+ARG VITE_BASE=/
+ENV VITE_BASE=${VITE_BASE}
 RUN npm run build
 
 

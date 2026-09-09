@@ -1,0 +1,113 @@
+{
+  "methods": [
+    {
+      "id": "progress-get-user-progress",
+      "service": "gamification.ProgressService",
+      "method": "GetUserProgress",
+      "type": "unary",
+      "summary": "Получить прогресс пользователя",
+      "description": "Возвращает текущий прогресс пользователя в системе геймификации: уровень, накопленный опыт и данные о следующем уровне.\n\nМетод предназначен для внутреннего межсервисного взаимодействия — его вызывает social-service при сборке профиля пользователя. Наружу через Traefik gRPC не публикуется.\n\nЕсли прогресса для пользователя ещё нет, он создаётся автоматически с нулевыми значениями (GetOrCreate), поэтому для существующего пользователя метод не возвращает NOT_FOUND.",
+      "request": {
+        "schema": [
+          {
+            "name": "user_id",
+            "type": "uint64",
+            "required": true,
+            "description": "ID пользователя, чей прогресс запрашивается"
+          }
+        ],
+        "example": {
+          "user_id": 42
+        }
+      },
+      "response": {
+        "schema": [
+          {
+            "name": "user_id",
+            "type": "uint64",
+            "required": true,
+            "description": "ID пользователя (дублирует значение из запроса)"
+          },
+          {
+            "name": "current_level",
+            "type": "uint64",
+            "required": true,
+            "description": "Текущий уровень пользователя"
+          },
+          {
+            "name": "current_level_name",
+            "type": "string",
+            "required": true,
+            "description": "Название текущего уровня"
+          },
+          {
+            "name": "current_xp",
+            "type": "uint64",
+            "required": true,
+            "description": "Накопленный опыт пользователя"
+          },
+          {
+            "name": "xp_for_next_level",
+            "type": "uint64",
+            "required": true,
+            "description": "Количество опыта, необходимое для достижения следующего уровня"
+          },
+          {
+            "name": "progress_percent",
+            "type": "double",
+            "required": true,
+            "description": "Процент прохождения до следующего уровня (0–100)"
+          },
+          {
+            "name": "next_level",
+            "type": "object",
+            "required": false,
+            "description": "Информация о следующем уровне (optional-поле в proto)",
+            "children": [
+              {
+                "name": "level",
+                "type": "uint64",
+                "required": true,
+                "description": "Номер следующего уровня"
+              },
+              {
+                "name": "level_name",
+                "type": "string",
+                "required": true,
+                "description": "Название следующего уровня"
+              }
+            ]
+          }
+        ],
+        "example": {
+          "user_id": 42,
+          "current_level": 3,
+          "current_level_name": "Исследователь",
+          "current_xp": 350,
+          "xp_for_next_level": 500,
+          "progress_percent": 70,
+          "next_level": {
+            "level": 4,
+            "level_name": "Картограф"
+          }
+        }
+      },
+      "statusCodes": [
+        {
+          "code": "OK",
+          "description": "Прогресс успешно получен"
+        },
+        {
+          "code": "NOT_FOUND",
+          "description": "Прогресс пользователя не найден"
+        },
+        {
+          "code": "INTERNAL",
+          "description": "Внутренняя ошибка: сбой доступа к БД или невозможность рассчитать данные следующего уровня"
+        }
+      ],
+      "protoExample": "service ProgressService {\n  // GetUserProgress returns the current progress of a user\n  rpc GetUserProgress(GetUserProgressRequest) returns (UserProgressResponse);\n}\n\nmessage GetUserProgressRequest {\n  uint64 user_id = 1;\n}\n\nmessage UserProgressResponse {\n  uint64 user_id = 1;\n  uint64 current_level = 2;\n  string current_level_name = 3;\n  uint64 current_xp = 4;\n  uint64 xp_for_next_level = 5;     // XP до некст уровня\n  double progress_percent = 6;      // Процентное отображение\n\n  optional LevelInfo next_level = 7;\n}\n\nmessage LevelInfo {\n  uint64 level = 1;\n  string level_name = 2;\n}",
+      "supportsGrpcWeb": false
+    }
+  ]
+}
