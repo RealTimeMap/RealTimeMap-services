@@ -9,19 +9,18 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
-	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
 )
 
 type Service struct {
 	repo         Repository
-	groupRepo    group.Repository
+	groupRepo    GroupRepository
 	revisionRepo RevisionRepository
 	store        storage.Storage
 	tx           txmanager.TxManager
 	logger       *zap.Logger
 }
 
-func NewService(repo Repository, groupRepo group.Repository, revisionRepo RevisionRepository, tx txmanager.TxManager, store storage.Storage, logger *zap.Logger) *Service {
+func NewService(repo Repository, groupRepo GroupRepository, revisionRepo RevisionRepository, tx txmanager.TxManager, store storage.Storage, logger *zap.Logger) *Service {
 	return &Service{
 		repo:         repo,
 		groupRepo:    groupRepo,

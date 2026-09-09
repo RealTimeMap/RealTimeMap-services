@@ -5,11 +5,11 @@ import (
 
 	"go.uber.org/zap"
 
-	srv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
+	srv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 )
 
 type Creator interface {
-	CreateGroup(ctx context.Context, param srv.CreateGroupParams) (*srv.Model, error)
+	CreateGroup(ctx context.Context, param srv.CreateGroupParams) (*srv.Group, error)
 }
 
 type CreateGroupCommand struct {

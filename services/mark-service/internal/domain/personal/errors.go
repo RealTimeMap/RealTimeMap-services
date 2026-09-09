@@ -29,4 +29,12 @@ var (
 			cause,
 		)
 	}
+
+	ErrAlreadyExistGroup = func(name string) error {
+		return apperror.NewAlreadyExistsError("name", name)
+	}
+
+	ErrNotFoundGroup = func(val any) error {
+		return apperror.NewNotFoundErrorByID("group", val)
+	}
 )

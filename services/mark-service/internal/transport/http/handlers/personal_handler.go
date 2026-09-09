@@ -36,6 +36,7 @@ func InitPersonalMarkHandler(g *gin.RouterGroup, deps PersonalDeps) {
 	r := g.Group("/personal")
 	{
 		r.POST("/create", auth.AuthRequired(), h.Create)
+		r.GET("/sync", auth.AuthRequired(), h.Sync)
 	}
 }
 
@@ -92,4 +93,35 @@ func (h *personalHandler) Create(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, obj)
+}
+
+type SyncRequest struct {
+	Since *uint `form:"since" binding:"omitempty"`
+	Limit int   `form:"limit" binding:"gt=0"`
+}
+
+func (h *personalHandler) Sync(c *gin.Context) {
+	req := SyncRequest{
+		Limit: 100,
+	}
+	userInfo, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	obj, err := h.useCase.Sync.Hanlde(c.Request.Context(), uint(userInfo.UserID), usecase.SyncCommand{
+		Since: req.Since,
+		Limit: req.Limit,
+	})
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(200, obj)
 }

@@ -3,7 +3,7 @@ package group
 import (
 	"time"
 
-	srv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
+	srv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 )
 
 type GroupResult struct {
@@ -14,7 +14,7 @@ type GroupResult struct {
 	CreatedAt   time.Time
 }
 
-func toGroupResult(obj *srv.Model) GroupResult {
+func toGroupResult(obj *srv.Group) GroupResult {
 	return GroupResult{
 		ID:          obj.ID,
 		UserID:      obj.UserID,
@@ -24,7 +24,7 @@ func toGroupResult(obj *srv.Model) GroupResult {
 	}
 }
 
-func toListGroupResult(objs []*srv.Model) []GroupResult {
+func toListGroupResult(objs []*srv.Group) []GroupResult {
 	res := make([]GroupResult, 0, len(objs))
 	for _, item := range objs {
 		res = append(res, toGroupResult(item))

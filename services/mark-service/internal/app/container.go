@@ -18,7 +18,6 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	category2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 	personalsrv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
-	groupsrv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
 	grpcstat "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/socket"
@@ -91,8 +90,9 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	markService := mark.NewService(markRepo, categoryRepo, store, log)
 	categoryService := category2.NewService(categoryRepo)
 	accrualService := mark.NewAccrualService(markRepo, interactRepo, log)
-	groupSrv := groupsrv.NewService(groupRepo, log)
+	groupSrv := personalsrv.NewGroupService(groupRepo, revisionRepo, manager, log)
 	personalSrv := personalsrv.NewService(personalRepo, groupRepo, revisionRepo, manager, store, log)
+	revisionSrv := personalsrv.NewRevisionService(revisionRepo, log)
 	// USE CASE
 
 	markUseCases := &mark_action.Application{
@@ -130,6 +130,10 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 
 	personalUseCases := &personal.Application{
 		Create: personal.NewCreatePersonalHandler(personalSrv, log),
+		Sync: personal.NewSyncMarkHandler(revisionSrv, log,
+			personal.NewChangeSource(personalSrv),
+			personal.NewChangeSource(groupSrv),
+		),
 	}
 	// Сокеты
 	socketServer := socket.New(socket.Deps{MarkUseCases: markUseCases, Logger: log})

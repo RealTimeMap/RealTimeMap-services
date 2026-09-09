@@ -3,13 +3,14 @@ package group
 import (
 	"context"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
-	groupsrv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal/group"
 	"go.uber.org/zap"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 )
 
 type ListGetter interface {
-	List(ctx context.Context, userID uint, params pagination.Params) ([]*groupsrv.Model, int64, error)
+	List(ctx context.Context, userID uint, params pagination.Params) ([]*personal.Group, int64, error)
 }
 
 type ListGroupHandler struct {
