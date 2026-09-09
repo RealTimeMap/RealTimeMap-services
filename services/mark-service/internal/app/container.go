@@ -131,8 +131,8 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	personalUseCases := &personal.Application{
 		Create: personal.NewCreatePersonalHandler(personalSrv, log),
 		Sync: personal.NewSyncMarkHandler(revisionSrv, log,
-			personal.NewChangeSource(personalSrv),
-			personal.NewChangeSource(groupSrv),
+			personal.NewChangeSource(personalSrv, personal.ToSyncMarkDTO),
+			personal.NewChangeSource(groupSrv, personal.ToSyncGroupDTO),
 		),
 	}
 	// Сокеты

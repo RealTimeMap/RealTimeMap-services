@@ -62,8 +62,8 @@ func (g Group) IsDeleted() bool   { return g.DeletedAt.Valid }
 
 // Changes GENERIC для формирования ответов для синхронизации
 type Changes[T any] struct {
-	Upserted []T
-	Removed  []uint
-	Cursor   uint
-	HasMore  bool
+	Upserted []T    `json:"upserted"`
+	Removed  []uint `json:"removed"`
+	Cursor   uint   `json:"cursor"`
+	HasMore  bool   `json:"hasMore"`
 }

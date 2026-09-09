@@ -95,15 +95,16 @@ func (h *personalHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, obj)
 }
 
+const defaultSyncLimit = 100
+
 type SyncRequest struct {
 	Since *uint `form:"since" binding:"omitempty"`
-	Limit int   `form:"limit" binding:"gt=0"`
+	Limit int   `form:"limit" binding:"omitempty,gt=0,lte=500"`
 }
 
 func (h *personalHandler) Sync(c *gin.Context) {
-	req := SyncRequest{
-		Limit: 100,
-	}
+	req := SyncRequest{}
+
 	userInfo, err := helper.GetUserInfo(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
@@ -114,7 +115,11 @@ func (h *personalHandler) Sync(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.useCase.Sync.Hanlde(c.Request.Context(), uint(userInfo.UserID), usecase.SyncCommand{
+	if req.Limit == 0 {
+		req.Limit = defaultSyncLimit
+	}
+
+	obj, err := h.useCase.Sync.Handle(c.Request.Context(), uint(userInfo.UserID), usecase.SyncCommand{
 		Since: req.Since,
 		Limit: req.Limit,
 	})
@@ -123,5 +128,5 @@ func (h *personalHandler) Sync(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, obj)
+	c.JSON(http.StatusOK, obj)
 }

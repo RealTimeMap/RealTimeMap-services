@@ -148,6 +148,40 @@ services:
       - "traefik.http.routers.admin-marks.service=mark"
       - "traefik.http.routers.admin-marks.tls=true"
 
+      # POST /api/v2/personal/create - создание персональной метки (с auth)
+      - "traefik.http.routers.personal-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/personal/create`) && Method(`POST`)"
+      - "traefik.http.routers.personal-create.entrypoints=websecure"
+      - "traefik.http.routers.personal-create.priority=100"
+      - "traefik.http.routers.personal-create.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.personal-create.service=mark"
+      - "traefik.http.routers.personal-create.tls=true"
+
+      # GET /api/v2/personal/sync - синхронизация персональных данных (с auth).
+      # Приоритет выше mark-public (5), иначе GET уйдёт в публичный роутер без auth-check.
+      - "traefik.http.routers.personal-sync.rule=Host(`realtimemap.ru`) && Path(`/api/v2/personal/sync`) && Method(`GET`)"
+      - "traefik.http.routers.personal-sync.entrypoints=websecure"
+      - "traefik.http.routers.personal-sync.priority=100"
+      - "traefik.http.routers.personal-sync.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.personal-sync.service=mark"
+      - "traefik.http.routers.personal-sync.tls=true"
+
+      # POST /api/v2/group/create - создание группы меток (с auth)
+      - "traefik.http.routers.group-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/group/create`) && Method(`POST`)"
+      - "traefik.http.routers.group-create.entrypoints=websecure"
+      - "traefik.http.routers.group-create.priority=100"
+      - "traefik.http.routers.group-create.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.group-create.service=mark"
+      - "traefik.http.routers.group-create.tls=true"
+
+      # GET /api/v2/group/list - список групп пользователя (с auth).
+      # Приоритет выше mark-public (5) по той же причине, что и у personal-sync.
+      - "traefik.http.routers.group-list.rule=Host(`realtimemap.ru`) && Path(`/api/v2/group/list`) && Method(`GET`)"
+      - "traefik.http.routers.group-list.entrypoints=websecure"
+      - "traefik.http.routers.group-list.priority=100"
+      - "traefik.http.routers.group-list.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.group-list.service=mark"
+      - "traefik.http.routers.group-list.tls=true"
+
       # Socket.IO
       - "traefik.http.routers.mark-socketio.rule=Host(`realtimemap.ru`) && PathPrefix(`/marks/socket.io`)"
       - "traefik.http.routers.mark-socketio.entrypoints=websecure"

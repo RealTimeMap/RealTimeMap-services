@@ -32,10 +32,10 @@ type SyncCommand struct {
 }
 
 type SyncResult struct {
-	Sections map[string]personalsrv.Changes[any]
-	Cursor   uint
-	HasMore  bool
-	UpdateTo uint
+	Sections map[string]personalsrv.Changes[any] `json:"sections"`
+	Cursor   uint                                `json:"cursor"`
+	HasMore  bool                                `json:"hasMore"`
+	UpdateTo uint                                `json:"updateTo"`
 }
 
 type ChangeSource interface {
@@ -43,13 +43,19 @@ type ChangeSource interface {
 	ListChanges(ctx context.Context, userID uint, since *uint, upTo uint, limit int) (personalsrv.Changes[any], error)
 }
 
-func (h *SyncMarkHandler) Hanlde(ctx context.Context, userID uint, cmd SyncCommand) (SyncResult, error) {
+func (h *SyncMarkHandler) Handle(ctx context.Context, userID uint, cmd SyncCommand) (SyncResult, error) {
+	h.logger.Info("start Handle", zap.String("layer", "use_case.Sync"))
+
 	upTo, err := h.revision.ActualRevision(ctx, userID)
 	if err != nil {
 		return SyncResult{}, err
 	}
 
-	result := SyncResult{Cursor: upTo, Sections: map[string]personalsrv.Changes[any]{}}
+	result := SyncResult{
+		Cursor:   upTo,
+		UpdateTo: upTo,
+		Sections: map[string]personalsrv.Changes[any]{},
+	}
 
 	for _, s := range h.sources {
 		ch, err := s.ListChanges(ctx, userID, cmd.Since, upTo, cmd.Limit)

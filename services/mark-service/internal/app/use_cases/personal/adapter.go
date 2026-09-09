@@ -18,12 +18,13 @@ type typedChangeSource[T any] interface {
 // changeSourceAdapter стирает параметр типа, приводя Changes[T] к Changes[any]
 // на границе domain -> use_cases.
 type changeSourceAdapter[T any] struct {
-	src typedChangeSource[T]
+	src   typedChangeSource[T]
+	toDTO func(T) any
 }
 
 // NewChangeSource оборачивает типизированный доменный сервис в ChangeSource.
-func NewChangeSource[T any](src typedChangeSource[T]) ChangeSource {
-	return changeSourceAdapter[T]{src: src}
+func NewChangeSource[T any](src typedChangeSource[T], toDTO func(T) any) ChangeSource {
+	return changeSourceAdapter[T]{src: src, toDTO: toDTO}
 }
 
 func (a changeSourceAdapter[T]) Name() string { return a.src.Name() }
@@ -42,7 +43,7 @@ func (a changeSourceAdapter[T]) ListChanges(
 
 	upserted := make([]any, 0, len(ch.Upserted))
 	for _, v := range ch.Upserted {
-		upserted = append(upserted, v)
+		upserted = append(upserted, a.toDTO(v))
 	}
 
 	removed := ch.Removed
