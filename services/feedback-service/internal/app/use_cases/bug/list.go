@@ -29,13 +29,20 @@ type ListBugCommand struct {
 	Pagination pagination.Params
 	Tag        *string
 	Status     *string
+
+	// OnlyOpen и OnlyUnlinked сужают перечень до багов, которые ещё
+	// можно взять в задачу. Ими пользуется таск-менеджер.
+	OnlyOpen     bool
+	OnlyUnlinked bool
 }
 
 func (h *ListBugHandler) Handle(ctx context.Context, cmd ListBugCommand) ([]BugResult, error) {
 	objs, err := h.getter.GetList(ctx, bug.GetBugParams{
-		Tag:        cmd.Tag,
-		Status:     cmd.Status,
-		Pagination: cmd.Pagination,
+		Tag:          cmd.Tag,
+		Status:       cmd.Status,
+		Pagination:   cmd.Pagination,
+		OnlyOpen:     cmd.OnlyOpen,
+		OnlyUnlinked: cmd.OnlyUnlinked,
 	})
 	if err != nil {
 		return nil, err
