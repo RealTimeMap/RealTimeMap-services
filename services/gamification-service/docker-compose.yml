@@ -41,21 +41,39 @@ services:
       - "traefik.http.routers.gamification-achievement-create.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.gamification-achievement-create.tls=true"
 
-      # GET /api/v2/achievement/:userID/nearest - ближайшие достижения (публичный)
-      - "traefik.http.routers.gamification-achievement-nearest.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/[^/]+/nearest/?$`) && Method(`GET`)"
+      # GET /api/v2/achievement/all - каталог всех достижений (публичный).
+      # Приоритет выше, чем у gamification-achievement-info: статический сегмент
+      # `all` иначе попал бы под шаблон :achID.
+      - "traefik.http.routers.gamification-achievement-all.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/all/?$`) && Method(`GET`)"
+      - "traefik.http.routers.gamification-achievement-all.entrypoints=websecure"
+      - "traefik.http.routers.gamification-achievement-all.priority=110"
+      - "traefik.http.routers.gamification-achievement-all.service=gamification"
+      - "traefik.http.routers.gamification-achievement-all.middlewares=cors-headers@file"
+      - "traefik.http.routers.gamification-achievement-all.tls=true"
+
+      # GET /api/v2/achievement/user/:userID/nearest - ближайшие достижения (публичный)
+      - "traefik.http.routers.gamification-achievement-nearest.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/user/[0-9]+/nearest/?$`) && Method(`GET`)"
       - "traefik.http.routers.gamification-achievement-nearest.entrypoints=websecure"
       - "traefik.http.routers.gamification-achievement-nearest.priority=105"
       - "traefik.http.routers.gamification-achievement-nearest.service=gamification"
       - "traefik.http.routers.gamification-achievement-nearest.middlewares=cors-headers@file"
       - "traefik.http.routers.gamification-achievement-nearest.tls=true"
 
-      # GET /api/v2/achievement/:userID - полученные достижения пользователя (публичный)
-      - "traefik.http.routers.gamification-achievement-list.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/[^/]+/?$`) && Method(`GET`)"
+      # GET /api/v2/achievement/user/:userID - полученные достижения пользователя (публичный)
+      - "traefik.http.routers.gamification-achievement-list.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/user/[0-9]+/?$`) && Method(`GET`)"
       - "traefik.http.routers.gamification-achievement-list.entrypoints=websecure"
       - "traefik.http.routers.gamification-achievement-list.priority=100"
       - "traefik.http.routers.gamification-achievement-list.service=gamification"
       - "traefik.http.routers.gamification-achievement-list.middlewares=cors-headers@file"
       - "traefik.http.routers.gamification-achievement-list.tls=true"
+
+      # GET /api/v2/achievement/:achID - одно достижение по ID (публичный)
+      - "traefik.http.routers.gamification-achievement-info.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/achievement/[0-9]+/?$`) && Method(`GET`)"
+      - "traefik.http.routers.gamification-achievement-info.entrypoints=websecure"
+      - "traefik.http.routers.gamification-achievement-info.priority=90"
+      - "traefik.http.routers.gamification-achievement-info.service=gamification"
+      - "traefik.http.routers.gamification-achievement-info.middlewares=cors-headers@file"
+      - "traefik.http.routers.gamification-achievement-info.tls=true"
 
       # Static files (store) — только фотографии gamification-service
       - "traefik.http.routers.gamification-store.rule=Host(`realtimemap.ru`) && PathPrefix(`/store/photos/achievements`)"
