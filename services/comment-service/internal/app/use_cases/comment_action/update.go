@@ -3,6 +3,7 @@ package comment_action
 import (
 	"context"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/comment"
 	"go.uber.org/zap"
 )
@@ -18,17 +19,19 @@ type UpdateCommentCommand struct {
 }
 
 type UpdateCommentHandler struct {
-	updater  CommentUpdater
-	provider ProfileProvider
+	updater   CommentUpdater
+	provider  ProfileProvider
+	publisher EventPublisher
 
 	logger *zap.Logger
 }
 
-func NewUpdateCommentHandler(updater CommentUpdater, provider ProfileProvider, logger *zap.Logger) *UpdateCommentHandler {
+func NewUpdateCommentHandler(updater CommentUpdater, provider ProfileProvider, publisher EventPublisher, logger *zap.Logger) *UpdateCommentHandler {
 	return &UpdateCommentHandler{
-		updater:  updater,
-		provider: provider,
-		logger:   logger,
+		updater:   updater,
+		provider:  provider,
+		publisher: publisher,
+		logger:    logger,
 	}
 }
 
@@ -39,6 +42,10 @@ func (h *UpdateCommentHandler) Handle(ctx context.Context, cmd UpdateCommentComm
 	if err != nil {
 		return CommentResult{}, err
 	}
+
+	publishAsync(h.logger, events.CommentUpdated, func(ctx context.Context) error {
+		return h.publisher.PublishCommentUpdated(ctx, updated)
+	})
 
 	attachAuthors(ctx, h.provider, h.logger, []*comment.Comment{updated})
 	return toCommentResult(updated), nil

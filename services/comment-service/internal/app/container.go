@@ -37,18 +37,28 @@ func MustContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Contain
 
 	// Kafka producer (только если включён)
 	var publisher comment_action.EventPublisher
-	if cfg.Kafka.Enabled {
+	switch {
+	case !cfg.Kafka.Enabled:
+		publisher = comment_action.NoOpEventPublisher{}
+		logger.Info("Using NoOp event publisher (Kafka disabled)")
+	case len(cfg.Kafka.Brokers) == 0:
+		// Включённая шина без адресов — ошибка конфигурации, но ронять сервис
+		// из-за неё нельзя: комментарии важнее событий. Падаем на заглушку и
+		// говорим об этом громко.
+		publisher = comment_action.NoOpEventPublisher{}
+		logger.Error("Kafka enabled but no brokers configured, falling back to NoOp publisher")
+	default:
 		p := producer2.New(
 			producer2.DefaultConfig().
-				WithBrokers(cfg.Kafka.Brokers[0]).
+				WithBrokers(cfg.Kafka.Brokers...).
 				WithTopic(cfg.Kafka.ProducerTopic),
 			producer2.WithLogger(logger),
 		)
 		publisher = kafka.NewCommentPublisher(p, logger)
-		logger.Info("Kafka event publisher initialized")
-	} else {
-		publisher = comment_action.NoOpEventPublisher{}
-		logger.Info("Using NoOp event publisher (Kafka disabled)")
+		logger.Info("Kafka event publisher initialized",
+			zap.Strings("brokers", cfg.Kafka.Brokers),
+			zap.String("topic", cfg.Kafka.ProducerTopic),
+		)
 	}
 
 	// Profile gRPC client + адаптер
@@ -70,8 +80,8 @@ func MustContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Contain
 	commentUseCases := &comment_action.Application{
 		CreateComment: comment_action.NewCreateCommentHandler(commentService, profileAdapter, publisher, logger),
 		GetComments:   comment_action.NewGetCommentsHandler(commentService, profileAdapter, reactionRepo, logger),
-		UpdateComment: comment_action.NewUpdateCommentHandler(commentService, profileAdapter, logger),
-		DeleteComment: comment_action.NewDeleteCommentHandler(commentService, logger),
+		UpdateComment: comment_action.NewUpdateCommentHandler(commentService, profileAdapter, publisher, logger),
+		DeleteComment: comment_action.NewDeleteCommentHandler(commentService, publisher, logger),
 	}
 
 	interactionUseCases := &comment_interaction.Application{

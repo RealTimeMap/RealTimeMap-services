@@ -22,26 +22,61 @@ func NewCommentPublisher(p *producer.Producer, logger *zap.Logger) comment_actio
 }
 
 func (p *CommentPublisher) PublishCommentCreated(ctx context.Context, c *comment.Comment) error {
+	return p.publish(ctx, events.CommentCreated, c, events.NewCommentCreated)
+}
+
+func (p *CommentPublisher) PublishCommentUpdated(ctx context.Context, c *comment.Comment) error {
+	return p.publish(ctx, events.CommentUpdated, c, events.NewCommentUpdated)
+}
+
+// PublishCommentDeleted сообщает об удалении комментария.
+//
+// Текст в событие не попадает: NewCommentDeleted его вычищает, чтобы удалённый
+// комментарий не оставался читаемым в топике до истечения retention.
+func (p *CommentPublisher) PublishCommentDeleted(ctx context.Context, c *comment.Comment) error {
+	return p.publish(ctx, events.CommentDeleted, c, events.NewCommentDeleted)
+}
+
+// publish собирает событие и отправляет его с метой в headers.
+//
+// build передаётся параметром, потому что конструкторы событий различаются не
+// только типом в конверте: NewCommentDeleted дополнительно чистит payload.
+func (p *CommentPublisher) publish(
+	ctx context.Context,
+	eventType string,
+	c *comment.Comment,
+	build func(events.CommentPayload) events.CommentEvent,
+) error {
+	var parentUserID *uint
+	if c.Parent != nil {
+		id := c.Parent.UserID
+		parentUserID = &id
+	}
+
 	payload := events.NewCommentPayload(
 		c.ID,
 		c.UserID,
 		c.EntityID,
 		string(c.EntityType),
+		c.Username,
 		c.ParentID,
+		parentUserID,
 		c.Content,
 	)
 
-	event := events.NewCommentCreated(payload)
-
-	if err := p.producer.PublishWithMeta(ctx, p.buildMeta(events.CommentCreated, c), event); err != nil {
-		p.logger.Error("failed to publish comment.created",
+	if err := p.producer.PublishWithMeta(ctx, p.buildMeta(eventType, c), build(payload)); err != nil {
+		p.logger.Error("failed to publish comment event",
+			zap.String("event_type", eventType),
 			zap.Uint("commentID", c.ID),
 			zap.Error(err),
 		)
 		return err
 	}
 
-	p.logger.Debug("published comment.created", zap.Uint("commentID", c.ID))
+	p.logger.Debug("published comment event",
+		zap.String("event_type", eventType),
+		zap.Uint("commentID", c.ID),
+	)
 	return nil
 }
 

@@ -2,8 +2,8 @@ package comment_action
 
 import (
 	"context"
-	"time"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/comment-service/internal/domain/comment"
 	"go.uber.org/zap"
 )
@@ -52,21 +52,10 @@ func (h *CreateCommentHandler) Handle(ctx context.Context, cmd CreateCommentComm
 		return CommentResult{}, err
 	}
 
-	h.publishCreated(newComment)
+	publishAsync(h.logger, events.CommentCreated, func(ctx context.Context) error {
+		return h.publisher.PublishCommentCreated(ctx, newComment)
+	})
 
 	attachAuthors(ctx, h.provider, h.logger, []*comment.Comment{newComment})
 	return toCommentResult(newComment), nil
-}
-
-// publishCreated асинхронно публикует событие создания комментария.
-// Сбой шины не влияет на результат — комментарий уже создан.
-func (h *CreateCommentHandler) publishCreated(c *comment.Comment) {
-	go func() {
-		publishCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := h.publisher.PublishCommentCreated(publishCtx, c); err != nil {
-			h.logger.Warn("Failed to publish comment created event", zap.Error(err))
-		}
-	}()
 }

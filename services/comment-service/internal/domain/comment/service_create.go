@@ -41,6 +41,12 @@ func (s *Service) Create(ctx context.Context, params CreateParams, userID uint, 
 		}
 		comment.ParentID = params.ParentID
 		comment.Depth = parent.Depth + 1
+
+		// Родитель нужен вызывающему для события об ответе: узнать автора
+		// комментария, на который отвечают, больше неоткуда — сервис не
+		// поднимает gRPC. Поле помечено gorm:"foreignKey", но здесь
+		// проставляется вручную и в БД повторно не пишется.
+		comment.Parent = parent
 	}
 
 	return s.commentRepo.Create(ctx, comment)
