@@ -123,6 +123,20 @@ var DefaultBackoff = []time.Duration{
 	6 * time.Hour,
 }
 
+// UserGRPC — адрес UserService, у которого сервис спрашивает email адресата.
+//
+// Событию с одним лишь идентификатором пользователя иначе некуда отправлять
+// письмо, а класть адрес в топик ради этого нельзя: он живёт там по retention.
+type UserGRPC struct {
+	Address string        `yaml:"address" env:"USER_GRPC_ADDRESS" env-default:"localhost:50052"`
+	Timeout time.Duration `yaml:"timeout" env:"USER_GRPC_TIMEOUT" env-default:"3s"`
+}
+
+// Frontend — база для ссылок в письмах.
+type Frontend struct {
+	BaseURL string `yaml:"base_url" env:"FRONTEND_BASE_URL" env-default:"https://realtimemap.ru"`
+}
+
 type Config struct {
 	Env      string      `yaml:"env" env:"ENV" env-default:"local"`
 	SMTP     SMTP        `yaml:"smtp"`
@@ -130,6 +144,8 @@ type Config struct {
 	Kafka    Kafka       `yaml:"kafka"`
 	HTTP     http.Config `yaml:"http"`
 	Worker   Worker      `yaml:"worker"`
+	User     UserGRPC    `yaml:"user"`
+	Frontend Frontend    `yaml:"frontend"`
 }
 
 func MustLoad() *Config {

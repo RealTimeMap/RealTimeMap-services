@@ -37,4 +37,18 @@ var (
 	ErrNotFoundGroup = func(val any) error {
 		return apperror.NewNotFoundErrorByID("group", val)
 	}
+	ErrNotFoundMark = func(val any) error {
+		return apperror.NewNotFoundErrorByID("personal_mark", val)
+	}
+	ErrOwnerShip = func() error {
+		return apperror.NewForbiddenError("you are not owner")
+	}
+	ErrGroupNotEmpty = func(marks int64) error {
+		return apperror.NewFieldValidationError(
+			"group",
+			fmt.Sprintf("group still contains %d mark(s)", marks),
+			"value_error.group.not_empty",
+			marks,
+		)
+	}
 )

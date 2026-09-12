@@ -165,6 +165,33 @@ services:
       - "traefik.http.routers.personal-sync.service=mark"
       - "traefik.http.routers.personal-sync.tls=true"
 
+      # GET /api/v2/personal/{markID} - детальная персональная метка (с auth).
+      # PathRegexp, а не PathPrefix: иначе правило перехватило бы и /personal/sync.
+      # Приоритет выше mark-public (5), иначе GET уйдёт в публичный роутер без auth-check,
+      # но ниже personal-sync (100), чтобы статический путь выигрывал у шаблона.
+      - "traefik.http.routers.personal-detail.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/personal/[0-9]+$`) && Method(`GET`)"
+      - "traefik.http.routers.personal-detail.entrypoints=websecure"
+      - "traefik.http.routers.personal-detail.priority=98"
+      - "traefik.http.routers.personal-detail.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.personal-detail.service=mark"
+      - "traefik.http.routers.personal-detail.tls=true"
+
+      # PATCH /api/v2/personal/{markID} - обновление персональной метки (с auth)
+      - "traefik.http.routers.personal-update.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/personal/[0-9]+$`) && Method(`PATCH`)"
+      - "traefik.http.routers.personal-update.entrypoints=websecure"
+      - "traefik.http.routers.personal-update.priority=98"
+      - "traefik.http.routers.personal-update.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.personal-update.service=mark"
+      - "traefik.http.routers.personal-update.tls=true"
+
+      # DELETE /api/v2/personal/{markID} - удаление персональной метки (с auth)
+      - "traefik.http.routers.personal-delete.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/personal/[0-9]+$`) && Method(`DELETE`)"
+      - "traefik.http.routers.personal-delete.entrypoints=websecure"
+      - "traefik.http.routers.personal-delete.priority=98"
+      - "traefik.http.routers.personal-delete.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.personal-delete.service=mark"
+      - "traefik.http.routers.personal-delete.tls=true"
+
       # POST /api/v2/group/create - создание группы меток (с auth)
       - "traefik.http.routers.group-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/group/create`) && Method(`POST`)"
       - "traefik.http.routers.group-create.entrypoints=websecure"
@@ -181,6 +208,32 @@ services:
       - "traefik.http.routers.group-list.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.group-list.service=mark"
       - "traefik.http.routers.group-list.tls=true"
+
+      # GET /api/v2/group/{groupID} - детальная группа (с auth).
+      # PathRegexp, а не PathPrefix: иначе правило перехватило бы и /group/list.
+      # Приоритет выше mark-public (5), но ниже group-list (100).
+      - "traefik.http.routers.group-detail.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9]+$`) && Method(`GET`)"
+      - "traefik.http.routers.group-detail.entrypoints=websecure"
+      - "traefik.http.routers.group-detail.priority=98"
+      - "traefik.http.routers.group-detail.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.group-detail.service=mark"
+      - "traefik.http.routers.group-detail.tls=true"
+
+      # PATCH /api/v2/group/{groupID} - обновление группы (с auth)
+      - "traefik.http.routers.group-update.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9]+$`) && Method(`PATCH`)"
+      - "traefik.http.routers.group-update.entrypoints=websecure"
+      - "traefik.http.routers.group-update.priority=98"
+      - "traefik.http.routers.group-update.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.group-update.service=mark"
+      - "traefik.http.routers.group-update.tls=true"
+
+      # DELETE /api/v2/group/{groupID} - удаление группы (с auth)
+      - "traefik.http.routers.group-delete.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9]+$`) && Method(`DELETE`)"
+      - "traefik.http.routers.group-delete.entrypoints=websecure"
+      - "traefik.http.routers.group-delete.priority=98"
+      - "traefik.http.routers.group-delete.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.group-delete.service=mark"
+      - "traefik.http.routers.group-delete.tls=true"
 
       # Socket.IO
       - "traefik.http.routers.mark-socketio.rule=Host(`realtimemap.ru`) && PathPrefix(`/marks/socket.io`)"

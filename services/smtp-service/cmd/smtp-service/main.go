@@ -1,6 +1,7 @@
 package main
 
 import (
+	userclient "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/user"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/runner"
@@ -35,9 +36,24 @@ func main() {
 	httpServer := pkghttp.NewServer(cfg.HTTP, log)
 	httpTransport.RegisterRoutes(httpServer.Router(), container)
 
+	// Клиент UserService: события с одним лишь id адресата (ответ на
+	// комментарий) иначе некуда отправить — email в топик не кладётся.
+	users, err := userclient.NewClient(&userclient.Config{
+		Address: cfg.User.Address,
+		Timeout: cfg.User.Timeout,
+	})
+	if err != nil {
+		log.Fatal("failed to init user gRPC client", zap.Error(err))
+	}
+	defer func() {
+		if err := users.Close(); err != nil {
+			log.Warn("user gRPC client close failed", zap.Error(err))
+		}
+	}()
+
 	// Kafka-вход: хендлер только ставит письмо в очередь и отдаёт управление,
 	// чтобы offset коммитился сразу, а не после SMTP-диалога.
-	kafkaHandler := kafkatransport.NewHandler(container.Emailer, log)
+	kafkaHandler := kafkatransport.NewHandler(container.Emailer, users, cfg.Frontend.BaseURL, log)
 	kafkaConsumer := consumer.New(
 		consumer.DefaultConfig().
 			WithBrokers(cfg.Kafka.Brokers...).

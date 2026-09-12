@@ -20,8 +20,10 @@ type Database struct {
 }
 
 type Kafka struct {
-	Brokers        []string      `yaml:"brokers" env:"KAFKA_BROKERS" env-default:"localhost:9092"`
-	Topics         []string      `yaml:"topics"`
+	Brokers []string `yaml:"brokers" env:"KAFKA_BROKERS" env-default:"localhost:9092"`
+	// Topics размечен env: список подписок меняется при добавлении события в
+	// другом сервисе, и пересобирать образ ради одной строки не нужно.
+	Topics         []string      `yaml:"topics" env:"KAFKA_TOPICS" env-separator:","`
 	GroupID        string        `yaml:"group_id" env:"KAFKA_GROUP_ID" env-default:"gamification-service"`
 	MaxWait        time.Duration `yaml:"max_wait" env-default:"500ms"`
 	CommitInterval time.Duration `yaml:"commit_interval" env-default:"0"`

@@ -87,12 +87,21 @@ services:
       # Service configuration
       - "traefik.http.services.comment.loadbalancer.server.port=8080"
 
+    environment:
+      # Внутри сети брокер слушает INTERNAL-листенер на 9092; 9093 анонсирован
+      # как localhost:9093 и из контейнера недоступен.
+      KAFKA_ENABLED: "true"
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_PRODUCER_TOPIC: "comment-service.events"
     volumes:
       - ./config/config.yaml:/app/config/config.yaml:ro
     networks:
       - web
       - internal-comment
       - service-network
+      # Без этой сети продюсер не достучится до брокера: он живёт в
+      # kafka-network, объявленной в docker-compose.kafka.yml.
+      - kafka-network
 
 
 networks:
@@ -101,4 +110,6 @@ networks:
   service-network:
     external: true
     name: service-network
+  kafka-network:
+    external: true
   internal-comment:

@@ -38,11 +38,42 @@ type meta struct {
 var registry = map[string]meta{
 	"welcome": {
 		subject:      "Добро пожаловать в RealTimeMap, {{.username}}!",
-		requiredData: []string{"username"},
+		requiredData: []string{"username", "mapUrl", "friendsUrl", "notificationSettingsUrl", "unsubscribeUrl"},
 	},
 	"newTask": {
 		subject:      "Назначена новая задача: {{ .taskId }}!",
 		requiredData: []string{"username", "taskId", "assignee", "status", "title", "description", "priority", "type"},
+	},
+	"commentReply": {
+		subject:      "{{ .authorName }} ответил на ваш комментарий",
+		requiredData: []string{"username", "authorName", "commentText", "commentUrl", "notificationSettingsUrl"},
+	},
+	"achievementUnlocked": {
+		// nextAchievements в контракт не входит: шаблон скрывает секцию
+		// «следующее по пути», когда список пуст — на последней ступени
+		// цепочки показывать нечего, и требовать её значило бы не отправить
+		// письмо о последнем достижении вовсе.
+		subject: "Новое достижение: {{ .achievementTitle }}",
+		requiredData: []string{
+			"username", "achievementTitle", "achievementDesc", "achievementCondition",
+			"threshold", "unlockedAt", "unlockedCount", "totalCount",
+			"statPrimary", "statPrimaryLabel", "statSecondary", "statSecondaryLabel",
+			"achievementsUrl", "shareUrl", "notificationSettingsUrl", "unsubscribeUrl",
+		},
+	},
+	"verifyEmail": {
+		subject:      "Подтвердите адрес почты — RealTimeMap",
+		requiredData: []string{"email", "code", "ttlMinutes", "verifyUrl"},
+	},
+	"passwordReset": {
+		// device/requestedAt/expiresAt описывают запрос: без них пользователь
+		// не отличит свой запрос от чужого, ради чего блок и существует.
+		subject:      "Смена пароля — RealTimeMap",
+		requiredData: []string{"username", "resetUrl", "ttlMinutes", "requestedAt", "device", "expiresAt", "securityUrl"},
+	},
+	"newSignIn": {
+		subject:      "Новый вход в ваш аккаунт — RealTimeMap",
+		requiredData: []string{"username", "signedInAt", "device", "location", "ipAddress", "sessionsUrl", "securityUrl"},
 	},
 }
 

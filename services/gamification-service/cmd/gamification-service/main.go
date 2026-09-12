@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/gamification"
@@ -11,6 +13,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/infrastructure/persistence/postgres/seed"
 	httptransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/http"
 	kafkatransport "github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/transport/kafka"
 	"go.uber.org/zap"
@@ -34,6 +37,13 @@ func main() {
 	}, log)
 	defer database.Close(db)
 	db.AutoMigrate(&model.Level{}, &model.UserProgress{}, &model.Achievement{}, &model.UserAchievement{}, &model.XPReward{}, &model.EventRule{}, &model.XPOperation{}, &model.UserAchievementCount{})
+
+	// Без правил начисления и достижений consumer читает события впустую:
+	// правила нет — опыт не начисляется, достижений нет — открывать нечего.
+	// Сидер идемпотентен и существующие строки не меняет.
+	if err := seed.Run(context.Background(), db, log); err != nil {
+		log.Error("failed to seed gamification rules", zap.Error(err))
+	}
 
 	// Services
 	container := app.NewContainer(cfg, db, log)

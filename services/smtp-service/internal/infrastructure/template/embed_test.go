@@ -70,8 +70,7 @@ func TestWelcomeContractMatchesTemplate(t *testing.T) {
 	}
 
 	for _, field := range tmpl.RequiredData {
-		placeholder := "{{." + field + "}}"
-		if !strings.Contains(tmpl.HTML, placeholder) && !strings.Contains(tmpl.Subject, placeholder) {
+		if !usesField(tmpl.HTML, field) && !usesField(tmpl.Subject, field) {
 			t.Errorf("field %q is declared required but never used", field)
 		}
 	}
@@ -86,7 +85,11 @@ func TestWelcomeRendersEndToEnd(t *testing.T) {
 	}
 
 	got, err := domain.NewRenderer(p).Render(context.Background(), "welcome", nil, map[string]any{
-		"username": "Вася",
+		"username":                "Вася",
+		"mapUrl":                  "https://realtimemap.ru/map",
+		"friendsUrl":              "https://realtimemap.ru/profile/friends",
+		"notificationSettingsUrl": "https://realtimemap.ru/settings/notifications",
+		"unsubscribeUrl":          "https://realtimemap.ru/unsubscribe",
 	})
 	if err != nil {
 		t.Fatalf("render: %v", err)
@@ -117,4 +120,14 @@ func TestWelcomeRendersEndToEnd(t *testing.T) {
 	if _, err := domain.NewRenderer(p).Render(context.Background(), "welcome", nil, map[string]any{}); err == nil {
 		t.Error("welcome rendered without UserName")
 	}
+}
+
+// usesField ищет обращение к полю в шаблоне.
+//
+// Go допускает пробелы внутри действия, и в шаблонах проекта принята форма
+// "{{ .field }}". Сравнение с одной жёсткой строкой объявляло бы используемое
+// поле неиспользуемым, поэтому проверяются обе формы.
+func usesField(tmpl, field string) bool {
+	return strings.Contains(tmpl, "{{."+field+"}}") ||
+		strings.Contains(tmpl, "{{ ."+field+" }}")
 }
