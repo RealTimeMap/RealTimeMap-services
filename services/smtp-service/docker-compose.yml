@@ -72,18 +72,29 @@ services:
 
       # Секреты и креды БД задаются в окружении хоста, а не в этом файле:
       # он коммитится в git.
-      DB_HOST: "${DB_HOST:?DB_HOST is required}"
+      #
+      # Подстановка мягкая (:- вместо :?): форма "${VAR:?...}" валит команду
+      # docker compose целиком, включая config и up для всех остальных
+      # сервисов, ещё до старта контейнера. Недостающую настройку сервис
+      # сообщит сам — DB_NAME размечен env-required в internal/config.
+      DB_HOST: "${DB_HOST:-postgres}"
       DB_NAME: "${SMTP_DB_NAME:-rtm_smtp}"
-      DB_USER: "${DB_USER:?DB_USER is required}"
-      DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required}"
-      SMTP_USERNAME: "${SMTP_USERNAME:?SMTP_USERNAME is required}"
-      SMTP_PASSWORD: "${SMTP_PASSWORD:?SMTP_PASSWORD is required}"
+      DB_USER: "${DB_USER:-}"
+      DB_PASSWORD: "${DB_PASSWORD:-}"
+      SMTP_USERNAME: "${SMTP_USERNAME:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
       SMTP_FROM: "${SMTP_FROM:-}"
       WORKER_DAILY_LIMIT: "${SMTP_DAILY_LIMIT:-450}"
     volumes:
-      # Именно docker-config.yaml: config.yaml держит локальные адреса и
-      # секреты в открытом виде и в образ попадать не должен.
-      - ./config/docker-config.yaml:/app/config/config.yaml:ro
+      # config.yaml лежит только на сервере: он не в git (см. .gitignore) и не
+      # в образе (см. build/Dockerfile). Так же смонтирован конфиг у всех
+      # остальных сервисов — монтировать здесь другой файл нельзя: при его
+      # отсутствии Docker создаёт на месте bind-mount директорию, и сервис
+      # падает с "read ./config/config.yaml: is a directory".
+      #
+      # Шаблон без секретов — config/docker-config.yaml, скопировать его на
+      # сервер под именем config.yaml и дописать креды через окружение.
+      - ./config/config.yaml:/app/config/config.yaml:ro
     networks:
       - web
       - service-network
