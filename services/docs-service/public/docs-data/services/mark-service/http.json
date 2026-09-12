@@ -1822,41 +1822,9 @@
                         },
                         {
                           "name": "photos",
-                          "type": "object[]",
+                          "type": "string",
                           "required": true,
-                          "description": "Фотографии метки",
-                          "children": [
-                            {
-                              "name": "url",
-                              "type": "string",
-                              "required": true,
-                              "description": "URL фотографии"
-                            },
-                            {
-                              "name": "fileName",
-                              "type": "string",
-                              "required": false,
-                              "description": "Оригинальное имя файла"
-                            },
-                            {
-                              "name": "width",
-                              "type": "integer",
-                              "required": false,
-                              "description": "Ширина в пикселях"
-                            },
-                            {
-                              "name": "height",
-                              "type": "integer",
-                              "required": false,
-                              "description": "Высота в пикселях"
-                            },
-                            {
-                              "name": "mimeType",
-                              "type": "string",
-                              "required": false,
-                              "description": "MIME-тип (image/jpeg, image/png, image/webp)"
-                            }
-                          ]
+                          "description": "Фотографии метки"
                         }
                       ]
                     },
@@ -2019,6 +1987,339 @@
       "errors": [
         "unauthorized",
         "validation-error"
+      ]
+    },
+    {
+      "id": "get-personal-mark",
+      "method": "GET",
+      "path": "/api/v2/personal/{markID}",
+      "summary": "Детальная персональная метка",
+      "description": "Возвращает одну персональную метку текущего пользователя со списком групп и фотографий. Доступна только владельцу: чужая метка возвращает 403, несуществующая — 404.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID персональной метки",
+          "location": "path",
+          "example": "12"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Метка найдена",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID метки"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": true,
+              "description": "ID владельца"
+            },
+            {
+              "name": "revision",
+              "type": "integer",
+              "required": true,
+              "description": "Ревизия пользователя на момент последнего изменения"
+            },
+            {
+              "name": "geom",
+              "type": "object",
+              "required": true,
+              "description": "Координаты метки",
+              "children": [
+                {
+                  "name": "lon",
+                  "type": "number",
+                  "required": true,
+                  "description": "Долгота"
+                },
+                {
+                  "name": "lat",
+                  "type": "number",
+                  "required": true,
+                  "description": "Широта"
+                }
+              ]
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Название метки"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "required": false,
+              "description": "Описание метки"
+            },
+            {
+              "name": "category",
+              "type": "string",
+              "required": true,
+              "description": "Категория метки"
+            },
+            {
+              "name": "color",
+              "type": "string",
+              "required": true,
+              "description": "Цвет метки для UI"
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "required": true,
+              "description": "Иконка метки для UI"
+            },
+            {
+              "name": "isShare",
+              "type": "boolean",
+              "required": true,
+              "description": "Доступна ли метка для шеринга"
+            },
+            {
+              "name": "isVisible",
+              "type": "boolean",
+              "required": true,
+              "description": "Отображается ли метка на карте"
+            },
+            {
+              "name": "groupIds",
+              "type": "integer[]",
+              "required": true,
+              "description": "ID групп, к которым привязана метка"
+            },
+            {
+              "name": "photos",
+              "type": "string[]",
+              "required": true,
+              "description": "URL фотографий метки"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата создания (ISO 8601)"
+            },
+            {
+              "name": "updatedAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата последнего изменения (ISO 8601)"
+            }
+          ],
+          "example": {
+            "id": 12,
+            "userId": 3,
+            "revision": 42,
+            "geom": {
+              "lon": 37.6176,
+              "lat": 55.7558
+            },
+            "title": "Любимая кофейня",
+            "description": "Тут вкусный раф",
+            "category": "food",
+            "color": "#8B5A2B",
+            "icon": "coffee",
+            "isShare": false,
+            "isVisible": true,
+            "groupIds": [
+              1,
+              2
+            ],
+            "photos": [
+              "https://realtimemap.ru/store/photos/marks/abc.jpg"
+            ],
+            "createdAt": "2026-09-09T10:15:00Z",
+            "updatedAt": "2026-09-11T08:30:00Z"
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "not-found"
+      ]
+    },
+    {
+      "id": "update-personal-mark",
+      "method": "PATCH",
+      "path": "/api/v2/personal/{markID}",
+      "summary": "Обновление персональной метки",
+      "description": "Частично обновляет персональную метку. Передаются только изменяемые поля — непереданные остаются прежними. Фотографии добавляются к существующим, а удаляются передачей их URL в photosToDelete (суммарно не больше 3). groupsId заменяет состав групп целиком, если передан. longitude и latitude принимаются только парой. Обновление увеличивает ревизию пользователя.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID персональной метки",
+          "location": "path",
+          "example": "12"
+        }
+      ],
+      "requestBody": {
+        "description": "Изменяемые поля метки",
+        "contentType": "form-data",
+        "schema": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": false,
+            "description": "Название метки"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": false,
+            "description": "Описание метки"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": false,
+            "description": "Категория метки"
+          },
+          {
+            "name": "icon",
+            "type": "string",
+            "required": false,
+            "description": "Иконка метки для UI"
+          },
+          {
+            "name": "color",
+            "type": "string",
+            "required": false,
+            "description": "Цвет метки для UI"
+          },
+          {
+            "name": "isVisible",
+            "type": "boolean",
+            "required": false,
+            "description": "Отображается ли метка на карте"
+          },
+          {
+            "name": "longitude",
+            "type": "number",
+            "required": false,
+            "description": "Долгота (-180 до 180). Передаётся только вместе с latitude"
+          },
+          {
+            "name": "latitude",
+            "type": "number",
+            "required": false,
+            "description": "Широта (-90 до 90). Передаётся только вместе с longitude"
+          },
+          {
+            "name": "groupsId",
+            "type": "integer[]",
+            "required": false,
+            "description": "ID групп. Если передан, полностью заменяет текущий состав групп"
+          },
+          {
+            "name": "photosToDelete",
+            "type": "string[]",
+            "required": false,
+            "description": "URL существующих фотографий, которые нужно открепить от метки"
+          },
+          {
+            "name": "photos",
+            "type": "file[]",
+            "required": false,
+            "description": "Новые фотографии метки"
+          }
+        ],
+        "example": {
+          "title": "Кофейня у дома",
+          "isVisible": false,
+          "photosToDelete": [
+            "https://realtimemap.ru/store/photos/marks/old.jpg"
+          ],
+          "photos": "[файлы]"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Метка обновлена. Возвращается идентификатор и новая ревизия пользователя.",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID метки"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": true,
+              "description": "ID владельца"
+            },
+            {
+              "name": "revision",
+              "type": "integer",
+              "required": true,
+              "description": "Новая ревизия пользователя после обновления"
+            }
+          ],
+          "example": {
+            "id": 12,
+            "userId": 3,
+            "revision": 43
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "not-found",
+        "validation-error"
+      ]
+    },
+    {
+      "id": "delete-personal-mark",
+      "method": "DELETE",
+      "path": "/api/v2/personal/{markID}",
+      "summary": "Удаление персональной метки",
+      "description": "Помечает персональную метку удалённой. Удаление увеличивает ревизию пользователя, поэтому метка попадает в секцию removed при следующей синхронизации. Доступно только владельцу.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "markID",
+          "type": "integer",
+          "required": true,
+          "description": "ID персональной метки",
+          "location": "path",
+          "example": "12"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Метка успешно удалена"
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "not-found"
       ]
     },
     {
@@ -2220,6 +2521,202 @@
       ],
       "errors": [
         "unauthorized",
+        "validation-error"
+      ]
+    },
+    {
+      "id": "get-group",
+      "method": "GET",
+      "path": "/api/v2/group/{groupID}",
+      "summary": "Детальная группа меток",
+      "description": "Возвращает одну группу меток текущего пользователя. Доступна только владельцу: чужая или несуществующая группа возвращает 404.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "groupID",
+          "type": "integer",
+          "required": true,
+          "description": "ID группы",
+          "location": "path",
+          "example": "1"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Группа найдена",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID группы"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": true,
+              "description": "ID владельца"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "Название группы"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "required": false,
+              "description": "Описание группы"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата создания (ISO 8601)"
+            }
+          ],
+          "example": {
+            "id": 1,
+            "userId": 3,
+            "name": "Кофейни",
+            "description": "Места с хорошим кофе",
+            "createdAt": "2026-09-09T10:15:00Z"
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "not-found"
+      ]
+    },
+    {
+      "id": "update-group",
+      "method": "PATCH",
+      "path": "/api/v2/group/{groupID}",
+      "summary": "Обновление группы меток",
+      "description": "Частично обновляет группу. Передаются только изменяемые поля — непереданные остаются прежними. Название должно оставаться уникальным в пределах пользователя. Обновление увеличивает ревизию пользователя.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "groupID",
+          "type": "integer",
+          "required": true,
+          "description": "ID группы",
+          "location": "path",
+          "example": "1"
+        }
+      ],
+      "requestBody": {
+        "description": "Изменяемые поля группы",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": false,
+            "description": "Название группы (1–255 символов). Уникально в пределах пользователя"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": false,
+            "description": "Описание группы"
+          }
+        ],
+        "example": {
+          "name": "Кофейни Москвы",
+          "description": "Проверенные места"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Группа обновлена",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID группы"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": true,
+              "description": "ID владельца"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "Название группы"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "required": false,
+              "description": "Описание группы"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата создания (ISO 8601)"
+            }
+          ],
+          "example": {
+            "id": 1,
+            "userId": 3,
+            "name": "Кофейни Москвы",
+            "description": "Проверенные места",
+            "createdAt": "2026-09-09T10:15:00Z"
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "not-found",
+        "validation-error",
+        "conflict"
+      ]
+    },
+    {
+      "id": "delete-group",
+      "method": "DELETE",
+      "path": "/api/v2/group/{groupID}",
+      "summary": "Удаление группы меток",
+      "description": "Помечает группу удалённой. Непустую группу удалить нельзя: метка обязана принадлежать хотя бы одной группе, поэтому при наличии привязанных меток возвращается ошибка валидации. Удаление увеличивает ревизию пользователя, поэтому группа попадает в секцию removed при следующей синхронизации.",
+      "tags": [
+        "Персональные метки"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "groupID",
+          "type": "integer",
+          "required": true,
+          "description": "ID группы",
+          "location": "path",
+          "example": "1"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Группа успешно удалена"
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "not-found",
         "validation-error"
       ]
     },

@@ -94,6 +94,12 @@ services:
       # Service configuration
       - "traefik.http.services.gamification.loadbalancer.server.port=8080"
 
+    environment:
+      # Внутри сети брокер слушает INTERNAL-листенер на 9092; 9093 анонсирован
+      # как localhost:9093 и из контейнера недоступен.
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_TOPICS: "mark_action-service.events,comment-service.events,user-service"
+      KAFKA_GROUP_ID: "gamification-service"
     volumes:
       - ./config/config.yaml:/app/config/config.yaml:ro
       - gamification_store_data:/app/store

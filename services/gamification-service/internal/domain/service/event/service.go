@@ -34,7 +34,11 @@ func NewEventGamificationService(eventRepo repository.EventRuleRepository, xpOpe
 func (s *Service) GreatUserExp(ctx context.Context, userID uint, event string, sourceID *uint) error {
 	rule, err := s.getRule(ctx, event)
 	if err != nil {
-		s.logger.Error("failed GetRule", zap.Error(err))
+		// Debug, а не Error: топик общий, и события без правила — норма, а не
+		// сбой. Решение о серьёзности принимает вызывающий (transport/kafka),
+		// который видит контекст; дублировать здесь Error значило бы писать
+		// стектрейс на каждое чужое сообщение и топить в нём настоящие ошибки.
+		s.logger.Debug("no event rule", zap.String("event", event), zap.Error(err))
 		return err
 	}
 	if err := s.checkDailyLimits(ctx, userID, rule); err != nil {
@@ -45,7 +49,12 @@ func (s *Service) GreatUserExp(ctx context.Context, userID uint, event string, s
 		UserID:     userID,
 		SourceType: model.SourceEvent,
 		Amount:     int(rule.Reward.Amount),
-		SourceID:   *sourceID,
+	}
+	// sourceID необязателен: событие может не указывать сущность (например,
+	// вход в приложение). Разыменование без проверки роняло бы весь consumer
+	// на таком событии.
+	if sourceID != nil {
+		input.SourceID = *sourceID
 	}
 	result, err := s.operator.Credit(ctx, input)
 	if err != nil {
