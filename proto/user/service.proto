@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package userservice;
 
+option go_package = "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/user";
+
 service UserService{
   rpc GetUserById(UserRequest) returns (UserResponse) {}
 }
