@@ -120,7 +120,10 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 
 	groupCases := &group.Application{
 		Create: group.NewCreateGroupHandler(groupSrv, log),
+		Get:    group.NewGetGroupHandler(groupSrv, log),
 		List:   group.NewListGroupHandler(groupSrv, log),
+		Update: group.NewUpdateGroupHandler(groupSrv, log),
+		Delete: group.NewDeleteGroupHandler(groupSrv, log),
 	}
 
 	categoryUseCases := &category.Application{
@@ -130,6 +133,9 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 
 	personalUseCases := &personal.Application{
 		Create: personal.NewCreatePersonalHandler(personalSrv, log),
+		Get:    personal.NewGetPersonalHandler(personalSrv, log),
+		Update: personal.NewUpdatePersonalHandler(personalSrv, log),
+		Delete: personal.NewDeletePersonalHandler(personalSrv, log),
 		Sync: personal.NewSyncMarkHandler(revisionSrv, log,
 			personal.NewChangeSource(personalSrv, personal.ToSyncMarkDTO),
 			personal.NewChangeSource(groupSrv, personal.ToSyncGroupDTO),

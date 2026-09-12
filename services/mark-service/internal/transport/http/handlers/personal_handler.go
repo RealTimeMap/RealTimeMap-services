@@ -9,9 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/paulmach/orb"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	usecase "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/personal"
@@ -37,6 +39,9 @@ func InitPersonalMarkHandler(g *gin.RouterGroup, deps PersonalDeps) {
 	{
 		r.POST("/create", auth.AuthRequired(), h.Create)
 		r.GET("/sync", auth.AuthRequired(), h.Sync)
+		r.GET("/:markID", auth.AuthRequired(), h.Get)
+		r.PATCH("/:markID", auth.AuthRequired(), h.Update)
+		r.DELETE("/:markID", auth.AuthRequired(), h.Delete)
 	}
 }
 
@@ -129,4 +134,136 @@ func (h *personalHandler) Sync(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, obj)
+}
+
+func (h *personalHandler) Get(c *gin.Context) {
+	userInfo, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	markID, err := middleware.ParsePathParams(c, "markID")
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	obj, err := h.useCase.Get.Handle(c.Request.Context(), usecase.GetPersonalMarkQuery{
+		MarkID: markID,
+		UserID: uint(userInfo.UserID),
+	})
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, obj)
+}
+
+// UpdatePersonalMarkRequest — частичное обновление: поля указатели, чтобы
+// отличить "не передано" от пустой строки и снятого флага.
+type UpdatePersonalMarkRequest struct {
+	Title       *string `form:"title" binding:"omitempty"`
+	Description *string `form:"description" binding:"-"`
+	Category    *string `form:"category" binding:"omitempty"`
+	Icon        *string `form:"icon" binding:"omitempty"`
+	Color       *string `form:"color" binding:"omitempty"`
+	IsVisible   *bool   `form:"isVisible" binding:"omitempty"`
+
+	Longitude *float64 `form:"longitude" binding:"omitempty,longitude"`
+	Latitude  *float64 `form:"latitude" binding:"omitempty,latitude"`
+
+	GroupsIds []uint `form:"groupsId" binding:"-"`
+
+	PhotosToDelete []string                `form:"photosToDelete" binding:"-"`
+	Photos         []*multipart.FileHeader `form:"photos" binding:"-"`
+}
+
+func (h *personalHandler) Update(c *gin.Context) {
+	var req UpdatePersonalMarkRequest
+
+	userInfo, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	markID, err := middleware.ParsePathParams(c, "markID")
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	if err := c.ShouldBind(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	photos, err := processPhotoUploads(req.Photos)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	// Координаты имеют смысл только парой: сдвиг по одной оси оставил бы метку
+	// в точке, которую клиент не запрашивал.
+	var geom *types.Point
+	if req.Longitude != nil && req.Latitude != nil {
+		geom = &types.Point{Point: orb.Point{*req.Longitude, *req.Latitude}}
+	} else if req.Longitude != nil || req.Latitude != nil {
+		errorhandler.HandleError(c, apperror.NewFieldValidationError(
+			"longitude",
+			"longitude and latitude must be provided together",
+			"value_error.geom.incomplete",
+			nil,
+		), h.logger)
+		return
+	}
+
+	obj, err := h.useCase.Update.Handle(c.Request.Context(), usecase.UpdatePersonalMarkCommand{
+		MarkID:         markID,
+		UserID:         uint(userInfo.UserID),
+		Geom:           geom,
+		Title:          req.Title,
+		Description:    req.Description,
+		Category:       req.Category,
+		Color:          req.Color,
+		Icon:           req.Icon,
+		IsVisible:      req.IsVisible,
+		GroupsIds:      req.GroupsIds,
+		PhotosToDelete: req.PhotosToDelete,
+		Photos:         photos,
+	})
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, obj)
+}
+
+func (h *personalHandler) Delete(c *gin.Context) {
+	userInfo, err := helper.GetUserInfo(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	markID, err := middleware.ParsePathParams(c, "markID")
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	err = h.useCase.Delete.Handle(c.Request.Context(), usecase.DeletePersonalMarkCommand{
+		MarkID: markID,
+		UserID: uint(userInfo.UserID),
+	})
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

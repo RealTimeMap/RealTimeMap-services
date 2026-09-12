@@ -44,7 +44,71 @@ func (r *PgGroupRepository) Create(ctx context.Context, obj *personal.Group) err
 }
 
 func (r *PgGroupRepository) Update(ctx context.Context, obj *personal.Group) error {
-	panic("implement me")
+	r.logger.Info("start Update", zap.String("layer", "postgres repo"))
+
+	// Select по именам колонок: Updates со структурой пропустил бы nil-поля,
+	// а description сбрасывается в null осознанно.
+	err := r.dbCtx(ctx).
+		Model(obj).
+		Select("name", "description", "revision").
+		Updates(obj).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return personal.ErrAlreadyExistGroup(obj.Name)
+		}
+		return err
+	}
+	return nil
+}
+
+func (r *PgGroupRepository) GetByID(ctx context.Context, groupID, userID uint) (personal.Group, error) {
+	r.logger.Info("start GetByID", zap.String("layer", "postgres repo"))
+
+	var obj personal.Group
+
+	err := r.dbCtx(ctx).
+		Where("id = ?", groupID).
+		Where("user_id = ?", userID).
+		First(&obj).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return personal.Group{}, personal.ErrNotFoundGroup(groupID)
+		}
+		return personal.Group{}, err
+	}
+
+	return obj, nil
+}
+
+// CountMarks считает живые метки в группе через таблицу связи many2many.
+func (r *PgGroupRepository) CountMarks(ctx context.Context, groupID uint) (int64, error) {
+	r.logger.Info("start CountMarks", zap.String("layer", "postgres repo"))
+
+	var count int64
+
+	err := r.dbCtx(ctx).
+		Table("personal_marks_groups AS pmg").
+		Joins("JOIN personal_marks AS pm ON pm.id = pmg.model_id").
+		Where("pmg.group_id = ?", groupID).
+		Where("pm.deleted_at IS NULL").
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// SetRevision обновляет только revision. Unscoped, чтобы вызов после
+// soft-delete тоже находил строку.
+func (r *PgGroupRepository) SetRevision(ctx context.Context, groupID, revision uint) error {
+	r.logger.Info("start SetRevision", zap.String("layer", "postgres repo"))
+
+	return r.dbCtx(ctx).
+		Unscoped().
+		Model(&personal.Group{}).
+		Where("id = ?", groupID).
+		Update("revision", revision).Error
 }
 
 func (r *PgGroupRepository) List(ctx context.Context, userID uint, params pagination.Params) ([]*personal.Group, int64, error) {
@@ -66,7 +130,9 @@ func (r *PgGroupRepository) List(ctx context.Context, userID uint, params pagina
 }
 
 func (r *PgGroupRepository) Delete(ctx context.Context, obj *personal.Group) error {
-	panic("implement me")
+	r.logger.Info("start Delete", zap.String("layer", "postgres repo"))
+
+	return r.dbCtx(ctx).Delete(obj).Error
 }
 
 func (r *PgGroupRepository) GetBatch(ctx context.Context, userID uint, ids []uint) ([]*personal.Group, error) {
