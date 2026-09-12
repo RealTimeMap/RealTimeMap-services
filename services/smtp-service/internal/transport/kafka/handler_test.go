@@ -4,13 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 
+	"fmt"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
+	userclient "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/user"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/consumer"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/email"
+	domaintemplate "github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/template"
+	embedtemplate "github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/infrastructure/template"
 	"github.com/google/uuid"
 	segmentio "github.com/segmentio/kafka-go"
 )
@@ -74,8 +81,37 @@ func registeredMessage(t *testing.T, mutate func(map[string]any)) segmentio.Mess
 	return segmentio.Message{Topic: "user.registered", Value: body}
 }
 
+// stubUsers подменяет UserService: отдаёт заранее заданных пользователей и
+// умеет изображать недоступность сервиса.
+type stubUsers struct {
+	byID map[int64]*userclient.User
+	err  error
+
+	mu    sync.Mutex
+	calls []int64
+}
+
+func (s *stubUsers) GetUserByID(_ context.Context, id int64) (*userclient.User, error) {
+	s.mu.Lock()
+	s.calls = append(s.calls, id)
+	s.mu.Unlock()
+
+	if s.err != nil {
+		return nil, s.err
+	}
+	u, ok := s.byID[id]
+	if !ok {
+		return nil, fmt.Errorf("%w: id=%d", userclient.ErrNotFound, id)
+	}
+	return u, nil
+}
+
 func newHandler(enq *recordingEnqueuer) *Handler {
-	return NewHandler(enq, logger.NewNop())
+	return NewHandler(enq, &stubUsers{}, "https://realtimemap.ru", logger.NewNop())
+}
+
+func newHandlerWithUsers(enq *recordingEnqueuer, users UserResolver) *Handler {
+	return NewHandler(enq, users, "https://realtimemap.ru", logger.NewNop())
 }
 
 func TestHandlerQueuesWelcomeEmail(t *testing.T) {
@@ -269,5 +305,266 @@ func TestHandlerPropagatesTraceID(t *testing.T) {
 	}
 	if got := enq.last().TraceID; got != "trace-42" {
 		t.Errorf("trace_id = %q, want trace-42", got)
+	}
+}
+
+// --- события комментариев ---
+
+// commentMessage собирает сообщение comment.created в общем конверте.
+func commentMessage(t *testing.T, mutate func(*events.CommentPayload)) segmentio.Message {
+	t.Helper()
+
+	parentID := uint(10)
+	parentUserID := uint(100)
+	payload := events.CommentPayload{
+		CommentID:    77,
+		UserID:       200,
+		Username:     "replier",
+		EntityType:   "mark_action",
+		EntityID:     42,
+		ParentID:     &parentID,
+		ParentUserID: &parentUserID,
+		Content:      "Согласен, отличное место",
+	}
+	if mutate != nil {
+		mutate(&payload)
+	}
+
+	body, err := json.Marshal(events.NewCommentCreated(payload))
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	return segmentio.Message{Topic: "comment-service.events", Value: body}
+}
+
+func usersWith(id int64, username, mail string) *stubUsers {
+	return &stubUsers{byID: map[int64]*userclient.User{
+		id: {ID: id, Username: username, Email: mail},
+	}}
+}
+
+// Ответ на комментарий: письмо уходит автору родителя, а не автору ответа.
+func TestHandlerQueuesCommentReply(t *testing.T) {
+	enq := &recordingEnqueuer{}
+	users := usersWith(100, "parentAuthor", "parent@example.com")
+
+	if err := newHandlerWithUsers(enq, users).HandleMessage(context.Background(), commentMessage(t, nil)); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+
+	if enq.count() != 1 {
+		t.Fatalf("enqueued %d emails, want 1", enq.count())
+	}
+
+	in := enq.last()
+	if in.TemplateID != "commentReply" {
+		t.Errorf("template = %q, want commentReply", in.TemplateID)
+	}
+	if in.ToEmail != "parent@example.com" {
+		t.Errorf("to = %q, want parent@example.com", in.ToEmail)
+	}
+	if in.Data["username"] != "parentAuthor" {
+		t.Errorf("username = %v, want parentAuthor", in.Data["username"])
+	}
+	if in.Data["authorName"] != "replier" {
+		t.Errorf("authorName = %v, want replier", in.Data["authorName"])
+	}
+	if in.Data["commentUrl"] != "https://realtimemap.ru/marks/42#comment-77" {
+		t.Errorf("commentUrl = %v", in.Data["commentUrl"])
+	}
+	// Ключ по комментарию-ответу: повторная доставка события не создаёт второго письма.
+	if in.IdempotencyKey != "comment.created:77" {
+		t.Errorf("idempotency key = %q", in.IdempotencyKey)
+	}
+}
+
+// Комментарий верхнего уровня уведомлять некого: у сущности нет владельца,
+// известного этому сервису.
+func TestHandlerSkipsTopLevelComment(t *testing.T) {
+	enq := &recordingEnqueuer{}
+	users := usersWith(100, "someone", "someone@example.com")
+
+	msg := commentMessage(t, func(p *events.CommentPayload) {
+		p.ParentID = nil
+		p.ParentUserID = nil
+	})
+
+	if err := newHandlerWithUsers(enq, users).HandleMessage(context.Background(), msg); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+	if enq.count() != 0 {
+		t.Errorf("enqueued %d emails for a top-level comment", enq.count())
+	}
+}
+
+// Ответ самому себе не должен порождать письмо.
+func TestHandlerSkipsSelfReply(t *testing.T) {
+	enq := &recordingEnqueuer{}
+	users := usersWith(200, "self", "self@example.com")
+
+	msg := commentMessage(t, func(p *events.CommentPayload) {
+		same := uint(200)
+		p.ParentUserID = &same // совпадает с UserID автора ответа
+	})
+
+	if err := newHandlerWithUsers(enq, users).HandleMessage(context.Background(), msg); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+	if enq.count() != 0 {
+		t.Errorf("enqueued %d emails for a self-reply", enq.count())
+	}
+}
+
+// Нет такого пользователя — повтор не поможет, сообщение коммитится.
+func TestHandlerSkipsWhenRecipientNotFound(t *testing.T) {
+	enq := &recordingEnqueuer{}
+	users := &stubUsers{byID: map[int64]*userclient.User{}}
+
+	err := newHandlerWithUsers(enq, users).HandleMessage(context.Background(), commentMessage(t, nil))
+	if !errors.Is(err, consumer.ErrSkip) {
+		t.Errorf("error = %v, want skip", err)
+	}
+	if errors.Is(err, consumer.ErrRetryable) {
+		t.Error("missing user marked retryable — partition would stall forever")
+	}
+}
+
+// UserService недоступен — сообщение обязано перечитаться, письмо терять нельзя.
+func TestHandlerRetriesWhenUserServiceUnavailable(t *testing.T) {
+	enq := &recordingEnqueuer{}
+	users := &stubUsers{err: fmt.Errorf("%w: dial tcp", userclient.ErrUnavailable)}
+
+	err := newHandlerWithUsers(enq, users).HandleMessage(context.Background(), commentMessage(t, nil))
+	if !errors.Is(err, consumer.ErrRetryable) {
+		t.Errorf("error = %v, want retryable", err)
+	}
+	if enq.count() != 0 {
+		t.Error("email queued despite unresolved recipient")
+	}
+}
+
+// Продюсер может не прислать имя автора; письмо всё равно должно уйти —
+// шаблон требует authorName непустым.
+func TestHandlerFallsBackToDefaultAuthorName(t *testing.T) {
+	enq := &recordingEnqueuer{}
+	users := usersWith(100, "parentAuthor", "parent@example.com")
+
+	msg := commentMessage(t, func(p *events.CommentPayload) {
+		p.Username = "   "
+	})
+
+	if err := newHandlerWithUsers(enq, users).HandleMessage(context.Background(), msg); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+	if got := enq.last().Data["authorName"]; got != "Участник" {
+		t.Errorf("authorName = %v, want fallback", got)
+	}
+}
+
+// --- совместимость форматов ---
+
+// Регистрация в общем конверте {type, payload} должна читаться так же, как
+// старый плоский формат.
+func TestHandlerReadsRegisteredInEnvelope(t *testing.T) {
+	enq := &recordingEnqueuer{}
+
+	event := events.UserRegisteredEvent{
+		Envelop: events.NewEnvelop(events.UserRegistered),
+		Payload: events.UserRegisteredPayload{
+			UserID:   80,
+			Username: "TestUser",
+			Email:    "TestUser@yandex.com",
+		},
+	}
+	body, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	msg := segmentio.Message{Topic: "user-service", Value: body}
+	if err := newHandler(enq).HandleMessage(context.Background(), msg); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+
+	if enq.count() != 1 {
+		t.Fatalf("enqueued %d emails, want 1", enq.count())
+	}
+	in := enq.last()
+	if in.ToEmail != "TestUser@yandex.com" || in.Data["username"] != "TestUser" {
+		t.Errorf("payload not read from envelope: to=%q username=%v", in.ToEmail, in.Data["username"])
+	}
+	// Ключ тот же, что у плоского формата: переход на конверт не должен
+	// приводить к повторной отправке приветствия тем, кто его уже получил.
+	if in.IdempotencyKey != "user.registered:80" {
+		t.Errorf("idempotency key = %q", in.IdempotencyKey)
+	}
+}
+
+// --- согласованность с контрактами шаблонов ---
+
+// renderingEnqueuer прогоняет данные письма через настоящий рендерер.
+//
+// Остальные тесты используют мок и потому не заметят, что хендлер перестал
+// слать поле, объявленное шаблоном обязательным: письмо упало бы только в
+// рантайме, на живом пользователе.
+type renderingEnqueuer struct {
+	renderer *domaintemplate.Renderer
+	rendered []*domaintemplate.Rendered
+}
+
+func (r *renderingEnqueuer) Enqueue(ctx context.Context, in email.EnqueueInput) (*email.EnqueueResult, error) {
+	out, err := r.renderer.Render(ctx, in.TemplateID, in.TemplateVersion, in.Data)
+	if err != nil {
+		return nil, err
+	}
+	r.rendered = append(r.rendered, out)
+	return &email.EnqueueResult{EmailID: uuid.New()}, nil
+}
+
+func newRenderingHandler(t *testing.T, users UserResolver) (*Handler, *renderingEnqueuer) {
+	t.Helper()
+
+	provider, err := embedtemplate.NewProvider()
+	if err != nil {
+		t.Fatalf("new provider: %v", err)
+	}
+
+	enq := &renderingEnqueuer{renderer: domaintemplate.NewRenderer(provider)}
+	return NewHandler(enq, users, "https://realtimemap.ru", logger.NewNop()), enq
+}
+
+// Данные, которые хендлер собирает для приветствия, должны покрывать контракт
+// шаблона целиком.
+func TestWelcomeDataSatisfiesTemplate(t *testing.T) {
+	h, enq := newRenderingHandler(t, &stubUsers{})
+
+	if err := h.HandleMessage(context.Background(), registeredMessage(t, nil)); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+
+	if len(enq.rendered) != 1 {
+		t.Fatalf("rendered %d emails, want 1", len(enq.rendered))
+	}
+	if !strings.Contains(enq.rendered[0].HTML, "TestUser") {
+		t.Error("welcome body has no user name")
+	}
+	if !strings.Contains(enq.rendered[0].HTML, "https://realtimemap.ru/map") {
+		t.Error("welcome body has no map link built from config")
+	}
+}
+
+// То же для письма об ответе на комментарий.
+func TestCommentReplyDataSatisfiesTemplate(t *testing.T) {
+	h, enq := newRenderingHandler(t, usersWith(100, "parentAuthor", "parent@example.com"))
+
+	if err := h.HandleMessage(context.Background(), commentMessage(t, nil)); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+
+	if len(enq.rendered) != 1 {
+		t.Fatalf("rendered %d emails, want 1", len(enq.rendered))
+	}
+	if !strings.Contains(enq.rendered[0].HTML, "Согласен, отличное место") {
+		t.Error("reply body has no comment text")
 	}
 }

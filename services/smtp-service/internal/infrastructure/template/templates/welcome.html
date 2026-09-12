@@ -1,360 +1,104 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>RealTime Map</title>
-    <style>
-        /* Reset styles for email clients */
-        body, table, td, a {
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-        }
-
-        table {
-            border-collapse: collapse;
-            mso-table-lspace: 0pt;
-            mso-table-rspace: 0pt;
-        }
-
-        img {
-            -ms-interpolation-mode: bicubic;
-            border: 0;
-            height: auto;
-            line-height: 100%;
-            outline: none;
-            text-decoration: none;
-            max-width: 100%;
-        }
-
-        /* Base styles using project color scheme */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-            color: #343a40; /* --text-primary */
-            background-color: #f8f9fa; /* --bg-page */
-        }
-
-        .email-wrapper {
-            width: 100%;
-            background-color: #f8f9fa; /* --bg-page */
-            padding: 20px 0;
-        }
-
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff; /* --bg-card */
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(29, 33, 41, 0.07); /* --shadow-color */
-        }
-
-        /* Header */
-        .email-header {
-            background: linear-gradient(135deg, #7aafeb 0%, #4a8ad4 100%); /* --accent-primary to --accent-primary-deep */
-            padding: 30px;
-            text-align: center;
-        }
-
-        .logo {
-            color: #ffffff;
-            font-size: 28px;
-            font-weight: 700;
-            text-decoration: none;
-            letter-spacing: -0.5px;
-        }
-
-        .logo-subtitle {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 12px;
-            margin-top: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Content */
-        .email-content {
-            padding: 40px 30px;
-        }
-
-        h1 {
-            color: #343a40; /* --text-primary */
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0 0 20px 0;
-            line-height: 1.3;
-        }
-
-        h2 {
-            color: #343a40; /* --text-primary */
-            font-size: 20px;
-            font-weight: 600;
-            margin: 25px 0 15px 0;
-        }
-
-        p {
-            color: #343a40; /* --text-primary */
-            margin: 0 0 15px 0;
-            line-height: 1.6;
-        }
-
-        .text-secondary {
-            color: #6c757d; /* --text-secondary */
-        }
-
-        /* Buttons */
-        .btn {
-            display: inline-block;
-            padding: 14px 32px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 16px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background-color: #7aafeb; /* --accent-primary */
-            color: #ffffff;
-        }
-
-        .btn-primary:hover {
-            background-color: #4a8ad4; /* --accent-primary-deep */
-        }
-
-        .btn-success {
-            background-color: #82f00d; /* --accent-success */
-            color: #343a40;
-        }
-
-        .btn-danger {
-            background-color: #ff3b30; /* --accent-danger */
-            color: #ffffff;
-        }
-
-        .btn-container {
-            text-align: center;
-            margin: 30px 0;
-        }
-
-        /* Info boxes */
-        .info-box {
-            background-color: #f8f9fa; /* --bg-page */
-            border-left: 4px solid #7aafeb; /* --accent-primary */
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-
-        .info-box-success {
-            border-left-color: #82f00d; /* --accent-success */
-        }
-
-        .info-box-danger {
-            border-left-color: #ff3b30; /* --accent-danger */
-        }
-
-        .info-box h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            font-weight: 600;
-            color: #343a40;
-        }
-
-        .info-box p {
-            margin: 0;
-            font-size: 14px;
-        }
-
-        /* List styles */
-        .feature-list {
-            margin: 20px 0;
-            padding: 0;
-            list-style: none;
-        }
-
-        .feature-list li {
-            padding: 10px 0 10px 30px;
-            position: relative;
-            color: #343a40;
-        }
-
-        .feature-list li:before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #7aafeb; /* --accent-primary */
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        /* Divider */
-        .divider {
-            height: 1px;
-            background-color: #e9ecef; /* --border-color */
-            margin: 30px 0;
-        }
-
-        /* Footer */
-        .email-footer {
-            background-color: #f8f9fa; /* --bg-page */
-            padding: 30px;
-            text-align: center;
-            border-top: 1px solid #e9ecef; /* --border-color */
-        }
-
-        .footer-text {
-            font-size: 13px;
-            color: #6c757d; /* --text-secondary */
-            margin: 5px 0;
-        }
-
-        .footer-links {
-            margin: 15px 0;
-        }
-
-        .footer-links a {
-            color: #7aafeb; /* --accent-primary */
-            text-decoration: none;
-            margin: 0 10px;
-            font-size: 13px;
-        }
-
-        .footer-links a:hover {
-            color: #4a8ad4; /* --accent-primary-deep */
-            text-decoration: underline;
-        }
-
-        /* Social links */
-        .social-links {
-            margin: 20px 0;
-        }
-
-        .social-links a {
-            display: inline-block;
-            margin: 0 8px;
-            color: #6c757d;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        /* Card */
-        .card {
-            background-color: #ffffff; /* --bg-card */
-            border: 1px solid #e9ecef; /* --border-color */
-            border-radius: 6px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-
-        /* Code/token display */
-        .code-block {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 4px;
-            padding: 15px;
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            letter-spacing: 2px;
-            text-align: center;
-            color: #343a40;
-            margin: 20px 0;
-        }
-
-        @media screen and (max-width: 600px) {
-            .email-container {
-                margin: 0 10px;
-            }
-
-            .email-content {
-                padding: 30px 20px;
-            }
-
-            .email-header,
-            .email-footer {
-                padding: 25px 20px;
-            }
-
-            h1 {
-                font-size: 22px;
-            }
-
-            .btn {
-                display: block;
-                width: 100%;
-            }
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Добро пожаловать в RealTimeMap</title>
+<!--[if mso]>
+<style>body,table,td,a{font-family:Arial,Helvetica,sans-serif !important}</style>
+<![endif]-->
+<style>
+@media only screen and (max-width:620px){
+  .wrap{width:100% !important}
+  .px{padding-left:20px !important;padding-right:20px !important}
+  .stackcell{display:block !important;width:100% !important;padding-right:0 !important;padding-bottom:14px !important}
+  .h1{font-size:23px !important;line-height:29px !important}
+}
+</style>
 </head>
-<body>
-<table class="email-wrapper" width="100%" cellpadding="0" cellspacing="0" border="0">
-    <tr>
-        <td align="center">
-            <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                    <td class="email-header">
-                        <div class="logo">RealTime Map</div>
-                        <div class="logo-subtitle">Гео-Социальная платформа</div>
-                    </td>
-                </tr>
+<body style="margin:0;padding:0;background-color:#101220;">
+<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;max-width:0;overflow:hidden;mso-hide:all;">Аккаунт создан. Поставьте первую метку и посмотрите, что происходит вокруг вас прямо сейчас.</span>
 
-                <tr>
-                    <td class="email-content">
-                        <h1>Добро пожаловать, {{ .username }}!</h1>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#101220;">
+<tr>
+<td align="center" style="padding:28px 12px 40px 12px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="wrap" style="width:600px;max-width:600px;background-color:#161826;border:1px solid #2a2d40;border-radius:8px;">
 
-                        <p>Мы рады приветствовать вас на платформе <strong>RealTime Map</strong> — современном геосоциальном сервисе для
-                            создания временных маркеров на карте и общения в реальном времени.</p>
+  <tr>
+    <td class="px" style="padding:20px 32px 18px 32px;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#9184d9;letter-spacing:1.4px;font-weight:bold;">REALTIMEMAP</td>
+  </tr>
 
-                        <div class="info-box info-box-success">
-                            <h3>Ваш аккаунт успешно создан!</h3>
-                            <p>Теперь вы можете использовать все возможности платформы.</p>
-                        </div>
+  <tr>
+    <td class="px" style="padding:28px 32px 0 32px;">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:#8b8fa6;letter-spacing:1.2px;font-weight:bold;">АККАУНТ СОЗДАН</div>
+      <div class="h1" style="font-family:Arial,Helvetica,sans-serif;font-size:27px;line-height:34px;mso-line-height-rule:exactly;color:#e9e9ed;padding-top:10px;">Добро пожаловать, {{ .username }}</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#b6b9cb;padding-top:12px;">RealTimeMap показывает, что происходит рядом с вами прямо сейчас: метки живут ограниченное время и исчезают, когда событие закончилось. Ниже — три шага, чтобы начать.</div>
+    </td>
+  </tr>
 
-                        <h2>Что вы можете делать:</h2>
+  <tr>
+    <td class="px" style="padding:24px 32px 0 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#1b1e2e;border:1px solid #282b3f;border-radius:8px;">
+        <tr>
+          <td width="30" valign="top" style="width:30px;padding:14px 0 14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;mso-line-height-rule:exactly;color:#9184d9;font-weight:bold;">1</td>
+          <td style="padding:14px 16px 14px 0;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;mso-line-height-rule:exactly;color:#c9ccdb;"><b style="color:#e9e9ed;">Поставьте первую метку</b><br>Двойное касание по карте — и метка появится там, где вы стоите.</td>
+        </tr>
+        <tr>
+          <td width="30" valign="top" style="width:30px;padding:14px 0 14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;mso-line-height-rule:exactly;color:#9184d9;font-weight:bold;">2</td>
+          <td style="padding:14px 16px 14px 0;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;mso-line-height-rule:exactly;color:#c9ccdb;"><b style="color:#e9e9ed;">Добавьте друзей</b><br>Их метки видны первыми, а переписка живёт рядом с картой.</td>
+        </tr>
+        <tr>
+          <td width="30" valign="top" style="width:30px;padding:14px 0 14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;mso-line-height-rule:exactly;color:#9184d9;font-weight:bold;">3</td>
+          <td style="padding:14px 16px 14px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;mso-line-height-rule:exactly;color:#c9ccdb;"><b style="color:#e9e9ed;">Настройте радиус уведомлений</b><br>Чтобы приходило только то, что действительно рядом.</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
 
-                        <ul class="feature-list">
-                            <li>Создавать временные географические маркеры на карте</li>
-                            <li>Получать уведомления о новых маркерах в реальном времени</li>
-                            <li>Комментировать маркеры и общаться с другими пользователями</li>
-                            <li>Использовать систему чатов для личных сообщений</li>
-                            <li>Зарабатывать очки опыта и повышать уровень</li>
-                            <li>Подписываться на премиум-планы для расширенных возможностей</li>
-                        </ul>
-
-                        <div class="btn-container">
-                            <a href="https://real-time-map-frontend.vercel.app/" class="btn btn-primary">Открыть карту</a>
-                        </div>
-
-                        <div class="divider"></div>
-
-                        <p class="text-secondary">
-                            Если у вас возникнут вопросы, наша команда поддержки всегда готова помочь.
-                        </p>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td class="email-footer">
-                        <p class="footer-text">&copy; 2026 RealTime Map. Все права защищены.</p>
-                        <div class="footer-links">
-                            <a href="/docs">Документация</a>
-                            <a href="/support">Поддержка</a>
-                            <a href="/privacy">Конфиденциальность</a>
-                        </div>
-                        <p class="footer-text text-secondary">
-                            Вы получили это письмо, так как зарегистрированы на платформе RealTime Map.
-                        </p>
-                    </td>
-                </tr>
-            </table>
+  <tr>
+    <td class="px" style="padding:26px 32px 4px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="stackcell" style="padding-right:10px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center" bgcolor="#161826" style="border:1px solid #9184d9;border-radius:8px;">
+              <a href="{{ .mapUrl }}" style="display:block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;mso-line-height-rule:exactly;color:#c3bcf0;text-decoration:none;font-weight:bold;">Открыть карту</a>
+            </td>
+          </tr>
+          </table>
         </td>
-    </tr>
+        <td class="stackcell">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center" bgcolor="#1b1e2e" style="border:1px solid #2f3349;border-radius:8px;">
+              <a href="{{ .friendsUrl }}" style="display:block;padding:13px 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;mso-line-height-rule:exactly;color:#b6b9cb;text-decoration:none;">Найти друзей</a>
+            </td>
+          </tr>
+          </table>
+        </td>
+      </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:26px 32px 26px 32px;border-top:1px solid #24273a;">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:19px;mso-line-height-rule:exactly;color:#7e8298;">Письмо отправлено на адрес, указанный при регистрации в RealTimeMap.</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:19px;mso-line-height-rule:exactly;color:#7e8298;padding-top:10px;">
+        <a href="{{ .notificationSettingsUrl }}" style="color:#9184d9;text-decoration:underline;">Настроить уведомления</a>
+        &nbsp;·&nbsp;
+        <a href="{{ .unsubscribeUrl }}" style="color:#9184d9;text-decoration:underline;">Отписаться</a>
+      </div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:18px;mso-line-height-rule:exactly;color:#5f6377;padding-top:10px;">RealTimeMap, 12 rue du Dôme, 67000 Strasbourg, France</div>
+    </td>
+  </tr>
+
+</table>
+</td>
+</tr>
 </table>
 </body>
 </html>

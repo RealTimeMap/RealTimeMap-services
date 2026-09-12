@@ -1,30 +1,58 @@
 package kafka
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
+)
 
 // Типы событий, на которые сервис отправляет письма.
 const (
-	EventUserRegistered = "user.registered"
+	EventUserRegistered = events.UserRegistered
+	EventCommentCreated = events.CommentCreated
 )
 
-// UserRegistered — событие регистрации пользователя.
+// UserRegistered — событие регистрации пользователя из auth-сервиса.
 //
-// Приезжает из auth-service. Адрес получателя лежит прямо в событии: сервиса,
-// у которого его можно спросить, пока нет (proto/user/service.proto без
-// реализации). Когда UserService появится, email перестанет ходить через
-// Kafka — это персональные данные, живущие в топике по retention.
-type UserRegistered struct {
-	EventType string `json:"event_type"`
-	UserID    uint64 `json:"user_id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
+// Тип объявлен здесь, а не взят из pkg/events напрямую, потому что несёт
+// разбор двух форматов сразу (см. decodeUserRegistered).
+type UserRegistered = events.UserRegisteredPayload
 
-	// Поля ниже сервис пока не использует: письмо на регистрацию одно и то же
-	// независимо от способа входа. Ветвление (подтверждение почты для обычной
-	// регистрации, приветствие сразу для OAuth) требует токена подтверждения,
-	// которого в событии нет.
-	Phone        *string   `json:"phone"`
-	IsVerified   bool      `json:"is_verified"`
-	OAuth        bool      `json:"oauth"`
-	RegisteredAt time.Time `json:"registered_at"`
+// decodeUserRegistered достаёт payload регистрации из тела сообщения.
+//
+// Понимает два формата. Новый — конверт {type, payload}, общий с остальными
+// сервисами. Старый — плоский объект, который auth-сервис слал до перехода на
+// конверт: такие сообщения ещё лежат в топике по retention, и отказ их читать
+// означал бы потерю писем за период до деплоя.
+//
+// Различаются по наличию ключа payload: в плоском формате его нет.
+func decodeUserRegistered(body []byte) (UserRegistered, error) {
+	var envelope struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return UserRegistered{}, fmt.Errorf("unmarshal envelope: %w", err)
+	}
+
+	raw := envelope.Payload
+	if len(raw) == 0 {
+		raw = body
+	}
+
+	var payload UserRegistered
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return UserRegistered{}, fmt.Errorf("unmarshal user.registered payload: %w", err)
+	}
+	return payload, nil
+}
+
+// decodeComment достаёт payload комментария. Формат только конвертный:
+// comment-service с самого начала публикует в нём.
+func decodeComment(body []byte) (events.CommentPayload, error) {
+	var event events.CommentEvent
+	if err := json.Unmarshal(body, &event); err != nil {
+		return events.CommentPayload{}, fmt.Errorf("unmarshal comment event: %w", err)
+	}
+	return event.Payload, nil
 }

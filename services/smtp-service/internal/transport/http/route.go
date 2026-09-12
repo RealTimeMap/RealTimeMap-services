@@ -4,10 +4,12 @@ import (
 	nethttp "net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/transport/http/handlers"
-	"github.com/gin-gonic/gin"
 )
 
 // queueStallThreshold — возраст старейшего письма, после которого очередь
@@ -21,7 +23,7 @@ const queueStallThreshold = 15 * time.Minute
 func RegisterRoutes(g *gin.Engine, di *app.Container) {
 	g.Use(middleware.TraceMiddleware())
 
-	api := g.Group("/api/v2")
+	api := g.Group("/api/v2", auth.NotBanned())
 
 	handlers.NewEmailHandler(api, handlers.EmailHandlerDeps{
 		Emails:  di.Emails,

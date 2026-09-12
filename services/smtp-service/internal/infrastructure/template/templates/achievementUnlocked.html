@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Новое достижение — {{ .achievementTitle }}</title>
+<!--[if mso]>
+<style>body,table,td,a{font-family:Arial,Helvetica,sans-serif !important}</style>
+<![endif]-->
+<style>
+@media only screen and (max-width:620px){
+  .wrap{width:100% !important}
+  .px{padding-left:20px !important;padding-right:20px !important}
+  .stackcell{display:block !important;width:100% !important;padding-right:0 !important;padding-bottom:14px !important}
+  .h1{font-size:23px !important;line-height:29px !important}
+  .statcell{display:block !important;width:100% !important;border-right:0 !important;border-bottom:1px solid #24273a !important}
+}
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#101220;">
+<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;max-width:0;overflow:hidden;mso-hide:all;">Достижение «{{ .achievementTitle }}» открыто — {{ .unlockedCount }} из {{ .totalCount }} в коллекции.</span>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#101220;">
+<tr>
+<td align="center" style="padding:28px 12px 40px 12px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="wrap" style="width:600px;max-width:600px;background-color:#161826;border:1px solid #2a2d40;border-radius:8px;">
+
+  <tr>
+    <td class="px" style="padding:20px 32px 18px 32px;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#9184d9;letter-spacing:1.4px;font-weight:bold;">REALTIMEMAP</td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:28px 32px 0 32px;">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:#8b8fa6;letter-spacing:1.2px;font-weight:bold;">ДОСТИЖЕНИЕ ОТКРЫТО</div>
+      <div class="h1" style="font-family:Arial,Helvetica,sans-serif;font-size:27px;line-height:34px;mso-line-height-rule:exactly;color:#e9e9ed;padding-top:10px;">{{ .achievementTitle }}</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#b6b9cb;padding-top:12px;">{{ .username }}, {{ .achievementDesc }}</div>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:22px 32px 0 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#1b1e2e;border:1px solid #282b3f;border-radius:8px;">
+        <tr>
+          <td width="76" valign="middle" align="center" style="width:76px;padding:18px 0 18px 18px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="58" style="width:58px;">
+            <tr>
+              <td align="center" valign="middle" height="58" bgcolor="#221f3a" style="height:58px;border:1px solid #57499c;border-radius:29px;font-family:Arial,Helvetica,sans-serif;font-size:22px;line-height:26px;mso-line-height-rule:exactly;color:#c3bcf0;font-weight:bold;">{{ .threshold }}</td>
+            </tr>
+            </table>
+          </td>
+          <td valign="middle" style="padding:18px 18px 18px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;mso-line-height-rule:exactly;color:#c9ccdb;">
+            <b style="color:#e9e9ed;">{{ .achievementCondition }}</b><br>
+            Открыто {{ .unlockedAt }}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:14px 32px 0 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#1b1e2e;border:1px solid #282b3f;border-radius:8px;">
+        <tr>
+          <td class="statcell" width="33%" align="center" style="width:33%;padding:16px 10px 16px 10px;border-right:1px solid #24273a;">
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:26px;mso-line-height-rule:exactly;color:#e9e9ed;font-weight:bold;">{{ .statPrimary }}</div>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:17px;mso-line-height-rule:exactly;color:#8b8fa6;letter-spacing:0.8px;padding-top:4px;">{{ .statPrimaryLabel }}</div>
+          </td>
+          <td class="statcell" width="33%" align="center" style="width:33%;padding:16px 10px 16px 10px;border-right:1px solid #24273a;">
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:26px;mso-line-height-rule:exactly;color:#e9e9ed;font-weight:bold;">{{ .statSecondary }}</div>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:17px;mso-line-height-rule:exactly;color:#8b8fa6;letter-spacing:0.8px;padding-top:4px;">{{ .statSecondaryLabel }}</div>
+          </td>
+          <td class="statcell" width="34%" align="center" style="width:34%;padding:16px 10px 16px 10px;">
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:26px;mso-line-height-rule:exactly;color:#e9e9ed;font-weight:bold;">{{ .unlockedCount }} / {{ .totalCount }}</div>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:17px;mso-line-height-rule:exactly;color:#8b8fa6;letter-spacing:0.8px;padding-top:4px;">ДОСТИЖЕНИЙ</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  {{ if .nextAchievements }}
+  <tr>
+    <td class="px" style="padding:24px 32px 0 32px;">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:#8b8fa6;letter-spacing:1.2px;font-weight:bold;">СЛЕДУЮЩЕЕ ПО ПУТИ</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="padding-top:12px;">
+        {{ range $i, $next := .nextAchievements }}
+        <tr>
+          <td style="padding:0 0 10px 0;{{ if $i }}border-top:1px solid #24273a;padding-top:14px;{{ end }}font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;mso-line-height-rule:exactly;color:#c9ccdb;"><b style="color:#e9e9ed;">{{ $next.Title }}</b> — {{ $next.Condition }}</td>
+          <td align="right" style="padding:0 0 10px 0;{{ if $i }}border-top:1px solid #24273a;padding-top:14px;{{ end }}font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:22px;mso-line-height-rule:exactly;color:#9184d9;white-space:nowrap;">{{ $next.Current }} / {{ $next.Threshold }}</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding:0 0 16px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#24273a" style="border-radius:3px;">
+            <tr>
+              <td width="{{ $next.Percent }}%" height="6" bgcolor="#9184d9" style="width:{{ $next.Percent }}%;height:6px;border-radius:3px;line-height:6px;font-size:0;">&nbsp;</td>
+              <td width="{{ $next.RemainingPercent }}%" height="6" style="width:{{ $next.RemainingPercent }}%;height:6px;line-height:6px;font-size:0;">&nbsp;</td>
+            </tr>
+            </table>
+          </td>
+        </tr>
+        {{ end }}
+      </table>
+    </td>
+  </tr>
+  {{ end }}
+
+  <tr>
+    <td class="px" style="padding:26px 32px 4px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="stackcell" style="padding-right:10px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center" bgcolor="#161826" style="border:1px solid #9184d9;border-radius:8px;">
+              <a href="{{ .achievementsUrl }}" style="display:block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;mso-line-height-rule:exactly;color:#c3bcf0;text-decoration:none;font-weight:bold;">Посмотреть бейдж</a>
+            </td>
+          </tr>
+          </table>
+        </td>
+        <td class="stackcell">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center" bgcolor="#1b1e2e" style="border:1px solid #2f3349;border-radius:8px;">
+              <a href="{{ .shareUrl }}" style="display:block;padding:13px 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;mso-line-height-rule:exactly;color:#b6b9cb;text-decoration:none;">Поделиться</a>
+            </td>
+          </tr>
+          </table>
+        </td>
+      </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:26px 32px 26px 32px;border-top:1px solid #24273a;">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:19px;mso-line-height-rule:exactly;color:#7e8298;">Письмо отправлено, потому что в настройках включены уведомления о достижениях.</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:19px;mso-line-height-rule:exactly;color:#7e8298;padding-top:10px;">
+        <a href="{{ .notificationSettingsUrl }}" style="color:#9184d9;text-decoration:underline;">Настроить уведомления</a>
+        &nbsp;·&nbsp;
+        <a href="{{ .unsubscribeUrl }}" style="color:#9184d9;text-decoration:underline;">Отписаться</a>
+      </div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:18px;mso-line-height-rule:exactly;color:#5f6377;padding-top:10px;">RealTimeMap, 12 rue du Dôme, 67000 Strasbourg, France</div>
+    </td>
+  </tr>
+
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
