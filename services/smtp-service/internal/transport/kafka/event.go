@@ -11,7 +11,40 @@ import (
 const (
 	EventUserRegistered = events.UserRegistered
 	EventCommentCreated = events.CommentCreated
+
+	// Письма аккаунта. Адрес и токены приходят в событии: токены подписаны
+	// секретом auth-сервиса, а спрашивать адрес по gRPC на каждое такое
+	// письмо незачем — auth его уже знает в момент публикации.
+	EventUserVerifyRequested   = events.UserVerifyRequested
+	EventUserPasswordForgotten = events.UserPasswordForgotten
+	EventUserPasswordChanged   = events.UserPasswordChanged
+	EventUserLoggedIn          = events.UserLoggedIn
 )
+
+// decodePayload разбирает payload события известного типа.
+//
+// Дженерик поверх конверта: у всех событий аккаунта одинаковая форма
+// {type, payload}, и отдельная функция на каждое отличалась бы только типом.
+func decodePayload[T any](body []byte) (T, error) {
+	var envelope struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	var zero T
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return zero, fmt.Errorf("unmarshal envelope: %w", err)
+	}
+
+	raw := envelope.Payload
+	if len(raw) == 0 {
+		raw = body
+	}
+
+	var payload T
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return zero, fmt.Errorf("unmarshal payload: %w", err)
+	}
+	return payload, nil
+}
 
 // UserRegistered — событие регистрации пользователя из auth-сервиса.
 //

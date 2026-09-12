@@ -13,11 +13,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	userclient "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/user"
 	pkgkafka "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/consumer"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/email"
 	segmentio "github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
@@ -87,6 +89,14 @@ func (h *Handler) HandleMessage(ctx context.Context, msg segmentio.Message) erro
 		return h.handleUserRegistered(ctx, msg)
 	case EventCommentCreated:
 		return h.handleCommentCreated(ctx, msg)
+	case EventUserVerifyRequested:
+		return h.handleVerifyRequested(ctx, msg)
+	case EventUserPasswordForgotten:
+		return h.handlePasswordForgotten(ctx, msg)
+	case EventUserPasswordChanged:
+		return h.handlePasswordChanged(ctx, msg)
+	case EventUserLoggedIn:
+		return h.handleLoggedIn(ctx, msg)
 	default:
 		// Топик может содержать события, до которых сервису нет дела.
 		return nil
@@ -97,11 +107,6 @@ func (h *Handler) handleUserRegistered(ctx context.Context, msg segmentio.Messag
 	event, err := decodeUserRegistered(msg.Value)
 	if err != nil {
 		return consumer.Skip(err)
-	}
-
-	traceID := pkgkafka.GetHeader(msg, "X-Trace-Id")
-	if traceID == "" {
-		traceID = pkgkafka.GetHeader(msg, "trace_id")
 	}
 
 	res, err := h.emails.Enqueue(ctx, email.EnqueueInput{
@@ -120,7 +125,7 @@ func (h *Handler) handleUserRegistered(ctx context.Context, msg segmentio.Messag
 		// Хеш включил бы registered_at и рассыпался бы, начни продюсер слать
 		// его иначе.
 		IdempotencyKey: fmt.Sprintf("%s:%d", EventUserRegistered, event.UserID),
-		TraceID:        traceID,
+		TraceID:        traceID(msg),
 	})
 	if err != nil {
 		return h.classifyEnqueueError(err, event)
@@ -197,11 +202,6 @@ func (h *Handler) handleCommentCreated(ctx context.Context, msg segmentio.Messag
 		return h.classifyLookupError(err, *payload.ParentUserID)
 	}
 
-	traceID := pkgkafka.GetHeader(msg, "X-Trace-Id")
-	if traceID == "" {
-		traceID = pkgkafka.GetHeader(msg, "trace_id")
-	}
-
 	userID := uint64(*payload.ParentUserID)
 	res, err := h.emails.Enqueue(ctx, email.EnqueueInput{
 		TemplateID: "commentReply",
@@ -217,7 +217,7 @@ func (h *Handler) handleCommentCreated(ctx context.Context, msg segmentio.Messag
 		// Ключ по комментарию-ответу: одно письмо на один ответ, независимо
 		// от того, сколько раз событие приехало.
 		IdempotencyKey: fmt.Sprintf("%s:%d", EventCommentCreated, payload.CommentID),
-		TraceID:        traceID,
+		TraceID:        traceID(msg),
 	})
 	if err != nil {
 		return h.classifyEnqueueErrorFor(err, "comment reply", zap.Uint("comment_id", payload.CommentID))
@@ -287,4 +287,220 @@ func (h *Handler) commentURL(entityID, commentID uint) string {
 // между окружениями и меняется через конфиг, не через правку шаблонов.
 func (h *Handler) frontendPath(path string) string {
 	return strings.TrimRight(h.frontendURL, "/") + path
+}
+
+// --- письма аккаунта ---
+//
+// Все четыре события приходят от auth-сервиса и несут адрес получателя прямо
+// в payload: письмо про смену пароля или вход должно уйти даже когда
+// UserService недоступен, а токены всё равно генерирует auth.
+
+func (h *Handler) handleVerifyRequested(ctx context.Context, msg segmentio.Message) error {
+	event, err := decodePayload[events.UserVerifyRequestedPayload](msg.Value)
+	if err != nil {
+		return consumer.Skip(err)
+	}
+
+	return h.enqueueAccountEmail(ctx, msg, accountEmail{
+		template:  "verifyEmail",
+		eventType: EventUserVerifyRequested,
+		userID:    event.UserID,
+		toEmail:   event.Email,
+		// Ключ включает ссылку: пользователь может запросить подтверждение
+		// повторно, и второе письмо с новым токеном обязано уйти.
+		key: fmt.Sprintf("%s:%d:%s", EventUserVerifyRequested, event.UserID, event.VerifyURL),
+		data: map[string]any{
+			"email":      event.Email,
+			"code":       event.Code,
+			"ttlMinutes": ttlOr(event.TTLMinutes, 30),
+			"verifyUrl":  event.VerifyURL,
+		},
+	})
+}
+
+func (h *Handler) handlePasswordForgotten(ctx context.Context, msg segmentio.Message) error {
+	event, err := decodePayload[events.UserPasswordForgottenPayload](msg.Value)
+	if err != nil {
+		return consumer.Skip(err)
+	}
+
+	ttl := ttlOr(event.TTLMinutes, 60)
+	requested := orNow(event.RequestedAt)
+
+	return h.enqueueAccountEmail(ctx, msg, accountEmail{
+		template:  "passwordReset",
+		eventType: EventUserPasswordForgotten,
+		userID:    event.UserID,
+		toEmail:   event.Email,
+		// Ссылка входит в ключ: повторный запрос сброса должен дойти.
+		key: fmt.Sprintf("%s:%d:%s", EventUserPasswordForgotten, event.UserID, event.ResetURL),
+		data: map[string]any{
+			"username":    event.Username,
+			"resetUrl":    event.ResetURL,
+			"ttlMinutes":  ttl,
+			"requestedAt": formatMoment(requested),
+			"device":      deviceOr(event.Device, event.IPAddress),
+			"expiresAt":   formatTime(requested.Add(time.Duration(ttl) * time.Minute)),
+			"securityUrl": h.frontendPath("/security"),
+		},
+	})
+}
+
+func (h *Handler) handlePasswordChanged(ctx context.Context, msg segmentio.Message) error {
+	event, err := decodePayload[events.UserPasswordChangedPayload](msg.Value)
+	if err != nil {
+		return consumer.Skip(err)
+	}
+
+	changed := orNow(event.ChangedAt)
+
+	return h.enqueueAccountEmail(ctx, msg, accountEmail{
+		template:  "passwordChanged",
+		eventType: EventUserPasswordChanged,
+		userID:    event.UserID,
+		toEmail:   event.Email,
+		key:       fmt.Sprintf("%s:%d:%d", EventUserPasswordChanged, event.UserID, changed.Unix()),
+		data: map[string]any{
+			"username":    event.Username,
+			"changedAt":   formatMoment(changed),
+			"device":      deviceOr(event.Device, event.IPAddress),
+			"ipAddress":   valueOr(event.IPAddress, "неизвестен"),
+			"resetUrl":    h.frontendPath("/password/reset"),
+			"securityUrl": h.frontendPath("/security"),
+		},
+	})
+}
+
+func (h *Handler) handleLoggedIn(ctx context.Context, msg segmentio.Message) error {
+	event, err := decodePayload[events.UserLoggedInPayload](msg.Value)
+	if err != nil {
+		return consumer.Skip(err)
+	}
+
+	signedIn := orNow(event.SignedInAt)
+
+	return h.enqueueAccountEmail(ctx, msg, accountEmail{
+		template:  "newSignIn",
+		eventType: EventUserLoggedIn,
+		userID:    event.UserID,
+		toEmail:   event.Email,
+		// Ключ по моменту входа: каждый вход — отдельное письмо, но повторная
+		// доставка того же события второго письма не создаёт.
+		key: fmt.Sprintf("%s:%d:%d", EventUserLoggedIn, event.UserID, signedIn.Unix()),
+		data: map[string]any{
+			"username":    event.Username,
+			"signedInAt":  formatMoment(signedIn),
+			"device":      deviceOr(event.Device, event.IPAddress),
+			"location":    valueOr(event.Location, "не определено"),
+			"ipAddress":   valueOr(event.IPAddress, "неизвестен"),
+			"sessionsUrl": h.frontendPath("/security/sessions"),
+			"securityUrl": h.frontendPath("/security"),
+		},
+	})
+}
+
+// accountEmail — общая часть постановки письма аккаунта в очередь.
+type accountEmail struct {
+	template  string
+	eventType string
+	userID    uint64
+	toEmail   string
+	key       string
+	data      map[string]any
+}
+
+// enqueueAccountEmail ставит письмо и разбирает ошибку одинаково для всех
+// событий аккаунта: у них различаются только шаблон и данные.
+func (h *Handler) enqueueAccountEmail(ctx context.Context, msg segmentio.Message, in accountEmail) error {
+	if strings.TrimSpace(in.toEmail) == "" {
+		// Без адреса письмо построить не из чего, и повтор не поможет.
+		h.logger.Warn("skipping account email: event carries no recipient",
+			zap.String("event_type", in.eventType),
+			zap.Uint64("user_id", in.userID),
+		)
+		return consumer.Skip(errors.New("event carries no recipient address"))
+	}
+
+	res, err := h.emails.Enqueue(ctx, email.EnqueueInput{
+		TemplateID:     in.template,
+		ToEmail:        in.toEmail,
+		UserID:         &in.userID,
+		Data:           in.data,
+		IdempotencyKey: in.key,
+		TraceID:        traceID(msg),
+	})
+	if err != nil {
+		return h.classifyEnqueueErrorFor(err, in.template,
+			zap.String("event_type", in.eventType),
+			zap.Uint64("user_id", in.userID),
+		)
+	}
+
+	if res.Duplicate {
+		h.logger.Debug("account email already queued",
+			zap.String("template", in.template),
+			zap.Uint64("user_id", in.userID),
+		)
+		return nil
+	}
+
+	h.logger.Info("account email queued",
+		zap.String("template", in.template),
+		zap.Uint64("user_id", in.userID),
+		zap.String("to", email.MaskEmail(in.toEmail)),
+	)
+	return nil
+}
+
+// traceID достаёт идентификатор трассировки из заголовков сообщения.
+func traceID(msg segmentio.Message) string {
+	if id := pkgkafka.GetHeader(msg, "X-Trace-Id"); id != "" {
+		return id
+	}
+	return pkgkafka.GetHeader(msg, "trace_id")
+}
+
+// orNow подставляет текущее время вместо нулевого: продюсер может не заполнить
+// момент события, а письмо без даты бесполезно как сигнал безопасности.
+func orNow(t time.Time) time.Time {
+	if t.IsZero() {
+		return time.Now().UTC()
+	}
+	return t
+}
+
+func ttlOr(v, fallback uint) uint {
+	if v == 0 {
+		return fallback
+	}
+	return v
+}
+
+func valueOr(v, fallback string) string {
+	if strings.TrimSpace(v) == "" {
+		return fallback
+	}
+	return v
+}
+
+// deviceOr описывает устройство, откатываясь на IP, когда User-Agent не
+// разобран: шаблон требует поле непустым, а «неизвестно» пользователю
+// бесполезно, если адрес всё же известен.
+func deviceOr(device, ip string) string {
+	if d := strings.TrimSpace(device); d != "" {
+		return d
+	}
+	if ip = strings.TrimSpace(ip); ip != "" {
+		return "устройство с адреса " + ip
+	}
+	return "неизвестное устройство"
+}
+
+// formatMoment и formatTime дают человекочитаемые дату и время в письме.
+func formatMoment(t time.Time) string {
+	return t.Format("02.01.2006, 15:04")
+}
+
+func formatTime(t time.Time) string {
+	return t.Format("15:04")
 }

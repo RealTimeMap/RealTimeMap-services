@@ -62,8 +62,11 @@ var registry = map[string]meta{
 		},
 	},
 	"verifyEmail": {
+		// code в контракт не входит: auth-сервис выдаёт ссылку всегда, а
+		// короткий код — не обязательно. Требовать его значило бы не отправить
+		// письмо подтверждения вовсе.
 		subject:      "Подтвердите адрес почты — RealTimeMap",
-		requiredData: []string{"email", "code", "ttlMinutes", "verifyUrl"},
+		requiredData: []string{"email", "ttlMinutes", "verifyUrl"},
 	},
 	"passwordReset": {
 		// device/requestedAt/expiresAt описывают запрос: без них пользователь
@@ -74,6 +77,10 @@ var registry = map[string]meta{
 	"newSignIn": {
 		subject:      "Новый вход в ваш аккаунт — RealTimeMap",
 		requiredData: []string{"username", "signedInAt", "device", "location", "ipAddress", "sessionsUrl", "securityUrl"},
+	},
+	"passwordChanged": {
+		subject:      "Пароль изменён — RealTimeMap",
+		requiredData: []string{"username", "changedAt", "device", "ipAddress", "resetUrl", "securityUrl"},
 	},
 }
 

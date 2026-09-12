@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"fmt"
 
@@ -566,5 +567,153 @@ func TestCommentReplyDataSatisfiesTemplate(t *testing.T) {
 	}
 	if !strings.Contains(enq.rendered[0].HTML, "Согласен, отличное место") {
 		t.Error("reply body has no comment text")
+	}
+}
+
+// --- письма аккаунта ---
+
+// accountMessage собирает событие аккаунта в общем конверте.
+func accountMessage(t *testing.T, eventType string, payload any) segmentio.Message {
+	t.Helper()
+
+	body, err := json.Marshal(map[string]any{
+		"id":        "evt-1",
+		"type":      eventType,
+		"timestamp": time.Now().UTC(),
+		"payload":   payload,
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	return segmentio.Message{Topic: "user-service", Value: body}
+}
+
+// Каждое событие аккаунта должно давать письмо своего шаблона, адресованное
+// получателю из события — UserService для них не опрашивается.
+func TestAccountEventsQueueTheirTemplates(t *testing.T) {
+	cases := []struct {
+		name      string
+		eventType string
+		payload   any
+		template  string
+	}{
+		{
+			name:      "подтверждение адреса",
+			eventType: events.UserVerifyRequested,
+			payload: events.UserVerifyRequestedPayload{
+				UserID: 7, Username: "user", Email: "user@example.com",
+				VerifyURL: "https://realtimemap.ru/verify?token=t1", TTLMinutes: 30,
+			},
+			template: "verifyEmail",
+		},
+		{
+			name:      "сброс пароля",
+			eventType: events.UserPasswordForgotten,
+			payload: events.UserPasswordForgottenPayload{
+				UserID: 7, Username: "user", Email: "user@example.com",
+				ResetURL: "https://realtimemap.ru/reset?token=t2", TTLMinutes: 60,
+				RequestedAt: time.Now().UTC(), Device: "iPhone · Safari",
+			},
+			template: "passwordReset",
+		},
+		{
+			name:      "пароль изменён",
+			eventType: events.UserPasswordChanged,
+			payload: events.UserPasswordChangedPayload{
+				UserID: 7, Username: "user", Email: "user@example.com",
+				ChangedAt: time.Now().UTC(), IPAddress: "92.184.16.44",
+			},
+			template: "passwordChanged",
+		},
+		{
+			name:      "вход в аккаунт",
+			eventType: events.UserLoggedIn,
+			payload: events.UserLoggedInPayload{
+				UserID: 7, Username: "user", Email: "user@example.com",
+				SignedInAt: time.Now().UTC(), Device: "Chrome", Location: "Страсбург",
+			},
+			template: "newSignIn",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Рендер настоящий: он ловит расхождение данных с контрактом шаблона.
+			h, enq := newRenderingHandler(t, &stubUsers{})
+
+			msg := accountMessage(t, tc.eventType, tc.payload)
+			if err := h.HandleMessage(context.Background(), msg); err != nil {
+				t.Fatalf("handle: %v", err)
+			}
+			if len(enq.rendered) != 1 {
+				t.Fatalf("rendered %d emails, want 1", len(enq.rendered))
+			}
+			if enq.rendered[0].TemplateID != tc.template {
+				t.Errorf("template = %q, want %q", enq.rendered[0].TemplateID, tc.template)
+			}
+		})
+	}
+}
+
+// Адрес приходит в событии: без него письмо построить не из чего, и повтор
+// не поможет — сообщение в топике не изменится.
+func TestAccountEventWithoutRecipientIsSkipped(t *testing.T) {
+	enq := &recordingEnqueuer{}
+	h := newHandlerWithUsers(enq, &stubUsers{})
+
+	msg := accountMessage(t, events.UserLoggedIn, events.UserLoggedInPayload{
+		UserID: 7, Username: "user", Email: "",
+	})
+
+	err := h.HandleMessage(context.Background(), msg)
+	if !errors.Is(err, consumer.ErrSkip) {
+		t.Errorf("error = %v, want skip", err)
+	}
+	if errors.Is(err, consumer.ErrRetryable) {
+		t.Error("missing address marked retryable — partition would stall forever")
+	}
+	if enq.count() != 0 {
+		t.Error("email queued without a recipient")
+	}
+}
+
+// Каждый вход — отдельное письмо, но повторная доставка того же события
+// второго письма создавать не должна.
+func TestLoginKeyIsPerSignIn(t *testing.T) {
+	enq := &recordingEnqueuer{}
+	h := newHandlerWithUsers(enq, &stubUsers{})
+
+	moment := time.Now().UTC()
+	same := events.UserLoggedInPayload{
+		UserID: 7, Username: "user", Email: "user@example.com", SignedInAt: moment,
+	}
+	later := same
+	later.SignedInAt = moment.Add(time.Hour)
+
+	for _, p := range []events.UserLoggedInPayload{same, same, later} {
+		if err := h.HandleMessage(context.Background(), accountMessage(t, events.UserLoggedIn, p)); err != nil {
+			t.Fatalf("handle: %v", err)
+		}
+	}
+
+	if enq.calls[0].IdempotencyKey != enq.calls[1].IdempotencyKey {
+		t.Error("same sign-in produced different keys")
+	}
+	if enq.calls[1].IdempotencyKey == enq.calls[2].IdempotencyKey {
+		t.Error("different sign-ins share a key — the second email would be lost")
+	}
+}
+
+// Продюсер может не прислать устройство; письмо всё равно должно уйти —
+// шаблон требует поле непустым.
+func TestDeviceFallsBackToAddress(t *testing.T) {
+	if got := deviceOr("", "10.0.0.1"); got != "устройство с адреса 10.0.0.1" {
+		t.Errorf("deviceOr with ip = %q", got)
+	}
+	if got := deviceOr("  ", ""); got != "неизвестное устройство" {
+		t.Errorf("deviceOr empty = %q", got)
+	}
+	if got := deviceOr("Chrome", "10.0.0.1"); got != "Chrome" {
+		t.Errorf("deviceOr prefers device, got %q", got)
 	}
 }
