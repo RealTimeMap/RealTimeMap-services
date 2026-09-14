@@ -40,6 +40,8 @@ type SyncGroupDTO struct {
 	Revision    uint    `json:"revision"`
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty"`
+	Color       string  `json:"color"`
+	Icon        string  `json:"icon"`
 }
 
 // ToSyncMarkDTO конвертирует доменную модель в DTO. Вызывается из
@@ -80,6 +82,8 @@ func ToSyncGroupDTO(g srv.Group) any {
 		Revision:    g.Revision,
 		Name:        g.Name,
 		Description: g.Description,
+		Color:       g.Color,
+		Icon:        g.Icon,
 	}
 }
 

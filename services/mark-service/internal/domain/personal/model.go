@@ -50,6 +50,8 @@ type Group struct {
 	Description *string
 	Revision    uint `gorm:"not null;index:idx_group_owner_rev,priority:2"`
 	UserID      uint `gorm:"not null;index:idx_group_owner_rev,priority:1;uniqueIndex:idx_group_user_name,priority:1"`
+	Color       string
+	Icon        string
 }
 
 func (Group) TableName() string {

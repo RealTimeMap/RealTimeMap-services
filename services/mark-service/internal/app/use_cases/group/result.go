@@ -11,6 +11,8 @@ type GroupResult struct {
 	UserID      uint
 	Name        string
 	Description *string
+	Color       string
+	Icon        string
 	CreatedAt   time.Time
 }
 
@@ -20,6 +22,8 @@ func toGroupResult(obj *srv.Group) GroupResult {
 		UserID:      obj.UserID,
 		Name:        obj.Name,
 		Description: obj.Description,
+		Color:       obj.Color,
+		Icon:        obj.Icon,
 		CreatedAt:   obj.CreatedAt,
 	}
 }

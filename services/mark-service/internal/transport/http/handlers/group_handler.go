@@ -45,12 +45,17 @@ type (
 	CreateGroupRequest struct {
 		Name        string  `json:"name" binding:"required"`
 		Description *string `json:"description"`
+		// Color — hex-код вида #RRGGBB, Icon — имя иконки из iconfy.
+		Color string `json:"color" binding:"omitempty,max=7"`
+		Icon  string `json:"icon" binding:"omitempty,max=128"`
 	}
 	GroupResponse struct {
 		ID          uint      `json:"id"`
 		UserID      uint      `json:"userId"`
 		Name        string    `json:"name"`
 		Description *string   `json:"description"`
+		Color       string    `json:"color"`
+		Icon        string    `json:"icon"`
 		CreatedAt   time.Time `json:"createdAt"`
 	}
 )
@@ -61,6 +66,8 @@ func ToGroupResponse(obj group.GroupResult) GroupResponse {
 		UserID:      obj.UserID,
 		Name:        obj.Name,
 		Description: obj.Description,
+		Color:       obj.Color,
+		Icon:        obj.Icon,
 		CreatedAt:   obj.CreatedAt,
 	}
 }
@@ -82,12 +89,14 @@ func (h *groupHandler) CreateGroup(c *gin.Context) {
 		Name:        req.Name,
 		Description: req.Description,
 		UserID:      uint(userInfo.UserID),
+		Color:       req.Color,
+		Icon:        req.Icon,
 	})
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
-	c.JSON(http.StatusOK, ToGroupResponse(obj))
+	c.JSON(http.StatusCreated, ToGroupResponse(obj))
 }
 
 func (h *groupHandler) List(c *gin.Context) {
@@ -148,6 +157,8 @@ func (h *groupHandler) Get(c *gin.Context) {
 type UpdateGroupRequest struct {
 	Name        *string `json:"name" binding:"omitempty,min=1,max=255"`
 	Description *string `json:"description"`
+	Color       *string `json:"color" binding:"omitempty,max=7"`
+	Icon        *string `json:"icon" binding:"omitempty,max=128"`
 }
 
 func (h *groupHandler) Update(c *gin.Context) {
@@ -175,6 +186,8 @@ func (h *groupHandler) Update(c *gin.Context) {
 		UserID:      uint(userInfo.UserID),
 		Name:        req.Name,
 		Description: req.Description,
+		Color:       req.Color,
+		Icon:        req.Icon,
 	})
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)

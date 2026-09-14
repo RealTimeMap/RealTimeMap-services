@@ -16,6 +16,8 @@ type CreateGroupCommand struct {
 	Name        string
 	Description *string
 	UserID      uint
+	Color       string
+	Icon        string
 }
 
 type CreateGroupHandler struct {
@@ -37,6 +39,8 @@ func (h *CreateGroupHandler) Handle(ctx context.Context, cmd CreateGroupCommand)
 		Name:        cmd.Name,
 		Description: cmd.Description,
 		UserID:      cmd.UserID,
+		Color:       cmd.Color,
+		Icon:        cmd.Icon,
 	})
 	if err != nil {
 		return GroupResult{}, err
