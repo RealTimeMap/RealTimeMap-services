@@ -1594,12 +1594,6 @@
             "description": "Описание метки"
           },
           {
-            "name": "category",
-            "type": "string",
-            "required": true,
-            "description": "Категория метки"
-          },
-          {
             "name": "icon",
             "type": "string",
             "required": true,
@@ -1630,7 +1624,7 @@
             "description": "Широта (-90 до 90)"
           },
           {
-            "name": "groupsId",
+            "name": "groupsIds",
             "type": "integer[]",
             "required": true,
             "description": "ID групп пользователя, к которым привязывается метка"
@@ -1645,13 +1639,12 @@
         "example": {
           "title": "Любимая кофейня",
           "description": "Тут хороший фильтр",
-          "category": "food",
           "icon": "coffee",
           "color": "#8B5A2B",
           "isVisible": true,
           "longitude": 37.6176,
           "latitude": 55.7558,
-          "groupsId": [
+          "groupsIds": [
             1,
             2
           ],
@@ -1785,12 +1778,6 @@
                           "description": "Описание метки"
                         },
                         {
-                          "name": "category",
-                          "type": "string",
-                          "required": true,
-                          "description": "Категория метки"
-                        },
-                        {
                           "name": "color",
                           "type": "string",
                           "required": true,
@@ -1815,7 +1802,7 @@
                           "description": "Отображается ли метка на карте"
                         },
                         {
-                          "name": "groupIds",
+                          "name": "groupsIds",
                           "type": "integer[]",
                           "required": true,
                           "description": "ID групп, к которым привязана метка"
@@ -1948,12 +1935,11 @@
                     "revision": 42,
                     "title": "Любимая кофейня",
                     "description": "Тут хороший фильтр",
-                    "category": "food",
                     "color": "#8B5A2B",
                     "icon": "coffee",
                     "isShare": false,
                     "isVisible": true,
-                    "groupIds": [
+                    "groupsIds": [
                       1
                     ],
                     "photos": [
@@ -2079,12 +2065,6 @@
               "description": "Описание метки"
             },
             {
-              "name": "category",
-              "type": "string",
-              "required": true,
-              "description": "Категория метки"
-            },
-            {
               "name": "color",
               "type": "string",
               "required": true,
@@ -2109,7 +2089,7 @@
               "description": "Отображается ли метка на карте"
             },
             {
-              "name": "groupIds",
+              "name": "groupsIds",
               "type": "integer[]",
               "required": true,
               "description": "ID групп, к которым привязана метка"
@@ -2143,12 +2123,11 @@
             },
             "title": "Любимая кофейня",
             "description": "Тут вкусный раф",
-            "category": "food",
             "color": "#8B5A2B",
             "icon": "coffee",
             "isShare": false,
             "isVisible": true,
-            "groupIds": [
+            "groupsIds": [
               1,
               2
             ],
@@ -2203,12 +2182,6 @@
             "description": "Описание метки"
           },
           {
-            "name": "category",
-            "type": "string",
-            "required": false,
-            "description": "Категория метки"
-          },
-          {
             "name": "icon",
             "type": "string",
             "required": false,
@@ -2239,7 +2212,7 @@
             "description": "Широта (-90 до 90). Передаётся только вместе с longitude"
           },
           {
-            "name": "groupsId",
+            "name": "groupsIds",
             "type": "integer[]",
             "required": false,
             "description": "ID групп. Если передан, полностью заменяет текущий состав групп"

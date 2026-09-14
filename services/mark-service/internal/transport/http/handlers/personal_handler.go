@@ -48,7 +48,6 @@ func InitPersonalMarkHandler(g *gin.RouterGroup, deps PersonalDeps) {
 type CreatePersonalMarkRequest struct {
 	Title       string  `form:"title" binding:"required"`
 	Description *string `form:"description" binding:"-"`
-	Category    string  `form:"category" binding:"required"`
 	Icon        string  `form:"icon" binding:"required"`
 	Color       string  `form:"color" binding:"required"`
 	IsVisible   bool    `form:"isVisible"`
@@ -56,7 +55,7 @@ type CreatePersonalMarkRequest struct {
 	Longitude float64 `form:"longitude" binding:"required,longitude"`
 	Latitude  float64 `form:"latitude" binding:"required,latitude"`
 
-	GroupsIds []uint                  `form:"groupsId" binding:"required"`
+	GroupsIds []uint                  `form:"groupsIds" binding:"required"`
 	Photos    []*multipart.FileHeader `form:"photos" binding:"-"`
 }
 
@@ -85,7 +84,6 @@ func (h *personalHandler) Create(c *gin.Context) {
 		Geom:        types.Point{Point: orb.Point{req.Longitude, req.Latitude}},
 		Title:       req.Title,
 		Description: req.Description,
-		Category:    req.Category,
 		Color:       req.Color,
 		Icon:        req.Icon,
 		IsVisible:   req.IsVisible,
@@ -166,7 +164,6 @@ func (h *personalHandler) Get(c *gin.Context) {
 type UpdatePersonalMarkRequest struct {
 	Title       *string `form:"title" binding:"omitempty"`
 	Description *string `form:"description" binding:"-"`
-	Category    *string `form:"category" binding:"omitempty"`
 	Icon        *string `form:"icon" binding:"omitempty"`
 	Color       *string `form:"color" binding:"omitempty"`
 	IsVisible   *bool   `form:"isVisible" binding:"omitempty"`
@@ -174,7 +171,7 @@ type UpdatePersonalMarkRequest struct {
 	Longitude *float64 `form:"longitude" binding:"omitempty,longitude"`
 	Latitude  *float64 `form:"latitude" binding:"omitempty,latitude"`
 
-	GroupsIds []uint `form:"groupsId" binding:"-"`
+	GroupsIds []uint `form:"groupsIds" binding:"-"`
 
 	PhotosToDelete []string                `form:"photosToDelete" binding:"-"`
 	Photos         []*multipart.FileHeader `form:"photos" binding:"-"`
@@ -227,7 +224,6 @@ func (h *personalHandler) Update(c *gin.Context) {
 		Geom:           geom,
 		Title:          req.Title,
 		Description:    req.Description,
-		Category:       req.Category,
 		Color:          req.Color,
 		Icon:           req.Icon,
 		IsVisible:      req.IsVisible,

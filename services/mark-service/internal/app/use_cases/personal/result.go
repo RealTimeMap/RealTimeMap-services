@@ -22,7 +22,6 @@ type SyncMarkDTO struct {
 
 	Title       string  `json:"title"`
 	Description *string `json:"description,omitempty"`
-	Category    string  `json:"category"`
 
 	Color string `json:"color"`
 	Icon  string `json:"icon"`
@@ -30,7 +29,7 @@ type SyncMarkDTO struct {
 	IsShare   bool `json:"isShare"`
 	IsVisible bool `json:"isVisible"`
 
-	GroupIDs []uint   `json:"groupIds"`
+	GroupIDs []uint   `json:"groupsIds"`
 	Photos   []string `json:"photos"`
 }
 
@@ -66,7 +65,6 @@ func ToSyncMarkDTO(m srv.Model) any {
 		Geom:        m.Geom,
 		Title:       m.Title,
 		Description: m.Description,
-		Category:    m.Category,
 		Color:       m.Color,
 		Icon:        m.Icon,
 		IsShare:     m.IsShare,
@@ -97,7 +95,6 @@ type PersonalMarkDetailResult struct {
 
 	Title       string  `json:"title"`
 	Description *string `json:"description,omitempty"`
-	Category    string  `json:"category"`
 
 	Color string `json:"color"`
 	Icon  string `json:"icon"`
@@ -105,7 +102,7 @@ type PersonalMarkDetailResult struct {
 	IsShare   bool `json:"isShare"`
 	IsVisible bool `json:"isVisible"`
 
-	GroupIDs []uint   `json:"groupIds"`
+	GroupIDs []uint   `json:"groupsIds"`
 	Photos   []string `json:"photos"`
 
 	CreatedAt time.Time `json:"createdAt"`
@@ -133,7 +130,6 @@ func toPersonalMarkDetailResult(m srv.Model) PersonalMarkDetailResult {
 		Geom:        m.Geom,
 		Title:       m.Title,
 		Description: m.Description,
-		Category:    m.Category,
 		Color:       m.Color,
 		Icon:        m.Icon,
 		IsShare:     m.IsShare,

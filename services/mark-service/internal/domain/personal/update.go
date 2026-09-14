@@ -16,7 +16,6 @@ type UpdatePersonalMarkParams struct {
 
 	Title       *string
 	Description *string
-	Category    *string
 	Color       *string
 	Icon        *string
 
@@ -95,9 +94,6 @@ func applyUpdates(obj *Model, params UpdatePersonalMarkParams) {
 	}
 	if params.Description != nil {
 		obj.Description = params.Description
-	}
-	if params.Category != nil {
-		obj.Category = *params.Category
 	}
 	if params.Color != nil {
 		obj.Color = *params.Color

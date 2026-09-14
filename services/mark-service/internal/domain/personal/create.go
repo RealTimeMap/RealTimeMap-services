@@ -14,7 +14,6 @@ type CreatePersonalMarkParams struct {
 
 	Title       string
 	Description *string
-	Category    string
 	Color       string
 	Icon        string // Иконка из iconfy
 
@@ -63,7 +62,6 @@ func (s *Service) Create(ctx context.Context, params CreatePersonalMarkParams) (
 			IsVisible:   params.IsVisible,
 			Title:       params.Title,
 			Description: params.Description,
-			Category:    params.Category,
 			Color:       params.Color,
 			Icon:        params.Icon,
 			Photos:      photos,

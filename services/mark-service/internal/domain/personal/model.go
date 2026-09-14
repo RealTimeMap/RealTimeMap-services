@@ -24,7 +24,6 @@ type Model struct {
 	Title       string
 	Description *string
 	Photos      types.Photos `gorm:"type:jsonb"`
-	Category    string
 
 	// Информация для UI
 	Color string

@@ -26,7 +26,6 @@ type CreatePersonalMarkCommand struct {
 
 	Title       string
 	Description *string
-	Category    string
 	Color       string
 	Icon        string
 
