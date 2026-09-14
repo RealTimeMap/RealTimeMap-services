@@ -35,7 +35,6 @@ type UpdatePersonalMarkCommand struct {
 
 	Title       *string
 	Description *string
-	Category    *string
 	Color       *string
 	Icon        *string
 
@@ -55,7 +54,6 @@ func (h *UpdatePersonalHandler) Handle(ctx context.Context, cmd UpdatePersonalMa
 		Geom:           cmd.Geom,
 		Title:          cmd.Title,
 		Description:    cmd.Description,
-		Category:       cmd.Category,
 		Color:          cmd.Color,
 		Icon:           cmd.Icon,
 		IsVisible:      cmd.IsVisible,

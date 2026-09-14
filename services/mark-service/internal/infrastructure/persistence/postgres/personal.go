@@ -92,7 +92,6 @@ func (r *PgPersonalMarkRepository) Update(ctx context.Context, obj *personal.Mod
 			"geom",
 			"title",
 			"description",
-			"category",
 			"color",
 			"icon",
 			"is_visible",
