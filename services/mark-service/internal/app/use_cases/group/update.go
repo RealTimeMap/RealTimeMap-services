@@ -31,6 +31,8 @@ type UpdateGroupCommand struct {
 
 	Name        *string
 	Description *string
+	Color       *string
+	Icon        *string
 }
 
 func (h *UpdateGroupHandler) Handle(ctx context.Context, cmd UpdateGroupCommand) (GroupResult, error) {
@@ -40,6 +42,8 @@ func (h *UpdateGroupHandler) Handle(ctx context.Context, cmd UpdateGroupCommand)
 	obj, err := h.updater.UpdateGroup(ctx, srv.UpdateGroupParams{
 		Name:        cmd.Name,
 		Description: cmd.Description,
+		Color:       cmd.Color,
+		Icon:        cmd.Icon,
 	}, cmd.GroupID, cmd.UserID)
 	if err != nil {
 		return GroupResult{}, err

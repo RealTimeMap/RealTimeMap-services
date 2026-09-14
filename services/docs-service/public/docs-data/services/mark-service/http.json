@@ -1883,6 +1883,18 @@
                           "type": "string",
                           "required": false,
                           "description": "Описание группы"
+                        },
+                        {
+                          "name": "color",
+                          "type": "string",
+                          "required": false,
+                          "description": "Hex-код цвета группы вида #RRGGBB"
+                        },
+                        {
+                          "name": "icon",
+                          "type": "string",
+                          "required": false,
+                          "description": "Название иконки из iconfy"
                         }
                       ]
                     },
@@ -1970,7 +1982,9 @@
                     "id": 1,
                     "revision": 40,
                     "name": "Кофейни",
-                    "description": null
+                    "description": null,
+                    "color": "#8B5A2B",
+                    "icon": "mdi:coffee-outline"
                   }
                 ],
                 "removed": [],
@@ -2347,11 +2361,25 @@
             "type": "string",
             "required": false,
             "description": "Описание группы"
+          },
+          {
+            "name": "color",
+            "type": "string",
+            "required": false,
+            "description": "Hex-код цвета группы вида #RRGGBB. Некорректный формат отклоняется"
+          },
+          {
+            "name": "icon",
+            "type": "string",
+            "required": false,
+            "description": "Название иконки из iconfy (до 128 символов)"
           }
         ],
         "example": {
           "name": "Кофейни",
-          "description": "Места с хорошим кофе"
+          "description": "Места с хорошим кофе",
+          "color": "#8B5A2B",
+          "icon": "mdi:coffee-outline"
         }
       },
       "responses": [
@@ -2384,6 +2412,18 @@
               "description": "Описание группы"
             },
             {
+              "name": "color",
+              "type": "string",
+              "required": false,
+              "description": "Hex-код цвета группы вида #RRGGBB"
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "required": false,
+              "description": "Название иконки из iconfy"
+            },
+            {
               "name": "createdAt",
               "type": "string",
               "required": true,
@@ -2395,6 +2435,8 @@
             "userId": 3,
             "name": "Кофейни",
             "description": "Места с хорошим кофе",
+            "color": "#8B5A2B",
+            "icon": "mdi:coffee-outline",
             "createdAt": "2026-09-09T10:15:00Z"
           }
         }
@@ -2470,6 +2512,18 @@
                   "description": "Описание группы"
                 },
                 {
+                  "name": "color",
+                  "type": "string",
+                  "required": false,
+                  "description": "Hex-код цвета группы вида #RRGGBB"
+                },
+                {
+                  "name": "icon",
+                  "type": "string",
+                  "required": false,
+                  "description": "Название иконки из iconfy"
+                },
+                {
                   "name": "createdAt",
                   "type": "string",
                   "required": true,
@@ -2509,6 +2563,8 @@
                 "userId": 3,
                 "name": "Кофейни",
                 "description": "Места с хорошим кофе",
+                "color": "#8B5A2B",
+                "icon": "mdi:coffee-outline",
                 "createdAt": "2026-09-09T10:15:00Z"
               }
             ],
@@ -2574,6 +2630,18 @@
               "description": "Описание группы"
             },
             {
+              "name": "color",
+              "type": "string",
+              "required": false,
+              "description": "Hex-код цвета группы вида #RRGGBB"
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "required": false,
+              "description": "Название иконки из iconfy"
+            },
+            {
               "name": "createdAt",
               "type": "string",
               "required": true,
@@ -2585,6 +2653,8 @@
             "userId": 3,
             "name": "Кофейни",
             "description": "Места с хорошим кофе",
+            "color": "#8B5A2B",
+            "icon": "mdi:coffee-outline",
             "createdAt": "2026-09-09T10:15:00Z"
           }
         }
@@ -2629,11 +2699,25 @@
             "type": "string",
             "required": false,
             "description": "Описание группы"
+          },
+          {
+            "name": "color",
+            "type": "string",
+            "required": false,
+            "description": "Hex-код цвета группы вида #RRGGBB. Некорректный формат отклоняется"
+          },
+          {
+            "name": "icon",
+            "type": "string",
+            "required": false,
+            "description": "Название иконки из iconfy (до 128 символов)"
           }
         ],
         "example": {
           "name": "Кофейни Москвы",
-          "description": "Проверенные места"
+          "description": "Проверенные места",
+          "color": "#6F4E37",
+          "icon": "mdi:coffee"
         }
       },
       "responses": [
@@ -2666,6 +2750,18 @@
               "description": "Описание группы"
             },
             {
+              "name": "color",
+              "type": "string",
+              "required": false,
+              "description": "Hex-код цвета группы вида #RRGGBB"
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "required": false,
+              "description": "Название иконки из iconfy"
+            },
+            {
               "name": "createdAt",
               "type": "string",
               "required": true,
@@ -2677,6 +2773,8 @@
             "userId": 3,
             "name": "Кофейни Москвы",
             "description": "Проверенные места",
+            "color": "#6F4E37",
+            "icon": "mdi:coffee",
             "createdAt": "2026-09-09T10:15:00Z"
           }
         }

@@ -43,6 +43,22 @@ var (
 	ErrOwnerShip = func() error {
 		return apperror.NewForbiddenError("you are not owner")
 	}
+	ErrGroupColorInvalid = func(color string) error {
+		return apperror.NewFieldValidationError(
+			"color",
+			"color must be a hex code like #RRGGBB",
+			"value_error.color.invalid",
+			color,
+		)
+	}
+	ErrGroupIconInvalid = func(icon string) error {
+		return apperror.NewFieldValidationError(
+			"icon",
+			fmt.Sprintf("icon name must be at most %d characters", maxGroupIconLen),
+			"value_error.icon.invalid",
+			icon,
+		)
+	}
 	ErrGroupNotEmpty = func(marks int64) error {
 		return apperror.NewFieldValidationError(
 			"group",

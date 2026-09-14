@@ -10,10 +10,23 @@ import (
 type UpdateGroupParams struct {
 	Name        *string
 	Description *string
+	Color       *string
+	Icon        *string
 }
 
 func (s *GroupService) UpdateGroup(ctx context.Context, params UpdateGroupParams, groupID, userID uint) (*Group, error) {
 	s.logger.Info("start UpdateGroup", zap.String("layer", "domain service"))
+
+	if params.Color != nil {
+		if err := validateGroupColor(*params.Color); err != nil {
+			return nil, err
+		}
+	}
+	if params.Icon != nil {
+		if err := validateGroupIcon(*params.Icon); err != nil {
+			return nil, err
+		}
+	}
 
 	obj, err := s.repo.GetByID(ctx, groupID, userID)
 	if err != nil {
@@ -31,6 +44,12 @@ func (s *GroupService) UpdateGroup(ctx context.Context, params UpdateGroupParams
 		}
 		if params.Description != nil {
 			obj.Description = params.Description
+		}
+		if params.Color != nil {
+			obj.Color = *params.Color
+		}
+		if params.Icon != nil {
+			obj.Icon = *params.Icon
 		}
 		obj.Revision = revision
 

@@ -50,7 +50,7 @@ func (r *PgGroupRepository) Update(ctx context.Context, obj *personal.Group) err
 	// а description сбрасывается в null осознанно.
 	err := r.dbCtx(ctx).
 		Model(obj).
-		Select("name", "description", "revision").
+		Select("name", "description", "revision", "color", "icon").
 		Updates(obj).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
