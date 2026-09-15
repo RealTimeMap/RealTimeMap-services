@@ -15,14 +15,15 @@ import (
 	"strings"
 	"time"
 
+	segmentio "github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	userclient "github.com/RealTimeMap/RealTimeMap-backend/pkg/clients/user"
 	pkgkafka "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/consumer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/smtp-service/internal/domain/email"
-	segmentio "github.com/segmentio/kafka-go"
-	"go.uber.org/zap"
 )
 
 // Enqueuer ставит письмо в очередь. Интерфейс объявлен на стороне
@@ -84,6 +85,7 @@ func (h *Handler) HandleMessage(ctx context.Context, msg segmentio.Message) erro
 		eventType = pkgkafka.ExtractMeta(msg).EventType
 	}
 
+	h.logger.Info("type", zap.String("eventType", eventType))
 	switch eventType {
 	case EventUserRegistered:
 		return h.handleUserRegistered(ctx, msg)
@@ -132,14 +134,16 @@ func (h *Handler) handleUserRegistered(ctx context.Context, msg segmentio.Messag
 	}
 
 	if res.Duplicate {
-		h.logger.Debug("welcome email already queued",
+		h.logger.Debug(
+			"welcome email already queued",
 			zap.Uint64("user_id", event.UserID),
 			zap.String("email_id", res.EmailID.String()),
 		)
 		return nil
 	}
 
-	h.logger.Info("welcome email queued",
+	h.logger.Info(
+		"welcome email queued",
 		zap.Uint64("user_id", event.UserID),
 		zap.String("email_id", res.EmailID.String()),
 		zap.String("to", email.MaskEmail(event.Email)),
@@ -228,7 +232,8 @@ func (h *Handler) handleCommentCreated(ctx context.Context, msg segmentio.Messag
 		return nil
 	}
 
-	h.logger.Info("comment reply email queued",
+	h.logger.Info(
+		"comment reply email queued",
 		zap.Uint("comment_id", payload.CommentID),
 		zap.String("to", email.MaskEmail(recipient.Email)),
 	)
@@ -414,7 +419,8 @@ type accountEmail struct {
 func (h *Handler) enqueueAccountEmail(ctx context.Context, msg segmentio.Message, in accountEmail) error {
 	if strings.TrimSpace(in.toEmail) == "" {
 		// Без адреса письмо построить не из чего, и повтор не поможет.
-		h.logger.Warn("skipping account email: event carries no recipient",
+		h.logger.Warn(
+			"skipping account email: event carries no recipient",
 			zap.String("event_type", in.eventType),
 			zap.Uint64("user_id", in.userID),
 		)
@@ -430,21 +436,24 @@ func (h *Handler) enqueueAccountEmail(ctx context.Context, msg segmentio.Message
 		TraceID:        traceID(msg),
 	})
 	if err != nil {
-		return h.classifyEnqueueErrorFor(err, in.template,
+		return h.classifyEnqueueErrorFor(
+			err, in.template,
 			zap.String("event_type", in.eventType),
 			zap.Uint64("user_id", in.userID),
 		)
 	}
 
 	if res.Duplicate {
-		h.logger.Debug("account email already queued",
+		h.logger.Debug(
+			"account email already queued",
 			zap.String("template", in.template),
 			zap.Uint64("user_id", in.userID),
 		)
 		return nil
 	}
 
-	h.logger.Info("account email queued",
+	h.logger.Info(
+		"account email queued",
 		zap.String("template", in.template),
 		zap.Uint64("user_id", in.userID),
 		zap.String("to", email.MaskEmail(in.toEmail)),
