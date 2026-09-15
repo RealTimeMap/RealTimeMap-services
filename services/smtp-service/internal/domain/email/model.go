@@ -46,7 +46,7 @@ type Email struct {
 	// DedupKey и DedupBucket вместе образуют уникальный ключ идемпотентности.
 	// Bucket — номер временного окна, поэтому одинаковые письма отбрасываются
 	// только внутри окна: легитимный повтор (юзер заново запросил код) проходит.
-	DedupKey    string `gorm:"type:varchar(255);not null;uniqueIndex:idx_emails_dedup,priority:1"`
+	DedupKey    string `gorm:"type:varchar(512);not null;uniqueIndex:idx_emails_dedup,priority:1"`
 	DedupBucket int64  `gorm:"not null;uniqueIndex:idx_emails_dedup,priority:2"`
 
 	// ScheduledAt — момент, начиная с которого письмо можно отправлять.
