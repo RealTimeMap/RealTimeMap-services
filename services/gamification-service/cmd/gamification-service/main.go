@@ -62,7 +62,7 @@ func main() {
 	}
 
 	// Kafka Consumer
-	kafkaHandler := kafkatransport.NewHandler(container.EventGamificationService, container.AchievementService, log)
+	kafkaHandler := kafkatransport.NewHandler(container.EventGamificationService, container.AchievementService, container.ProgressRepo, log)
 	kafkaConsumer := consumer.New(
 		consumer.DefaultConfig().
 			WithBrokers(cfg.Kafka.Brokers...).

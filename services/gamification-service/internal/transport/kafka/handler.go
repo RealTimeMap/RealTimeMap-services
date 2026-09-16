@@ -11,6 +11,8 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	pkgkafka "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/consumer"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/achievement"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/event"
 	"github.com/segmentio/kafka-go"
@@ -20,14 +22,27 @@ import (
 type Handler struct {
 	service    *event.Service
 	achService achievement.Service
-	logger     *zap.Logger
+
+	// progressRepo заводит базовый прогресс на регистрацию. Остальные события
+	// получают его побочным эффектом начисления опыта, но регистрация опыта не
+	// приносит — без этой зависимости у пользователя не было бы строки
+	// прогресса до первого засчитанного действия.
+	progressRepo repository.UserProgressRepository
+
+	logger *zap.Logger
 }
 
-func NewHandler(service *event.Service, achService achievement.Service, logger *zap.Logger) *Handler {
+func NewHandler(
+	service *event.Service,
+	achService achievement.Service,
+	progressRepo repository.UserProgressRepository,
+	logger *zap.Logger,
+) *Handler {
 	return &Handler{
-		service:    service,
-		achService: achService,
-		logger:     logger,
+		service:      service,
+		achService:   achService,
+		progressRepo: progressRepo,
+		logger:       logger,
 	}
 }
 
@@ -52,6 +67,12 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 	)
 	log.Debug("received kafka message")
 
+	// Регистрация заводит прогресс и на этом заканчивается: правила начисления
+	// за неё нет, а достижения считаются по действиям пользователя.
+	if meta.EventType == events.UserRegistered {
+		return h.createProgress(ctx, meta.UserID, log)
+	}
+
 	if err := h.service.GreatUserExp(ctx, meta.UserID, meta.EventType, meta.SourceID); err != nil {
 		// Правила нет или событие исчерпало дневной лимит — это штатный
 		// исход, а не сбой: топик несёт события, за которые опыт не положен.
@@ -66,6 +87,22 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 
 	h.achService.OnEvent(ctx, meta.UserID, meta.EventType)
 
+	return nil
+}
+
+// createProgress заводит базовый прогресс новому пользователю.
+//
+// GetOrCreate идемпотентен, поэтому повторная доставка события (Kafka
+// гарантирует at-least-once) второй строки не создаёт.
+func (h *Handler) createProgress(ctx context.Context, userID uint, log *zap.Logger) error {
+	if _, err := h.progressRepo.GetOrCreate(ctx, userID); err != nil {
+		// Недоступность БД — сообщение перечитается: без прогресса
+		// пользователь не получит ни уровня, ни начислений.
+		log.Error("failed to create user progress, will retry", zap.Error(err))
+		return consumer.Retryable(err)
+	}
+
+	log.Info("user progress created")
 	return nil
 }
 

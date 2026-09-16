@@ -43,7 +43,7 @@ func NewContainer(config *config.Config, db *gorm.DB, logger *zap.Logger) *Conta
 	cli := redispkg.NewRedisCli(config.Redis)
 
 	cacheStrategy := getCacheStrategy(config.CacheStrategy, logger, cli)
-	strategy := levelgenerator.NewLinearGenerator()
+	strategy := levelgenerator.NewQuadraticGenerator()
 
 	progressService := progress.NewProgressService(progressRepo, logger)
 	levelService := level.NewLevelService(levelRepo, strategy, logger)
