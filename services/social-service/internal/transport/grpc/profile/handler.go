@@ -3,7 +3,6 @@ package profile
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	pb "github.com/RealTimeMap/RealTimeMap-backend/pkg/pb/profile"
@@ -61,7 +60,6 @@ func (h *Handler) GetUserProfileByIDs(ctx context.Context, req *pb.MultipleProfi
 }
 
 func toResponse(p *model.Profile) *pb.ProfileResponse {
-	fmt.Println(p)
 	return &pb.ProfileResponse{
 		Id:       uint64(p.UserID),
 		Username: p.Username,

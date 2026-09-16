@@ -2,4 +2,16 @@ package profile
 
 import "errors"
 
-var ErrUnavailable = errors.New("profile-service unavailable")
+var (
+	// ErrUnavailable — сервис недоступен или не ответил в срок. Вызывающему
+	// стоит повторить попытку позже.
+	ErrUnavailable = errors.New("profile-service unavailable")
+
+	// ErrNotFound — профиля с таким id нет. Повтор не поможет.
+	//
+	// Отсутствие профиля — штатная ситуация, а не сбой: профиль заводится
+	// событием регистрации, и между ним и первым действием пользователя есть
+	// зазор. Потребитель показывает заглушку вместо владельца, а не роняет
+	// весь ответ.
+	ErrNotFound = errors.New("profile not found")
+)
