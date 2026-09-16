@@ -43,9 +43,13 @@ func (h *DetailMarkHandler) Handle(ctx context.Context, markID uint) (DetailMark
 	p, err := h.attachOwner(ctx, res)
 
 	if err != nil {
-		if !errors.Is(err, profile.ErrUnavailable) {
-			// Если ошибка не связана с доступностью сервиса выбрасываем ее выше
-			// иначе мягкая деградация
+		// Мягкая деградация: метку отдаём с локальными данными владельца.
+		//
+		// Недоступность сервиса и отсутствие профиля — обе штатные ситуации.
+		// Профиль заводится событием регистрации, и пока оно не доехало,
+		// профиля нет; ронять на этом детальный просмотр метки нельзя —
+		// сама метка при этом в базе есть и читается.
+		if !errors.Is(err, profile.ErrUnavailable) && !errors.Is(err, profile.ErrNotFound) {
 			return DetailMarkResult{}, err
 		}
 	}
@@ -57,7 +61,14 @@ func (h *DetailMarkHandler) attachOwner(ctx context.Context, obj *mark.Mark) (Us
 	p, err := h.provider.GetUserProfileByID(ctx, obj.UserID)
 
 	if err != nil {
-		h.logger.Error("gRPC failed to get user profile", zap.Error(err))
+		// Отсутствие профиля — не авария: Warn, чтобы настоящие сбои gRPC не
+		// утонули в шуме от меток пользователей без профиля.
+		if errors.Is(err, profile.ErrNotFound) {
+			h.logger.Warn("profile not found, falling back to local owner data",
+				zap.Uint("user_id", obj.UserID))
+		} else {
+			h.logger.Error("gRPC failed to get user profile", zap.Error(err))
+		}
 		return localFallback(obj), err
 	}
 

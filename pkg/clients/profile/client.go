@@ -75,7 +75,20 @@ func wrapErr(err error) error {
 	if isUnavailable(err) {
 		return fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
+	if isNotFound(err) {
+		return fmt.Errorf("%w: %v", ErrNotFound, err)
+	}
 	return err
+}
+
+// isNotFound отличает отсутствие профиля от настоящего сбоя: вызывающий
+// подставляет заглушку вместо владельца, вместо того чтобы возвращать 500.
+func isNotFound(err error) bool {
+	st, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+	return st.Code() == codes.NotFound
 }
 
 func isUnavailable(err error) bool {
