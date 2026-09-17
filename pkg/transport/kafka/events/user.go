@@ -55,6 +55,14 @@ type UserRegisteredPayload struct {
 	IsVerified   bool      `json:"is_verified"`
 	OAuth        bool      `json:"oauth"`
 	RegisteredAt time.Time `json:"registered_at"`
+
+	// IsAdmin — признак администратора на стороне auth-сервиса.
+	//
+	// Обычная регистрация его не поднимает, поэтому в подавляющем большинстве
+	// событий поле = false. Оно здесь ради полноты состояния: потребитель
+	// заводит профиль ровно из этого события и не может спросить auth
+	// отдельно — UserService в proto/user/service.proto без реализации.
+	IsAdmin bool `json:"is_admin"`
 }
 
 // UserVerifyRequestedPayload — запрос подтверждения адреса.

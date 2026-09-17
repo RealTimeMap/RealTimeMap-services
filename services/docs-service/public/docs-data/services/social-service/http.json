@@ -41,6 +41,12 @@
               "description": "Приватный ли профиль"
             },
             {
+              "name": "isAdmin",
+              "type": "boolean",
+              "required": true,
+              "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
+            },
+            {
               "name": "settings",
               "type": "object",
               "required": true,
@@ -92,6 +98,7 @@
             "username": "john_doe",
             "avatar": "https://realtimemap.ru/store/profile-avatars/2026/04/avatar.jpg",
             "isPrivate": false,
+            "isAdmin": false,
             "settings": {
               "showInSearch": true
             },
@@ -177,6 +184,12 @@
               "description": "Приватный ли профиль"
             },
             {
+              "name": "isAdmin",
+              "type": "boolean",
+              "required": true,
+              "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
+            },
+            {
               "name": "settings",
               "type": "object",
               "required": true,
@@ -196,6 +209,7 @@
             "username": "john_doe_updated",
             "avatar": "https://realtimemap.ru/store/profile-avatars/2026/05/new-avatar.jpg",
             "isPrivate": false,
+            "isAdmin": false,
             "settings": {
               "showInSearch": true
             }
@@ -256,13 +270,15 @@
                 "userId": 4,
                 "username": "base",
                 "avatar": "",
-                "isPrivate": false
+                "isPrivate": false,
+                "isAdmin": false
               },
               {
                 "userId": 3,
                 "username": "admin",
                 "avatar": "",
-                "isPrivate": false
+                "isPrivate": false,
+                "isAdmin": false
               }
             ],
             "page": 1,
@@ -425,6 +441,12 @@
               "description": "Приватный ли профиль"
             },
             {
+              "name": "isAdmin",
+              "type": "boolean",
+              "required": true,
+              "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
+            },
+            {
               "name": "settings",
               "type": "object",
               "required": true,
@@ -482,6 +504,7 @@
             "username": "john_doe",
             "avatar": "https://realtimemap.ru/store/profile-avatars/2026/04/avatar.jpg",
             "isPrivate": false,
+            "isAdmin": false,
             "settings": {
               "showInSearch": true
             },
@@ -624,7 +647,8 @@
                 "userId": 5,
                 "username": "blocked_user",
                 "avatar": "",
-                "isPrivate": false
+                "isPrivate": false,
+                "isAdmin": false
               }
             ],
             "page": 1,
@@ -835,13 +859,15 @@
                 "userId": 3,
                 "username": "admin",
                 "avatar": "",
-                "isPrivate": false
+                "isPrivate": false,
+                "isAdmin": false
               },
               {
                 "userId": 4,
                 "username": "base",
                 "avatar": "",
-                "isPrivate": false
+                "isPrivate": false,
+                "isAdmin": false
               }
             ],
             "page": 1,
@@ -976,7 +1002,8 @@
                 "userId": 5,
                 "username": "traveler",
                 "avatar": "",
-                "isPrivate": false
+                "isPrivate": false,
+                "isAdmin": false
               }
             ],
             "page": 1,
@@ -1033,7 +1060,8 @@
                 "userId": 5,
                 "username": "traveler",
                 "avatar": "",
-                "isPrivate": false
+                "isPrivate": false,
+                "isAdmin": false
               }
             ],
             "page": 1,

@@ -7,6 +7,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	pkgredis "github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+	kafkaproducer "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app/use_cases/chat"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat/services"
@@ -17,6 +18,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/subscription"
 	progressadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/progress"
 	markstatadapter "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/grpc/stats"
+	infrakafka "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/kafka"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/persistence/postgres"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/realtime/presence"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/realtime/socketpub"
@@ -50,6 +52,10 @@ type Container struct {
 	ProgressClient *pkgprogress.Client
 	MarkStatClient *pkgmark.Client
 
+	// Producer держится в контейнере ради Close: writer надо закрыть, чтобы
+	// добить буфер несобранного batch при остановке сервиса.
+	producer *kafkaproducer.Producer
+
 	Redis *redis.Client
 
 	Logger *zap.Logger
@@ -60,6 +66,12 @@ func (c *Container) Close() error {
 	// Закрываем Socket.IO: рвём соединения и подписки Redis adapter.
 	if c.ChatSocket != nil {
 		c.ChatSocket.Close()
+	}
+
+	if c.producer != nil {
+		if err := c.producer.Close(); err != nil {
+			c.Logger.Error("failed to close kafka producer", zap.Error(err))
+		}
 	}
 
 	if c.ProgressClient != nil {
@@ -102,8 +114,35 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 		}
 	}
 
+	// Publisher исходящих событий профиля. Выключенная или ненастроенная шина
+	// не должна ронять сервис: профили важнее событий, падаем на заглушку.
+	var (
+		eventPublisher profile.EventPublisher
+		kafkaProducer  *kafkaproducer.Producer
+	)
+	switch {
+	case !cfg.Kafka.ProducerEnabled:
+		eventPublisher = profile.NoOpEventPublisher{}
+		logger.Info("Using NoOp event publisher (Kafka producer disabled)")
+	case len(cfg.Kafka.Brokers) == 0:
+		eventPublisher = profile.NoOpEventPublisher{}
+		logger.Error("Kafka producer enabled but no brokers configured, falling back to NoOp publisher")
+	default:
+		kafkaProducer = kafkaproducer.New(
+			kafkaproducer.DefaultConfig().
+				WithBrokers(cfg.Kafka.Brokers...).
+				WithTopic(cfg.Kafka.ProducerTopic),
+			kafkaproducer.WithLogger(logger),
+		)
+		eventPublisher = infrakafka.NewProfilePublisher(kafkaProducer, logger)
+		logger.Info("Kafka event publisher initialized",
+			zap.Strings("brokers", cfg.Kafka.Brokers),
+			zap.String("topic", cfg.Kafka.ProducerTopic),
+		)
+	}
+
 	profileRepo := postgres.NewPgProfileRepository(db, logger)
-	profileService := profile.NewProfileService(profileRepo, store, photoValidator, progressPort, logger)
+	profileService := profile.NewProfileService(profileRepo, store, photoValidator, progressPort, eventPublisher, logger)
 	friendRepo := postgres.NewPgFriendshipRepository(db, logger)
 	subscriptionRepo := postgres.NewPgSubscriptionRepository(db, logger)
 	profileStatService := profile.NewStatService(markStatPort, friendRepo, subscriptionRepo, logger)
@@ -169,6 +208,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 		Storage: store,
 
 		ProgressClient: progressClient,
+
+		producer: kafkaProducer,
 
 		ChatCases:  chatCases,
 		ChatSocket: chatSocket,

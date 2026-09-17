@@ -23,6 +23,24 @@ type ProgressGetter interface {
 	GetUserProgress(ctx context.Context, userID uint) (*model.Progress, error)
 }
 
+// EventPublisher — порт публикации доменных событий профиля.
+//
+// Интерфейс объявлен здесь, у потребителя: доменный слой не должен знать про
+// Kafka, а реализация живёт в infrastructure/kafka.
+type EventPublisher interface {
+	PublishProfileUpdated(ctx context.Context, p *model.Profile) error
+}
+
+// NoOpEventPublisher — заглушка на случай выключенной шины.
+//
+// Профиль важнее событий: без брокера сервис продолжает работать, а
+// рассинхрон с auth чинится следующим успешно опубликованным событием.
+type NoOpEventPublisher struct{}
+
+func (NoOpEventPublisher) PublishProfileUpdated(context.Context, *model.Profile) error {
+	return nil
+}
+
 const avatarMaxSize = 5 * 1024 * 1024 // 5MB
 var re = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
@@ -31,6 +49,7 @@ type Service struct {
 	store          storage.Storage
 	photoValidator *mediavalidator.PhotoValidator
 	progress       ProgressGetter
+	publisher      EventPublisher
 
 	logger *zap.Logger
 }
@@ -40,13 +59,21 @@ func NewProfileService(
 	store storage.Storage,
 	photoValidator *mediavalidator.PhotoValidator,
 	progress ProgressGetter,
+	publisher EventPublisher,
 	logger *zap.Logger,
 ) *Service {
+	// nil-публикатор приравнивается к заглушке: вызывающему не нужно знать про
+	// выключенную шину, а Service не должен проверять nil на каждой публикации.
+	if publisher == nil {
+		publisher = NoOpEventPublisher{}
+	}
+
 	return &Service{
 		profileRepo:    profileRepo,
 		store:          store,
 		photoValidator: photoValidator,
 		progress:       progress,
+		publisher:      publisher,
 		logger:         logger,
 	}
 }
@@ -64,6 +91,7 @@ func (s *Service) CreateProfile(ctx context.Context, input CreateProfileInput) (
 		UserID:          input.UserID,
 		Username:        input.Username,
 		IsPrivate:       false,
+		IsAdmin:         input.IsAdmin,
 		PrivacySettings: model.DefaultPrivacySettings(),
 		Tag:             input.Username,
 	}
@@ -147,7 +175,49 @@ func (s *Service) UpdateProfile(ctx context.Context, in UpdateProfileInput) (*mo
 		return nil, err
 	}
 
+	s.publishUpdated(ctx, updated)
+
 	return updated, nil
+}
+
+// publishUpdated рассылает изменение профиля потребителям (auth-сервис держит
+// по нему свою копию username).
+//
+// Ошибка публикации не возвращается наверх осознанно: профиль уже сохранён,
+// откатить его нельзя, а 500 в ответ заставил бы клиент повторить запрос и
+// перезалить аватар. Рассинхрон здесь самовосстанавливающийся — следующее
+// редактирование профиля отправит актуальное состояние целиком.
+func (s *Service) publishUpdated(ctx context.Context, p *model.Profile) {
+	if err := s.publisher.PublishProfileUpdated(ctx, p); err != nil {
+		s.logger.Error("failed to publish profile.updated",
+			zap.Uint("user_id", p.UserID), zap.Error(err))
+	}
+}
+
+// SyncAdmin применяет признак администратора, пришедший из auth-сервиса.
+//
+// Отдельный метод, а не поле в UpdateProfileInput: тот вход наполняется из
+// HTTP-запроса пользователя, и общая точка входа позволила бы выставить себе
+// админку, добавив поле в multipart-форму.
+//
+// Событие profile.updated отсюда не публикуется: значение пришло из auth,
+// и отправка его обратно — лишний круг по шине.
+func (s *Service) SyncAdmin(ctx context.Context, in SyncAdminInput) (*model.Profile, error) {
+	s.logger.Info("ProfileService.SyncAdmin",
+		zap.Uint("user_id", in.UserID), zap.Bool("is_admin", in.IsAdmin))
+
+	current, err := s.profileRepo.GetProfile(ctx, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Событие могло приехать повторно (Kafka at-least-once) или не менять
+	// значения — лишний UPDATE в таком случае не нужен.
+	if current.IsAdmin == in.IsAdmin {
+		return current, nil
+	}
+
+	return s.profileRepo.Update(ctx, in.UserID, map[string]any{"is_admin": in.IsAdmin})
 }
 
 func (s *Service) GetProfile(ctx context.Context, userId uint) (*model.Profile, error) {

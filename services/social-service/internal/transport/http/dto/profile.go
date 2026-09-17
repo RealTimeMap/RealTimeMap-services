@@ -8,6 +8,11 @@ type BaseProfileResponse struct {
 	Avatar    string `json:"avatar"`
 	Tag       string `json:"tag"`
 	IsPrivate bool   `json:"isPrivate"`
+
+	// IsAdmin — копия признака из auth-сервиса, для оформления выдачи
+	// (бейдж администратора). Права по нему не проверяются: значение может
+	// отставать от auth, а решение о доступе принимает gateway.
+	IsAdmin bool `json:"isAdmin"`
 }
 
 func NewBaseProfileResponse(data *model.Profile) BaseProfileResponse {
@@ -16,6 +21,7 @@ func NewBaseProfileResponse(data *model.Profile) BaseProfileResponse {
 		Username:  data.Username,
 		Avatar:    data.Avatar.URL,
 		IsPrivate: data.IsPrivate,
+		IsAdmin:   data.IsAdmin,
 		Tag:       data.Tag,
 	}
 }

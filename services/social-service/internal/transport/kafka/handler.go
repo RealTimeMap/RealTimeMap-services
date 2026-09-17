@@ -1,5 +1,5 @@
-// Package kafka принимает доменные события auth-сервиса и заводит профиль
-// пользователя.
+// Package kafka принимает доменные события auth-сервиса: заводит профиль
+// пользователя и поддерживает признак администратора в актуальном состоянии.
 package kafka
 
 import (
@@ -30,11 +30,11 @@ func NewHandler(service *profile.Service, logger *zap.Logger) *Handler {
 	}
 }
 
-// HandleMessage разбирает сообщение и заводит профиль на регистрацию.
+// HandleMessage разбирает сообщение и разводит его по типу события.
 //
 // Топик auth-сервиса общий: туда же едут вход в аккаунт, смена пароля и
-// подтверждение адреса. Профиль заводится только на user.registered —
-// без проверки типа любое из этих событий создавало бы профиль повторно.
+// подтверждение адреса. Обрабатываются только знакомые типы — без проверки
+// любое из этих событий заводило бы профиль повторно.
 func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 	eventType, payload, err := decodeEvent(msg)
 	if err != nil {
@@ -42,11 +42,19 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 		return consumer.Skip(err)
 	}
 
-	if eventType != events.UserRegistered {
+	switch eventType {
+	case events.UserRegistered:
+		return h.handleRegistered(ctx, payload)
+	case events.UserUpdated:
+		return h.handleUpdated(ctx, payload)
+	default:
 		// Событие чужого типа — не наше дело.
 		return nil
 	}
+}
 
+// handleRegistered заводит профиль на регистрацию пользователя.
+func (h *Handler) handleRegistered(ctx context.Context, payload json.RawMessage) error {
 	user, err := decodeRegistered(payload)
 	if err != nil {
 		h.logger.Warn("skipping user.registered: malformed payload", zap.Error(err))
@@ -60,6 +68,7 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 	_, err = h.service.CreateProfile(ctx, profile.CreateProfileInput{
 		Username: user.Username,
 		UserID:   user.UserID,
+		IsAdmin:  user.IsAdmin,
 	})
 	if err != nil {
 		var conflictErr *apperror.ConflictError
@@ -76,10 +85,63 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 	return nil
 }
 
+// handleUpdated применяет признак администратора, изменённый в auth-сервисе.
+//
+// Остальные поля user.updated игнорируются: username, tag и аватар
+// редактируются здесь, и запись их значений из auth затёрла бы свежую правку
+// профиля тем, что auth знал на момент регистрации.
+func (h *Handler) handleUpdated(ctx context.Context, payload json.RawMessage) error {
+	user, err := decodeUpdated(payload)
+	if err != nil {
+		h.logger.Warn("skipping user.updated: malformed payload", zap.Error(err))
+		return consumer.Skip(err)
+	}
+
+	// Событие без is_admin не о правах — применять нечего.
+	if user.IsAdmin == nil {
+		return nil
+	}
+
+	h.logger.Info("admin flag update received",
+		zap.Uint("user_id", user.UserID),
+		zap.Bool("is_admin", *user.IsAdmin))
+
+	_, err = h.service.SyncAdmin(ctx, profile.SyncAdminInput{
+		UserID:  user.UserID,
+		IsAdmin: *user.IsAdmin,
+	})
+	if err != nil {
+		var notFoundErr *apperror.NotFoundError
+		if errors.As(err, &notFoundErr) {
+			// Профиля ещё нет: user.updated обогнал user.registered либо
+			// пользователь заведён в обход регистрации. Повтор не поможет —
+			// профиль появится своим событием, уже с актуальным признаком.
+			h.logger.Warn("profile not found, skipping admin sync",
+				zap.Uint("user_id", user.UserID))
+			return consumer.Skip(err)
+		}
+
+		h.logger.Error("Error syncing admin flag", zap.Error(err))
+		return consumer.Retryable(err)
+	}
+
+	return nil
+}
+
 // registeredUser — то, что сервису нужно от события регистрации.
 type registeredUser struct {
 	UserID   uint
 	Username string
+	IsAdmin  bool
+}
+
+// updatedUser — то, что сервису нужно от события изменения пользователя.
+//
+// IsAdmin — указатель: отсутствующий ключ (событие про что-то другое) нужно
+// отличать от явного false, которым снимают админку.
+type updatedUser struct {
+	UserID  uint
+	IsAdmin *bool
 }
 
 // decodeEvent достаёт тип события и неразобранный payload.
@@ -124,6 +186,7 @@ func decodeRegistered(payload json.RawMessage) (registeredUser, error) {
 	var raw struct {
 		UserID   *uint  `json:"user_id"`
 		Username string `json:"username"`
+		IsAdmin  bool   `json:"is_admin"`
 	}
 	if err := json.Unmarshal(payload, &raw); err != nil {
 		return registeredUser{}, fmt.Errorf("unmarshal payload: %w", err)
@@ -136,5 +199,26 @@ func decodeRegistered(payload json.RawMessage) (registeredUser, error) {
 	return registeredUser{
 		UserID:   *raw.UserID,
 		Username: raw.Username,
+		IsAdmin:  raw.IsAdmin,
+	}, nil
+}
+
+// decodeUpdated разбирает payload изменения пользователя.
+func decodeUpdated(payload json.RawMessage) (updatedUser, error) {
+	var raw struct {
+		UserID  *uint `json:"user_id"`
+		IsAdmin *bool `json:"is_admin"`
+	}
+	if err := json.Unmarshal(payload, &raw); err != nil {
+		return updatedUser{}, fmt.Errorf("unmarshal payload: %w", err)
+	}
+
+	if raw.UserID == nil || *raw.UserID == 0 {
+		return updatedUser{}, errors.New("user id is missing in payload")
+	}
+
+	return updatedUser{
+		UserID:  *raw.UserID,
+		IsAdmin: raw.IsAdmin,
 	}, nil
 }

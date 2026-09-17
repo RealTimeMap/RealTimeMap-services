@@ -27,6 +27,11 @@ message ProfileResponse {
   string username = 2;
   string tag = 3;
   string avatar = 4;
+
+  // Копия признака администратора из auth-сервиса — для оформления выдачи
+  // (бейдж у автора комментария, метки). Права по нему не проверяются:
+  // значение может отставать от auth.
+  bool is_admin = 5;
 }
 
 message MultipleProfileResponse {

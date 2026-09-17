@@ -14,4 +14,11 @@ const (
 
 	// MarkEvents — события mark-service.
 	MarkEvents = "mark_action-service.events"
+
+	// SocialEvents — события social-service: изменение профиля.
+	//
+	// Отдельный топик, а не UserEvents: в UserEvents пишет auth, и публикация
+	// туда же из social замкнула бы цикл — свои же события приезжали бы
+	// обратно в консьюмер social, который читает этот топик.
+	SocialEvents = "social-service.events"
 )
