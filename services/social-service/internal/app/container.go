@@ -134,7 +134,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 				WithTopic(cfg.Kafka.ProducerTopic),
 			kafkaproducer.WithLogger(logger),
 		)
-		eventPublisher = infrakafka.NewProfilePublisher(kafkaProducer, logger)
+		eventPublisher = infrakafka.NewProfilePublisher(kafkaProducer, cfg.Kafka.ProducerTopic, logger)
 		logger.Info("Kafka event publisher initialized",
 			zap.Strings("brokers", cfg.Kafka.Brokers),
 			zap.String("topic", cfg.Kafka.ProducerTopic),

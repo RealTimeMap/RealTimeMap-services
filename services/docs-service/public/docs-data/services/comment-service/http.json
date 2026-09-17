@@ -95,6 +95,12 @@
                   "type": "string",
                   "required": true,
                   "description": "URL аватара"
+                },
+                {
+                  "name": "isAdmin",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
                 }
               ]
             },
@@ -160,7 +166,8 @@
               "id": 5,
               "username": "john_doe",
               "tag": "john",
-              "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
+              "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg",
+              "isAdmin": false
             },
             "likes": 0,
             "meta": {
@@ -285,6 +292,12 @@
                       "type": "string",
                       "required": true,
                       "description": "URL аватара"
+                    },
+                    {
+                      "name": "isAdmin",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
                     }
                   ]
                 },
@@ -360,7 +373,8 @@
                   "id": 5,
                   "username": "john_doe",
                   "tag": "john",
-                  "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
+                  "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg",
+                  "isAdmin": false
                 },
                 "likes": 3,
                 "meta": {
@@ -493,6 +507,12 @@
                       "type": "string",
                       "required": true,
                       "description": "URL аватара"
+                    },
+                    {
+                      "name": "isAdmin",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
                     }
                   ]
                 },
@@ -568,7 +588,8 @@
                   "id": 7,
                   "username": "alice",
                   "tag": "alice",
-                  "avatar": ""
+                  "avatar": "",
+                  "isAdmin": false
                 },
                 "likes": 1,
                 "meta": {
@@ -671,6 +692,12 @@
                   "type": "string",
                   "required": true,
                   "description": "URL аватара"
+                },
+                {
+                  "name": "isAdmin",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
                 }
               ]
             },
@@ -736,7 +763,8 @@
               "id": 5,
               "username": "john_doe",
               "tag": "john",
-              "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
+              "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg",
+              "isAdmin": false
             },
             "likes": 3,
             "meta": {

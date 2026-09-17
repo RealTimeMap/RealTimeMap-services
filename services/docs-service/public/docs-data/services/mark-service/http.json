@@ -474,6 +474,12 @@
                   "type": "string",
                   "required": false,
                   "description": "URL аватара"
+                },
+                {
+                  "name": "isAdmin",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
                 }
               ]
             },
@@ -562,7 +568,8 @@
               "id": 5,
               "username": "john_doe",
               "tag": "john",
-              "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg"
+              "avatar": "https://realtimemap.ru/store/photos/avatars/2026/04/avatar.jpg",
+              "isAdmin": false
             },
             "photos": [
               "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"

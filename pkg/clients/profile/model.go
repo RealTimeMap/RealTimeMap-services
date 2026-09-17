@@ -5,4 +5,5 @@ type UserProfile struct {
 	Username string
 	Tag      string
 	Avatar   string
+	IsAdmin  bool
 }

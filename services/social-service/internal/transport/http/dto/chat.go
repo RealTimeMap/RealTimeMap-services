@@ -18,6 +18,10 @@ type SenderResponse struct {
 	ID       uint   `json:"id"`
 	Username string `json:"username"`
 	Avatar   string `json:"avatar"`
+
+	// IsAdmin — копия признака из auth-сервиса, для бейджа в интерфейсе.
+	// Права по нему не проверяются: значение может отставать от auth.
+	IsAdmin bool `json:"isAdmin"`
 }
 
 func NewSenderResponse(p chatuc.ProfileResult) SenderResponse {
@@ -25,6 +29,7 @@ func NewSenderResponse(p chatuc.ProfileResult) SenderResponse {
 		ID:       p.ID,
 		Username: p.Username,
 		Avatar:   p.Avatar,
+		IsAdmin:  p.IsAdmin,
 	}
 }
 
@@ -130,10 +135,15 @@ type LastMessagePreviewResponse struct {
 // ChatListItemResponse — элемент списка чатов пользователя. Полиморфен по Type
 // (direct/group): для direct title/avatar — данные собеседника, для group — чата.
 type ChatListItemResponse struct {
-	ChatID      uint                        `json:"chatId"`
-	Type        string                      `json:"type"`
-	Title       string                      `json:"title"`
-	Avatar      string                      `json:"avatar"`
+	ChatID uint   `json:"chatId"`
+	Type   string `json:"type"`
+	Title  string `json:"title"`
+	Avatar string `json:"avatar"`
+
+	// IsAdmin относится к собеседнику и приходит только для direct-чата:
+	// у группы title — имя чата, и бейдж вешать не на кого.
+	IsAdmin bool `json:"isAdmin"`
+
 	LastMessage *LastMessagePreviewResponse `json:"lastMessage"`
 	UnreadCount int                         `json:"unreadCount"`
 	UpdatedAt   time.Time                   `json:"updatedAt"`
@@ -145,6 +155,7 @@ func NewChatListItemResponse(item chatuc.ChatListItemResult) ChatListItemRespons
 		Type:        item.Type,
 		Title:       item.Title,
 		Avatar:      item.Avatar,
+		IsAdmin:     item.IsAdmin,
 		UnreadCount: item.UnreadCount,
 		UpdatedAt:   item.UpdatedAt,
 	}

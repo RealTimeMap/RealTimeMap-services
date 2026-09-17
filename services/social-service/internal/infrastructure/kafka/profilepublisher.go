@@ -16,10 +16,15 @@ import (
 type ProfilePublisher struct {
 	producer *producer.Producer
 	logger   *zap.Logger
+
+	// topic дублируется здесь только для логов: продюсер пишет в свой
+	// топик по умолчанию, но в сообщении о публикации его надо назвать —
+	// иначе по логу не понять, куда именно уехало событие.
+	topic string
 }
 
-func NewProfilePublisher(p *producer.Producer, logger *zap.Logger) profile.EventPublisher {
-	return &ProfilePublisher{producer: p, logger: logger}
+func NewProfilePublisher(p *producer.Producer, topic string, logger *zap.Logger) profile.EventPublisher {
+	return &ProfilePublisher{producer: p, topic: topic, logger: logger}
 }
 
 // PublishProfileUpdated отправляет актуальное состояние профиля.
@@ -53,9 +58,14 @@ func (p *ProfilePublisher) PublishProfileUpdated(ctx context.Context, prof *mode
 		return err
 	}
 
-	p.logger.Debug("published profile event",
+	// Info, а не Debug: это единственный след того, что синхронизация с
+	// auth-сервисом состоялась. На Debug в проде он не виден, и «username не
+	// доехал» становится неотличимо от «событие не отправлялось».
+	p.logger.Info("published profile event",
 		zap.String("event_type", events.ProfileUpdated),
+		zap.String("topic", p.topic),
 		zap.Uint("user_id", prof.UserID),
+		zap.String("username", prof.Username),
 	)
 	return nil
 }
