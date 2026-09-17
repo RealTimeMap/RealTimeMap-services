@@ -29,6 +29,10 @@ type OwnerResponse struct {
 	Username string `json:"username"`
 	Avatar   string `json:"avatar"`
 	Tag      string `json:"tag"`
+
+	// IsAdmin — бейдж администратора. Не признак прав на эту метку:
+	// значение приезжает копией из social-service и может отставать.
+	IsAdmin bool `json:"isAdmin"`
 }
 
 func NewOwnerResponse(u mark_action.UserResult) OwnerResponse {
@@ -37,6 +41,7 @@ func NewOwnerResponse(u mark_action.UserResult) OwnerResponse {
 		Username: u.Username,
 		Tag:      u.Tag,
 		Avatar:   u.Avatar,
+		IsAdmin:  u.IsAdmin,
 	}
 }
 

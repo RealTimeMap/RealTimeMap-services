@@ -110,5 +110,6 @@ func toProfile(p *pb.ProfileResponse) *UserProfile {
 		Username: p.GetUsername(),
 		Tag:      p.GetTag(),
 		Avatar:   p.GetAvatar(),
+		IsAdmin:  p.GetIsAdmin(),
 	}
 }

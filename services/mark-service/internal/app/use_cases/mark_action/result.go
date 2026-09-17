@@ -36,6 +36,12 @@ type UserResult struct {
 	Username string
 	Avatar   string
 	Tag      string
+
+	// IsAdmin — бейдж администратора у автора метки. Копия признака из
+	// auth-сервиса, которую ведёт social-service; правами не управляет.
+	// При деградации profile-сервиса остаётся false: localFallback знает
+	// только имя автора, сохранённое вместе с меткой.
+	IsAdmin bool
 }
 
 type CategoryResult struct {

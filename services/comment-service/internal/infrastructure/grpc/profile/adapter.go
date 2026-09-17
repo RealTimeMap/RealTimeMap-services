@@ -52,5 +52,6 @@ func toProfile(p *pkgprofile.UserProfile) *comment.UserProfile {
 		Username: p.Username,
 		Tag:      p.Tag,
 		Avatar:   p.Avatar,
+		IsAdmin:  p.IsAdmin,
 	}
 }

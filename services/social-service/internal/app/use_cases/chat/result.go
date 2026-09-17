@@ -14,6 +14,7 @@ type ProfileResult struct {
 	ID       uint
 	Username string
 	Avatar   string
+	IsAdmin  bool
 }
 
 // toProfileResult безопасно маппит профиль. Если профиль не подгрузился
@@ -27,6 +28,7 @@ func toProfileResult(p *model.Profile) ProfileResult {
 		ID:       p.UserID,
 		Username: p.Username,
 		Avatar:   p.Avatar.URL,
+		IsAdmin:  p.IsAdmin,
 	}
 }
 
@@ -139,10 +141,16 @@ type LastMessagePreview struct {
 }
 
 type ChatListItemResult struct {
-	ChatID      uint
-	Type        string
-	Title       string
-	Avatar      string
+	ChatID uint
+	Type   string
+	Title  string
+	Avatar string
+
+	// IsAdmin осмыслен только для direct-чата: там заголовок и аватар — это
+	// собеседник, и бейдж относится к нему. У группы заголовок принадлежит
+	// чату, а не человеку, поэтому поле остаётся false.
+	IsAdmin bool
+
 	LastMessage *LastMessagePreview
 	UnreadCount int
 	UpdatedAt   time.Time
@@ -162,6 +170,7 @@ func toChatListItemResult(item *chat.ChatListItem, requesterID uint, profiles ma
 		if peer := directPeerProfile(item.Chat, requesterID, profiles); peer != nil {
 			res.Title = peer.Username
 			res.Avatar = peer.Avatar.URL
+			res.IsAdmin = peer.IsAdmin
 		}
 	default: // group
 		if item.Chat.Title != nil {

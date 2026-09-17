@@ -70,6 +70,10 @@ type AuthorResponse struct {
 	Username string `json:"username"`
 	Tag      string `json:"tag"`
 	Avatar   string `json:"avatar"`
+
+	// IsAdmin — бейдж администратора. Не признак прав на этот комментарий:
+	// значение приезжает копией из social-service и может отставать.
+	IsAdmin bool `json:"isAdmin"`
 }
 
 type CommentResponse struct {
@@ -89,6 +93,7 @@ func NewCommentResponse(res comment_action.CommentResult) CommentResponse {
 			Username: res.Author.Username,
 			Tag:      res.Author.Tag,
 			Avatar:   res.Author.Avatar,
+			IsAdmin:  res.Author.IsAdmin,
 		},
 		Likes: res.Likes,
 		Meta: Meta{

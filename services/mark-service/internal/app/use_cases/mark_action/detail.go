@@ -82,6 +82,7 @@ func (h *DetailMarkHandler) attachOwner(ctx context.Context, obj *mark.Mark) (Us
 		Username: p.Username,
 		Avatar:   p.Avatar,
 		Tag:      p.Tag,
+		IsAdmin:  p.IsAdmin,
 	}, nil
 
 }

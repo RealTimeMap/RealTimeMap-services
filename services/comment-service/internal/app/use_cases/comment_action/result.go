@@ -9,6 +9,7 @@ type AuthorResult struct {
 	Username string
 	Tag      string
 	Avatar   string
+	IsAdmin  bool
 }
 
 type MetaResult struct {
@@ -46,6 +47,7 @@ func toAuthorResult(p *comment.UserProfile) AuthorResult {
 		Username: p.Username,
 		Tag:      p.Tag,
 		Avatar:   p.Avatar,
+		IsAdmin:  p.IsAdmin,
 	}
 }
 
