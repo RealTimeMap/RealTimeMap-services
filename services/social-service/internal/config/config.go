@@ -22,11 +22,19 @@ type Database struct {
 }
 
 type Kafka struct {
-	Brokers        []string      `yaml:"brokers" env:"KAFKA_BROKERS" env-default:"localhost:9092"`
+	Brokers        []string      `yaml:"brokers" env:"KAFKA_BROKERS" env-separator:"," env-default:"localhost:9092"`
 	Topics         []string      `yaml:"topics"`
 	GroupID        string        `yaml:"group_id" env:"KAFKA_GROUP_ID" env-default:"gamification-service"`
 	MaxWait        time.Duration `yaml:"max_wait" env-default:"500ms"`
 	CommitInterval time.Duration `yaml:"commit_interval" env-default:"0"`
+
+	// ProducerEnabled управляет только публикацией. Консьюмер от него не
+	// зависит: без входящих событий профили вообще не заводятся, а без
+	// исходящих сервис остаётся работоспособным.
+	ProducerEnabled bool `yaml:"producer_enabled" env:"KAFKA_PRODUCER_ENABLED" env-default:"false"`
+
+	// ProducerTopic — топик исходящих событий social-service.
+	ProducerTopic string `yaml:"producer_topic" env:"KAFKA_PRODUCER_TOPIC" env-default:"social-service.events"`
 }
 
 type Config struct {

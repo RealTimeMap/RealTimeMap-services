@@ -65,5 +65,6 @@ func toResponse(p *model.Profile) *pb.ProfileResponse {
 		Username: p.Username,
 		Tag:      p.Tag,
 		Avatar:   p.Avatar.URL,
+		IsAdmin:  p.IsAdmin,
 	}
 }
