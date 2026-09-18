@@ -1189,6 +1189,12 @@
                   "description": "Имя автора последнего сообщения"
                 },
                 {
+                  "name": "isAdmin",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
+                },
+                {
                   "name": "content",
                   "type": "string",
                   "required": true,
@@ -1218,6 +1224,7 @@
               "lastMessage": {
                 "messageId": 340,
                 "username": "alice",
+                "isAdmin": false,
                 "content": "до встречи!"
               },
               "unreadCount": 2,
@@ -1231,6 +1238,7 @@
               "lastMessage": {
                 "messageId": 331,
                 "username": "bob",
+                "isAdmin": false,
                 "content": "залил фикс"
               },
               "unreadCount": 0,
@@ -1298,6 +1306,12 @@
                   "description": "Имя собеседника"
                 },
                 {
+                  "name": "isAdmin",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
+                },
+                {
                   "name": "avatar",
                   "type": "string",
                   "required": false,
@@ -1317,6 +1331,7 @@
             "peer": {
               "id": 5,
               "username": "alice",
+              "isAdmin": false,
               "avatar": "https://realtimemap.ru/store/profile-avatars/2026/06/alice.jpg"
             },
             "createdAt": "2026-07-19T10:00:00Z"
@@ -1511,6 +1526,12 @@
                   "description": "Имя автора"
                 },
                 {
+                  "name": "isAdmin",
+                  "type": "boolean",
+                  "required": true,
+                  "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
+                },
+                {
                   "name": "avatar",
                   "type": "string",
                   "required": false,
@@ -1530,6 +1551,7 @@
             "sender": {
               "id": 1,
               "username": "john_doe",
+              "isAdmin": false,
               "avatar": ""
             }
           }
@@ -1645,6 +1667,12 @@
                       "description": "Имя автора"
                     },
                     {
+                      "name": "isAdmin",
+                      "type": "boolean",
+                      "required": true,
+                      "description": "Признак администратора. Копия из auth-service, обновляется событиями; для оформления выдачи, не для проверки прав"
+                    },
+                    {
                       "name": "avatar",
                       "type": "string",
                       "required": false,
@@ -1674,6 +1702,7 @@
                 "sender": {
                   "id": 1,
                   "username": "john_doe",
+                  "isAdmin": false,
                   "avatar": ""
                 }
               },
@@ -1688,6 +1717,7 @@
                 "sender": {
                   "id": 5,
                   "username": "alice",
+                  "isAdmin": false,
                   "avatar": ""
                 }
               }

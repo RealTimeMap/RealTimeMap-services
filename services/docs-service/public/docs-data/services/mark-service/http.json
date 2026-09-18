@@ -1632,9 +1632,9 @@
           },
           {
             "name": "groupsIds",
-            "type": "integer[]",
+            "type": "array",
             "required": true,
-            "description": "ID групп пользователя, к которым привязывается метка"
+            "description": "Список UUID групп, к которым привязана метка. Минимум одна группа"
           },
           {
             "name": "photos",
@@ -1652,8 +1652,7 @@
           "longitude": 37.6176,
           "latitude": 55.7558,
           "groupsIds": [
-            1,
-            2
+            "18617847-4b69-4108-b34e-0693542ad3a2"
           ],
           "photos": "[файлы]"
         }
@@ -1700,7 +1699,7 @@
       "method": "GET",
       "path": "/api/v2/personal/sync",
       "summary": "Синхронизация персональных данных",
-      "description": "Возвращает изменения персональных меток и групп пользователя с указанной ревизии. Ответ разбит на секции: personalMarks и groups. Без параметра since выполняется первичная синхронизация — возвращаются только активные записи, секция removed остаётся пустой. При переданном since возвращаются изменения с ревизией больше since, включая ID удалённых записей в removed. Если hasMore = true, повторите запрос с since = cursor.",
+      "description": "Возвращает изменения персональных меток и групп пользователя с указанной ревизии. Ответ разбит на секции: personalMarks и groups. Без параметра since возвращается полный слепок пользователя и максимальная ревизия сервера, список removed остаётся пустым. При переданном since возвращаются изменения с ревизии больше since, включая идентификаторы удалённых записей в removed. Идентификаторы в removed — строки: у меток это число в строковом виде, у групп — UUID. Если hasMore = true, следующая страница с since = cursor.",
       "tags": [
         "Персональные метки"
       ],
@@ -1824,9 +1823,9 @@
                     },
                     {
                       "name": "removed",
-                      "type": "integer[]",
+                      "type": "array",
                       "required": true,
-                      "description": "ID удалённых записей. Заполняется только при переданном since"
+                      "description": "Идентификаторы удалённых записей. Строки: у меток — число в строковом виде, у групп — UUID"
                     },
                     {
                       "name": "cursor",
@@ -1894,9 +1893,9 @@
                     },
                     {
                       "name": "removed",
-                      "type": "integer[]",
+                      "type": "array",
                       "required": true,
-                      "description": "ID удалённых записей. Заполняется только при переданном since"
+                      "description": "Идентификаторы удалённых записей. Строки: у меток — число в строковом виде, у групп — UUID"
                     },
                     {
                       "name": "cursor",
@@ -1947,7 +1946,7 @@
                     "isShare": false,
                     "isVisible": true,
                     "groupsIds": [
-                      1
+                      "18617847-4b69-4108-b34e-0693542ad3a2"
                     ],
                     "photos": [
                       {
@@ -1964,7 +1963,7 @@
                   }
                 ],
                 "removed": [
-                  7
+                  "7"
                 ],
                 "cursor": 42,
                 "hasMore": false
@@ -1972,7 +1971,7 @@
               "groups": {
                 "upserted": [
                   {
-                    "id": 1,
+                    "id": "18617847-4b69-4108-b34e-0693542ad3a2",
                     "revision": 40,
                     "name": "Кофейни",
                     "description": null,
@@ -2097,9 +2096,9 @@
             },
             {
               "name": "groupsIds",
-              "type": "integer[]",
+              "type": "array",
               "required": true,
-              "description": "ID групп, к которым привязана метка"
+              "description": "Список UUID групп метки"
             },
             {
               "name": "photos",
@@ -2135,8 +2134,7 @@
             "isShare": false,
             "isVisible": true,
             "groupsIds": [
-              1,
-              2
+              "18617847-4b69-4108-b34e-0693542ad3a2"
             ],
             "photos": [
               "https://realtimemap.ru/store/photos/marks/abc.jpg"
@@ -2220,9 +2218,9 @@
           },
           {
             "name": "groupsIds",
-            "type": "integer[]",
+            "type": "array",
             "required": false,
-            "description": "ID групп. Если передан, полностью заменяет текущий состав групп"
+            "description": "Список UUID групп, к которым привязана метка. Минимум одна группа"
           },
           {
             "name": "photosToDelete",
@@ -2321,7 +2319,7 @@
       "method": "POST",
       "path": "/api/v2/group/create",
       "summary": "Создание группы меток",
-      "description": "Создаёт группу для персональных меток пользователя. Название должно быть уникальным в пределах пользователя — при повторе возвращается конфликт. Создание увеличивает ревизию пользователя.",
+      "description": "Создаёт группу для персональных меток пользователя. Название должно быть уникальным в пределах пользователя — при повторе возвращается конфликт. Создание увеличивает ревизию пользователя. Идентификатор группы — UUID: его можно передать в поле id, если группа была создана офлайн на клиенте и её id уже роздан локальным меткам. Без этого поля UUID генерирует сервер. Занятый id отклоняется как конфликт — повторная отправка не подменяет существующую группу.",
       "tags": [
         "Персональные метки"
       ],
@@ -2330,6 +2328,12 @@
         "description": "Данные группы",
         "contentType": "json",
         "schema": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": false,
+            "description": "UUID группы, созданной офлайн на клиенте. Если не передан, идентификатор генерирует сервер. Нулевой UUID отклоняется"
+          },
           {
             "name": "name",
             "type": "string",
@@ -2356,6 +2360,7 @@
           }
         ],
         "example": {
+          "id": "18617847-4b69-4108-b34e-0693542ad3a2",
           "name": "Кофейни",
           "description": "Места с хорошим кофе",
           "color": "#8B5A2B",
@@ -2369,9 +2374,9 @@
           "schema": [
             {
               "name": "id",
-              "type": "integer",
+              "type": "string",
               "required": true,
-              "description": "ID группы"
+              "description": "UUID группы"
             },
             {
               "name": "userId",
@@ -2411,7 +2416,7 @@
             }
           ],
           "example": {
-            "id": 1,
+            "id": "18617847-4b69-4108-b34e-0693542ad3a2",
             "userId": 3,
             "name": "Кофейни",
             "description": "Места с хорошим кофе",
@@ -2469,9 +2474,9 @@
               "children": [
                 {
                   "name": "id",
-                  "type": "integer",
+                  "type": "string",
                   "required": true,
-                  "description": "ID группы"
+                  "description": "UUID группы"
                 },
                 {
                   "name": "userId",
@@ -2539,7 +2544,7 @@
           "example": {
             "items": [
               {
-                "id": 1,
+                "id": "18617847-4b69-4108-b34e-0693542ad3a2",
                 "userId": 3,
                 "name": "Кофейни",
                 "description": "Места с хорошим кофе",
@@ -2573,11 +2578,11 @@
       "parameters": [
         {
           "name": "groupID",
-          "type": "integer",
+          "type": "string",
           "required": true,
-          "description": "ID группы",
+          "description": "UUID группы",
           "location": "path",
-          "example": "1"
+          "example": "18617847-4b69-4108-b34e-0693542ad3a2"
         }
       ],
       "responses": [
@@ -2587,9 +2592,9 @@
           "schema": [
             {
               "name": "id",
-              "type": "integer",
+              "type": "string",
               "required": true,
-              "description": "ID группы"
+              "description": "UUID группы"
             },
             {
               "name": "userId",
@@ -2629,7 +2634,7 @@
             }
           ],
           "example": {
-            "id": 1,
+            "id": "18617847-4b69-4108-b34e-0693542ad3a2",
             "userId": 3,
             "name": "Кофейни",
             "description": "Места с хорошим кофе",
@@ -2657,11 +2662,11 @@
       "parameters": [
         {
           "name": "groupID",
-          "type": "integer",
+          "type": "string",
           "required": true,
-          "description": "ID группы",
+          "description": "UUID группы",
           "location": "path",
-          "example": "1"
+          "example": "18617847-4b69-4108-b34e-0693542ad3a2"
         }
       ],
       "requestBody": {
@@ -2707,9 +2712,9 @@
           "schema": [
             {
               "name": "id",
-              "type": "integer",
+              "type": "string",
               "required": true,
-              "description": "ID группы"
+              "description": "UUID группы"
             },
             {
               "name": "userId",
@@ -2749,7 +2754,7 @@
             }
           ],
           "example": {
-            "id": 1,
+            "id": "18617847-4b69-4108-b34e-0693542ad3a2",
             "userId": 3,
             "name": "Кофейни Москвы",
             "description": "Проверенные места",
@@ -2779,11 +2784,11 @@
       "parameters": [
         {
           "name": "groupID",
-          "type": "integer",
+          "type": "string",
           "required": true,
-          "description": "ID группы",
+          "description": "UUID группы",
           "location": "path",
-          "example": "1"
+          "example": "18617847-4b69-4108-b34e-0693542ad3a2"
         }
       ],
       "responses": [

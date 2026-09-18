@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/paulmach/orb"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
@@ -55,7 +56,7 @@ type CreatePersonalMarkRequest struct {
 	Longitude float64 `form:"longitude" binding:"required,longitude"`
 	Latitude  float64 `form:"latitude" binding:"required,latitude"`
 
-	GroupsIds []uint                  `form:"groupsIds" binding:"required"`
+	GroupsIds []uuid.UUID             `form:"groupsIds" binding:"required"`
 	Photos    []*multipart.FileHeader `form:"photos" binding:"-"`
 }
 
@@ -171,7 +172,7 @@ type UpdatePersonalMarkRequest struct {
 	Longitude *float64 `form:"longitude" binding:"omitempty,longitude"`
 	Latitude  *float64 `form:"latitude" binding:"omitempty,latitude"`
 
-	GroupsIds []uint `form:"groupsIds" binding:"-"`
+	GroupsIds []uuid.UUID `form:"groupsIds" binding:"-"`
 
 	PhotosToDelete []string                `form:"photosToDelete" binding:"-"`
 	Photos         []*multipart.FileHeader `form:"photos" binding:"-"`

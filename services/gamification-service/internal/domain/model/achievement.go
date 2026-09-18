@@ -3,7 +3,6 @@ package model
 import (
 	"time"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"gorm.io/gorm"
 )
 
@@ -16,8 +15,10 @@ type Achievement struct {
 	TriggerEventType string `gorm:"type:varchar(64)"`
 	Threshold        uint   // Колво для получения
 
-	Icon     types.Photo
-	IsActive bool `gorm:"default:true"`
+	// Icon — имя иконки из iconfy ("mdi:trophy-outline"), а не файл.
+	// Картинку рисует клиент по этому имени, серверу хранить её незачем.
+	Icon     string `gorm:"size:128"`
+	IsActive bool   `gorm:"default:true"`
 
 	RewardID uint     `gorm:"index"`
 	Reward   XPReward `gorm:"foreignKey:RewardID"`

@@ -3,6 +3,8 @@ package personal
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"go.uber.org/zap"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
@@ -40,7 +42,7 @@ type UpdatePersonalMarkCommand struct {
 
 	IsVisible *bool
 
-	GroupsIds []uint
+	GroupsIds []uuid.UUID
 
 	PhotosToDelete []string
 	Photos         []mediavalidator.PhotoInput

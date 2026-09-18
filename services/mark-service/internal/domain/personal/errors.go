@@ -3,6 +3,8 @@ package personal
 import (
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 )
 
@@ -15,7 +17,7 @@ var (
 			photos,
 		)
 	}
-	ErrGroupsRequired = func(ids []uint) error {
+	ErrGroupsRequired = func(ids []uuid.UUID) error {
 		return apperror.NewFieldValidationError(
 			"groups",
 			"minimum 1 groups required",
@@ -58,6 +60,15 @@ var (
 			"value_error.icon.invalid",
 			icon,
 		)
+	}
+	// ErrGroupIDTaken — переданный клиентом UUID уже занят. Отдаётся как
+	// конфликт: повторная отправка той же офлайн-группы не должна молча
+	// подменять существующую запись.
+	ErrGroupIDTaken = func(id uuid.UUID) error {
+		return apperror.NewAlreadyExistsError("id", id.String())
+	}
+	ErrGroupIDGeneration = func(cause error) error {
+		return apperror.WrapInternalError("generate group id failed", cause)
 	}
 	ErrGroupNotEmpty = func(marks int64) error {
 		return apperror.NewFieldValidationError(

@@ -21,7 +21,7 @@ func newAchievementItem(uAch model.UserAchievement) AchievementItem {
 		ID:         uAch.Achievement.ID,
 		Title:      uAch.Achievement.Title,
 		Desc:       uAch.Achievement.Desc,
-		Icon:       uAch.Achievement.Icon.URL,
+		Icon:       uAch.Achievement.Icon,
 		Threshold:  uAch.Achievement.Threshold,
 		Reward:     uAch.Achievement.Reward.Amount,
 		UnlockedAt: uAch.UnlockedAt,

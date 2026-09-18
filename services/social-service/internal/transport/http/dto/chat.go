@@ -130,6 +130,11 @@ type LastMessagePreviewResponse struct {
 	MessageID uint   `json:"messageId"`
 	Username  string `json:"username"`
 	Content   string `json:"content"`
+
+	// IsAdmin — автор превью. Не путать с IsAdmin самого элемента списка:
+	// тот относится к собеседнику direct-чата, этот — к тому, кто написал
+	// последнее сообщение (в группе это может быть кто угодно).
+	IsAdmin bool `json:"isAdmin"`
 }
 
 // ChatListItemResponse — элемент списка чатов пользователя. Полиморфен по Type
@@ -164,6 +169,7 @@ func NewChatListItemResponse(item chatuc.ChatListItemResult) ChatListItemRespons
 			MessageID: item.LastMessage.MessageID,
 			Username:  item.LastMessage.Username,
 			Content:   item.LastMessage.Content,
+			IsAdmin:   item.LastMessage.IsAdmin,
 		}
 	}
 	return res

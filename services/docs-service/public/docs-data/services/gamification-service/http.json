@@ -61,14 +61,14 @@
       "method": "POST",
       "path": "/api/v2/achievement/create",
       "summary": "Создать достижение",
-      "description": "Создаёт новое достижение в системе. Достижение привязывается к типу события (triggerEvent) и активируется, когда счётчик действий пользователя достигает порога (threshold). Опционально может быть звеном цепочки прогрессий через nextId.\n\nДоступ только для администратора: проверка идёт по заголовкам X-User-ID и X-User-Admin — 401 при отсутствующем или некорректном X-User-ID, 403 если пользователь не администратор.",
+      "description": "Создаёт новое достижение в системе. Достижение привязывается к типу события (triggerEvent) и активируется, когда счётчик действий пользователя достигает порога (threshold). Опционально может быть звеном цепочки прогрессий через nextId. Иконка задаётся именем из iconfy (поле icon) — файл не загружается, картинку по этому имени рисует клиент.\n\nДоступ только для администратора: проверка идёт по заголовкам X-User-ID и X-User-Admin — 401 при отсутствующем или некорректном X-User-ID, 403 если пользователь не администратор.",
       "tags": [
         "Достижения"
       ],
       "auth": true,
       "requestBody": {
-        "description": "Параметры достижения в формате multipart/form-data (вместе с файлом иконки)",
-        "contentType": "multipart/form-data",
+        "description": "Параметры достижения. Файлов больше нет, поэтому обычная форма",
+        "contentType": "x-www-form-urlencoded",
         "schema": [
           {
             "name": "code",
@@ -114,9 +114,9 @@
           },
           {
             "name": "icon",
-            "type": "file",
+            "type": "string",
             "required": true,
-            "description": "Изображение иконки достижения (JPG/PNG, до 5 МБ)"
+            "description": "Имя иконки из iconfy (до 128 символов), например mdi:trophy-outline"
           }
         ],
         "example": {
@@ -127,7 +127,7 @@
           "threshold": 10,
           "rewardId": 2,
           "nextId": 16,
-          "icon": "<binary>"
+          "icon": "mdi:trophy-outline"
         }
       },
       "responses": [
@@ -181,7 +181,7 @@
                   "name": "icon",
                   "type": "string",
                   "required": true,
-                  "description": "URL иконки"
+                  "description": "Имя иконки из iconfy"
                 },
                 {
                   "name": "reward",
@@ -226,7 +226,7 @@
               "desc": "Создайте 10 меток на карте",
               "triggerEventType": "mark.created",
               "threshold": 10,
-              "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+              "icon": "mdi:trophy-outline",
               "reward": {
                 "id": 2,
                 "code": "mark.created",
@@ -239,7 +239,7 @@
                 "desc": "Создайте 50 меток",
                 "triggerEventType": "mark.created",
                 "threshold": 50,
-                "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon2.jpg"
+                "icon": "mdi:trophy"
               }
             }
           }
@@ -332,7 +332,7 @@
                   "name": "icon",
                   "type": "string",
                   "required": true,
-                  "description": "URL иконки"
+                  "description": "Имя иконки из iconfy"
                 },
                 {
                   "name": "reward",
@@ -377,7 +377,7 @@
               "desc": "Создайте 10 меток на карте",
               "triggerEventType": "mark.created",
               "threshold": 10,
-              "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+              "icon": "mdi:trophy",
               "reward": {
                 "id": 2,
                 "code": "mark.created",
@@ -390,7 +390,7 @@
                 "desc": "Создайте 50 меток",
                 "triggerEventType": "mark.created",
                 "threshold": 50,
-                "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon2.jpg",
+                "icon": "mdi:trophy",
                 "reward": {
                   "id": 5,
                   "code": "mark.created.silver",
@@ -405,7 +405,7 @@
               "desc": "Оставьте первый комментарий",
               "triggerEventType": "comment.created",
               "threshold": 1,
-              "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/cmt.jpg",
+              "icon": "mdi:trophy",
               "reward": {
                 "id": 3,
                 "code": "comment.created",
@@ -484,7 +484,7 @@
               "name": "icon",
               "type": "string",
               "required": true,
-              "description": "URL иконки"
+              "description": "Имя иконки из iconfy"
             },
             {
               "name": "reward",
@@ -526,7 +526,7 @@
             "desc": "Создайте 10 меток на карте",
             "triggerEventType": "mark.created",
             "threshold": 10,
-            "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+            "icon": "mdi:trophy",
             "reward": {
               "id": 2,
               "code": "mark.created",
@@ -539,7 +539,7 @@
               "desc": "Создайте 50 меток",
               "triggerEventType": "mark.created",
               "threshold": 50,
-              "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon2.jpg"
+              "icon": "mdi:trophy"
             }
           }
         }
@@ -642,7 +642,7 @@
                       "name": "icon",
                       "type": "string",
                       "required": true,
-                      "description": "URL иконки"
+                      "description": "Имя иконки из iconfy"
                     },
                     {
                       "name": "reward",
@@ -733,7 +733,7 @@
                   "desc": "Создайте 50 меток",
                   "triggerEventType": "mark.created",
                   "threshold": 50,
-                  "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+                  "icon": "mdi:trophy",
                   "reward": {
                     "id": 2,
                     "code": "mark.created",
@@ -746,7 +746,7 @@
                     "desc": "Создайте 1000 меток",
                     "triggerEventType": "mark.created",
                     "threshold": 1000,
-                    "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg"
+                    "icon": "mdi:trophy"
                   }
                 },
                 "unlockedAt": "2026-05-15T12:00:00Z"
@@ -759,7 +759,7 @@
                   "desc": "Оставьте первый комментарий",
                   "triggerEventType": "comment.created",
                   "threshold": 1,
-                  "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/cmt.jpg",
+                  "icon": "mdi:trophy",
                   "reward": {
                     "id": 3,
                     "code": "comment.created",
@@ -849,7 +849,7 @@
                   "desc": "Создайте 10 меток",
                   "triggerEventType": "mark.created",
                   "threshold": 10,
-                  "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon.jpg",
+                  "icon": "mdi:trophy",
                   "reward": {
                     "id": 2,
                     "code": "mark.created",
@@ -862,7 +862,7 @@
                     "desc": "Создайте 50 меток",
                     "triggerEventType": "mark.created",
                     "threshold": 50,
-                    "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/icon2.jpg"
+                    "icon": "mdi:trophy"
                   }
                 },
                 "current": 8,
@@ -877,7 +877,7 @@
                   "desc": "Добавьте 5 друзей",
                   "triggerEventType": "friend.added",
                   "threshold": 5,
-                  "icon": "https://realtimemap.ru/store/photos/achievements/2026/05/friend.jpg",
+                  "icon": "mdi:trophy",
                   "reward": {
                     "id": 4,
                     "code": "friend.added",

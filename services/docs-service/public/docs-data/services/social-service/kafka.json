@@ -1,23 +1,60 @@
 {
   "topics": [
     {
-      "id": "user-friend-added",
-      "name": "social.friend.added",
-      "summary": "Событие добавления друга",
-      "description": "Публикуется при принятии запроса на дружбу.",
+      "id": "social-profile-updated",
+      "name": "social-service.events",
+      "summary": "Профиль изменён — актуальное состояние для auth-сервиса",
+      "description": "Исходящий топик social-service. Публикуется событие profile.updated: профиль редактируется здесь, но username участвует в выдаче auth-сервиса (заголовок X-User-Name на gateway), и без события там навсегда осталось бы значение с момента регистрации.\n\nЕдет полное состояние изменяемых полей, а не дельта: потребитель не обязан хранить предыдущую версию, а повтор события (Kafka at-least-once) при полном состоянии идемпотентен — повторное применение тех же значений ничего не портит.\n\nis_admin в payload намеренно отсутствует: признак принадлежит auth-сервису, social его только зеркалит. Отправка своей копии обратно закольцевала бы поле — устаревшее значение из social перезаписало бы актуальное в auth.\n\nКлюч сообщения — user_id: события одного пользователя попадают в одну партицию и приходят потребителю в порядке публикации. Без этого два быстрых редактирования подряд могли бы примениться в auth задом наперёд, оставив там старый username.",
       "producers": ["social-service"],
-      "consumers": ["notification-service"],
-      "partitionKey": "userId",
-      "retention": "7d",
+      "consumers": ["auth-service"],
+      "partitionKey": "user_id",
       "schema": [
-        { "name": "userId", "type": "string", "required": true, "description": "ID инициатора" },
-        { "name": "friendId", "type": "string", "required": true, "description": "ID друга" },
-        { "name": "timestamp", "type": "string", "required": true, "description": "ISO 8601 дата" }
+        { "name": "id", "type": "string", "required": true, "description": "UUID сообщения (конверт)" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: profile.updated" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "Время публикации (ISO 8601, UTC)" },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Состояние профиля на момент изменения",
+          "children": [
+            { "name": "user_id", "type": "integer", "required": true, "description": "ID пользователя" },
+            { "name": "username", "type": "string", "required": true, "description": "Актуальное имя пользователя" },
+            { "name": "tag", "type": "string", "required": true, "description": "Тег профиля" },
+            { "name": "avatar", "type": "string", "required": true, "description": "URL аватара" }
+          ]
+        }
       ],
       "example": {
-        "userId": "550e8400-...",
-        "friendId": "660e8400-...",
-        "timestamp": "2026-04-17T10:00:00Z"
+        "id": "18617847-4b69-4108-b34e-0693542ad3a2",
+        "type": "profile.updated",
+        "timestamp": "2026-09-18T10:15:00Z",
+        "payload": {
+          "user_id": 60,
+          "username": "john_doe",
+          "tag": "john",
+          "avatar": "https://realtimemap.ru/store/photos/avatars/60.jpg"
+        }
+      }
+    },
+    {
+      "id": "social-user-events-in",
+      "name": "user-service",
+      "summary": "Входящий топик auth-сервиса: создание профиля и признак администратора",
+      "description": "Топик auth-сервиса, который social-service читает как consumer. Оттуда берутся user.registered (завести профиль новому пользователю) и user.updated (обновить признак администратора).\n\nИмя топика — без суффикса .events, исторически: значение совпадает с topic.UserEvents в auth-сервисе.\n\nСервис читает топик целиком и разбирает знакомые типы событий, остальные пропускает молча.",
+      "producers": ["auth-service"],
+      "consumers": ["social-service"],
+      "partitionKey": "user_id",
+      "schema": [
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: user.registered или user.updated" },
+        { "name": "payload", "type": "object", "required": true, "description": "Данные пользователя из auth-сервиса" }
+      ],
+      "example": {
+        "type": "user.registered",
+        "payload": {
+          "user_id": 60,
+          "username": "john_doe"
+        }
       }
     }
   ]

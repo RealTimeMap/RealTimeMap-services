@@ -3,8 +3,15 @@
   "name": "comment-service",
   "description": "Сервис комментариев к сущностям приложения (метки и др.) с поддержкой ответов и лайков.",
   "fullDescription": "Управляет созданием, чтением, редактированием и удалением комментариев. Поддерживает вложенные ответы (до 2 уровней), лайки и курсорную пагинацию; дизлайки не поддерживаются. Списки комментариев и ответов доступны анонимно, а при валидном токене в meta приходят флаги isLiked и canLike для текущего пользователя. Авторская информация подгружается из profile-service по gRPC.",
-  "protocols": ["http"],
-  "availableEnvs": ["dev", "staging", "prod"],
+  "protocols": [
+    "http",
+    "kafka"
+  ],
+  "availableEnvs": [
+    "dev",
+    "staging",
+    "prod"
+  ],
   "healthPath": "/comment/health",
   "team": "Backend",
   "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/comment-service"

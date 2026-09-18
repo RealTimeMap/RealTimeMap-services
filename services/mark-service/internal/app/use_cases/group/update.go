@@ -3,13 +3,14 @@ package group
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	srv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 )
 
 type Updater interface {
-	UpdateGroup(ctx context.Context, params srv.UpdateGroupParams, groupID, userID uint) (*srv.Group, error)
+	UpdateGroup(ctx context.Context, params srv.UpdateGroupParams, groupID uuid.UUID, userID uint) (*srv.Group, error)
 }
 
 type UpdateGroupHandler struct {
@@ -26,7 +27,7 @@ func NewUpdateGroupHandler(updater Updater, logger *zap.Logger) *UpdateGroupHand
 }
 
 type UpdateGroupCommand struct {
-	GroupID uint
+	GroupID uuid.UUID
 	UserID  uint
 
 	Name        *string
@@ -37,7 +38,7 @@ type UpdateGroupCommand struct {
 
 func (h *UpdateGroupHandler) Handle(ctx context.Context, cmd UpdateGroupCommand) (GroupResult, error) {
 	h.logger.Info("start Handle", zap.String("layer", "use_case.Update"),
-		zap.Uint("groupID", cmd.GroupID), zap.Uint("userID", cmd.UserID))
+		zap.String("groupID", cmd.GroupID.String()), zap.Uint("userID", cmd.UserID))
 
 	obj, err := h.updater.UpdateGroup(ctx, srv.UpdateGroupParams{
 		Name:        cmd.Name,

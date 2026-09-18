@@ -88,7 +88,7 @@ func ToAchievementResponse(a *model.Achievement) *AchievementResponse {
 		Desc:             a.Desc,
 		TriggerEventType: a.TriggerEventType,
 		Threshold:        a.Threshold,
-		Icon:             a.Icon.URL,
+		Icon:             a.Icon,
 		Reward:           toXPRewardResponse(&a.Reward),
 		Next:             ToAchievementResponse(a.Next),
 	}

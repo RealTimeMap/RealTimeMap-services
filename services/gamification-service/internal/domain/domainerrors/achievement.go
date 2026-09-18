@@ -12,4 +12,20 @@ var (
 	AchievementAlreadyUnlockedError = func(id uint) error {
 		return apperror.NewConflictError("achievement", "achievement already unlocked", id)
 	}
+	ErrAchievementIconRequired = func() error {
+		return apperror.NewFieldValidationError(
+			"icon",
+			"field required",
+			"value_error.icon.required",
+			"",
+		)
+	}
+	ErrAchievementIconInvalid = func(icon string) error {
+		return apperror.NewFieldValidationError(
+			"icon",
+			"icon name must be at most 128 characters",
+			"value_error.icon.invalid",
+			icon,
+		)
+	}
 )

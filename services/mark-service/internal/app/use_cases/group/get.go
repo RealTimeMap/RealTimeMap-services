@@ -3,13 +3,14 @@ package group
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	srv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 )
 
 type Getter interface {
-	Get(ctx context.Context, groupID, userID uint) (srv.Group, error)
+	Get(ctx context.Context, groupID uuid.UUID, userID uint) (srv.Group, error)
 }
 
 type GetGroupHandler struct {
@@ -26,13 +27,13 @@ func NewGetGroupHandler(getter Getter, logger *zap.Logger) *GetGroupHandler {
 }
 
 type GetGroupQuery struct {
-	GroupID uint
+	GroupID uuid.UUID
 	UserID  uint
 }
 
 func (h *GetGroupHandler) Handle(ctx context.Context, query GetGroupQuery) (GroupResult, error) {
 	h.logger.Info("start Handle", zap.String("layer", "use_case.Get"),
-		zap.Uint("groupID", query.GroupID), zap.Uint("userID", query.UserID))
+		zap.String("groupID", query.GroupID.String()), zap.Uint("userID", query.UserID))
 
 	obj, err := h.getter.Get(ctx, query.GroupID, query.UserID)
 	if err != nil {
