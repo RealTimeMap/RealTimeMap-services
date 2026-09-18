@@ -3,6 +3,7 @@ package handlers
 import (
 	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -56,8 +57,35 @@ type CreatePersonalMarkRequest struct {
 	Longitude float64 `form:"longitude" binding:"required,longitude"`
 	Latitude  float64 `form:"latitude" binding:"required,latitude"`
 
-	GroupsIds []uuid.UUID             `form:"groupsIds" binding:"required"`
+	GroupsIds []string                `form:"groupsIds" binding:"required"`
 	Photos    []*multipart.FileHeader `form:"photos" binding:"-"`
+}
+
+// parseGroupIDs разбирает идентификаторы групп из формы.
+func parseGroupIDs(raw []string) ([]uuid.UUID, error) {
+	out := make([]uuid.UUID, 0, len(raw))
+
+	for _, item := range raw {
+		for _, part := range strings.Split(item, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+
+			id, err := uuid.Parse(part)
+			if err != nil {
+				return nil, apperror.NewFieldValidationError(
+					"groupsIds",
+					"groupsIds must contain uuid values",
+					"value_error.uuid",
+					part,
+				)
+			}
+			out = append(out, id)
+		}
+	}
+
+	return out, nil
 }
 
 func (h *personalHandler) Create(c *gin.Context) {
@@ -71,6 +99,12 @@ func (h *personalHandler) Create(c *gin.Context) {
 
 	if err := c.ShouldBind(&req); err != nil {
 		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	groupIDs, err := parseGroupIDs(req.GroupsIds)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 
@@ -88,7 +122,7 @@ func (h *personalHandler) Create(c *gin.Context) {
 		Color:       req.Color,
 		Icon:        req.Icon,
 		IsVisible:   req.IsVisible,
-		GroupsIds:   req.GroupsIds,
+		GroupsIds:   groupIDs,
 		Photos:      photos,
 	})
 	if err != nil {
@@ -172,7 +206,8 @@ type UpdatePersonalMarkRequest struct {
 	Longitude *float64 `form:"longitude" binding:"omitempty,longitude"`
 	Latitude  *float64 `form:"latitude" binding:"omitempty,latitude"`
 
-	GroupsIds []uuid.UUID `form:"groupsIds" binding:"-"`
+	// Строками по той же причине, что и в CreatePersonalMarkRequest.
+	GroupsIds []string `form:"groupsIds" binding:"-"`
 
 	PhotosToDelete []string                `form:"photosToDelete" binding:"-"`
 	Photos         []*multipart.FileHeader `form:"photos" binding:"-"`
@@ -219,6 +254,12 @@ func (h *personalHandler) Update(c *gin.Context) {
 		return
 	}
 
+	groupIDs, err := parseGroupIDs(req.GroupsIds)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
 	obj, err := h.useCase.Update.Handle(c.Request.Context(), usecase.UpdatePersonalMarkCommand{
 		MarkID:         markID,
 		UserID:         uint(userInfo.UserID),
@@ -228,7 +269,7 @@ func (h *personalHandler) Update(c *gin.Context) {
 		Color:          req.Color,
 		Icon:           req.Icon,
 		IsVisible:      req.IsVisible,
-		GroupsIds:      req.GroupsIds,
+		GroupsIds:      groupIDs,
 		PhotosToDelete: req.PhotosToDelete,
 		Photos:         photos,
 	})
