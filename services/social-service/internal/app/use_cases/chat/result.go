@@ -138,6 +138,10 @@ type LastMessagePreview struct {
 	Username  string
 	Content   string
 	MessageID uint
+
+	// IsAdmin — автор последнего сообщения. В групповом чате превью
+	// подписано именем участника, и бейдж относится к нему.
+	IsAdmin bool
 }
 
 type ChatListItemResult struct {
@@ -197,14 +201,19 @@ func toLastMessagePreview(m *message.Message, profiles map[uint]*model.Profile) 
 	if m == nil {
 		return nil
 	}
-	var username string
+	var (
+		username string
+		isAdmin  bool
+	)
 	if p := profiles[m.SenderID]; p != nil {
 		username = p.Username
+		isAdmin = p.IsAdmin
 	}
 	return &LastMessagePreview{
 		MessageID: m.ID,
 		Content:   m.Content,
 		Username:  username,
+		IsAdmin:   isAdmin,
 	}
 }
 

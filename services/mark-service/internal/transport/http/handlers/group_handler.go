@@ -4,15 +4,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	errorhandler "github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/error"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	httputils "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/validation"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/group"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -43,14 +44,18 @@ func InitGroupHandler(g *gin.RouterGroup, deps GroupDeps) {
 
 type (
 	CreateGroupRequest struct {
-		Name        string  `json:"name" binding:"required"`
-		Description *string `json:"description"`
+		// ID необязателен. Его передаёт клиент, создавший группу офлайн:
+		// идентификатор уже роздан локальным меткам, и сервер обязан принять
+		// именно его. Без поля идентификатор генерирует сервер.
+		ID          *uuid.UUID `json:"id" binding:"omitempty"`
+		Name        string     `json:"name" binding:"required"`
+		Description *string    `json:"description"`
 		// Color — hex-код вида #RRGGBB, Icon — имя иконки из iconfy.
 		Color string `json:"color" binding:"omitempty,max=7"`
 		Icon  string `json:"icon" binding:"omitempty,max=128"`
 	}
 	GroupResponse struct {
-		ID          uint      `json:"id"`
+		ID          uuid.UUID `json:"id"`
 		UserID      uint      `json:"userId"`
 		Name        string    `json:"name"`
 		Description *string   `json:"description"`
@@ -59,6 +64,34 @@ type (
 		CreatedAt   time.Time `json:"createdAt"`
 	}
 )
+
+// ErrGroupIDNil — клиент прислал нулевой UUID. Пропустить его нельзя:
+// uuid.Nil на уровне сервиса означает "идентификатор не задан", и такая
+// группа получила бы сгенерированный id вместо переданного.
+var ErrGroupIDNil = apperror.NewFieldValidationError(
+	"id",
+	"id must not be a nil uuid",
+	"value_error.id.invalid",
+	uuid.Nil.String(),
+)
+
+// parseGroupID читает groupID из пути. Идентификатор группы — UUID, поэтому
+// числовой ParsePathParams здесь неприменим.
+func parseGroupID(c *gin.Context) (uuid.UUID, error) {
+	raw := c.Param("groupID")
+
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return uuid.Nil, apperror.NewFieldValidationError(
+			"groupID",
+			"groupID must be a uuid",
+			"value_error.uuid",
+			raw,
+		)
+	}
+
+	return id, nil
+}
 
 func ToGroupResponse(obj group.GroupResult) GroupResponse {
 	return GroupResponse{
@@ -85,7 +118,17 @@ func (h *groupHandler) CreateGroup(c *gin.Context) {
 		validation.AbortWithBindingError(c, err)
 		return
 	}
+	var id uuid.UUID
+	if req.ID != nil {
+		if *req.ID == uuid.Nil {
+			errorhandler.HandleError(c, ErrGroupIDNil, h.logger)
+			return
+		}
+		id = *req.ID
+	}
+
 	obj, err := h.useCases.Create.Handle(c.Request.Context(), group.CreateGroupCommand{
+		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,
 		UserID:      uint(userInfo.UserID),
@@ -134,7 +177,7 @@ func (h *groupHandler) Get(c *gin.Context) {
 		return
 	}
 
-	groupID, err := middleware.ParsePathParams(c, "groupID")
+	groupID, err := parseGroupID(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -170,7 +213,7 @@ func (h *groupHandler) Update(c *gin.Context) {
 		return
 	}
 
-	groupID, err := middleware.ParsePathParams(c, "groupID")
+	groupID, err := parseGroupID(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -204,7 +247,7 @@ func (h *groupHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	groupID, err := middleware.ParsePathParams(c, "groupID")
+	groupID, err := parseGroupID(c)
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return

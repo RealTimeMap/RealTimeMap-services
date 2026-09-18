@@ -1,13 +1,17 @@
 package personal
 
+// Changeable — строка, участвующая в синхронизации.
+//
+// GetSyncID отдаёт строку, а не uint: ключи секций разнотипны (метка — uint,
+// группа — UUID), а Removed в ответе должен быть однородным списком.
 type Changeable interface {
-	GetID() uint
+	GetSyncID() string
 	GetRevision() uint
 	IsDeleted() bool
 }
 
 func toChanges[T Changeable](objs []T, upTo uint, limit int) Changes[T] {
-	out := Changes[T]{Upserted: []T{}, Removed: []uint{}, Cursor: upTo}
+	out := Changes[T]{Upserted: []T{}, Removed: []string{}, Cursor: upTo}
 	if len(objs) > limit {
 		objs = objs[:limit]
 		out.HasMore = true
@@ -15,7 +19,7 @@ func toChanges[T Changeable](objs []T, upTo uint, limit int) Changes[T] {
 	}
 	for _, m := range objs {
 		if m.IsDeleted() {
-			out.Removed = append(out.Removed, m.GetID())
+			out.Removed = append(out.Removed, m.GetSyncID())
 		} else {
 			out.Upserted = append(out.Upserted, m)
 		}

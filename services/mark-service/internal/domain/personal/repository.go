@@ -3,6 +3,8 @@ package personal
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 )
 
@@ -29,13 +31,17 @@ type GroupRepository interface {
 	Update(ctx context.Context, obj *Group) error
 	List(ctx context.Context, userID uint, params pagination.Params) ([]*Group, int64, error)
 	Delete(ctx context.Context, obj *Group) error
-	GetBatch(ctx context.Context, userID uint, ids []uint) ([]*Group, error)
-	GetByID(ctx context.Context, groupID, userID uint) (Group, error)
+	GetBatch(ctx context.Context, userID uint, ids []uuid.UUID) ([]*Group, error)
+	GetByID(ctx context.Context, groupID uuid.UUID, userID uint) (Group, error)
+	// ExistsByID проверяет занятость идентификатора без учёта владельца:
+	// UUID приходит от клиента, и коллизия с чужой группой должна быть
+	// конфликтом, а не молчаливым доступом к ней.
+	ExistsByID(ctx context.Context, groupID uuid.UUID) (bool, error)
 	Get(ctx context.Context, userID uint, since *uint, upTo uint, limit int) ([]Group, error)
 	// CountMarks считает живые метки, привязанные к группе: удаление
 	// непустой группы осиротило бы их, поэтому запрещено.
-	CountMarks(ctx context.Context, groupID uint) (int64, error)
+	CountMarks(ctx context.Context, groupID uuid.UUID) (int64, error)
 	// SetRevision проставляет ревизию без загрузки модели — нужен при удалении,
 	// чтобы soft-deleted строка доехала до клиента через ListChanges.
-	SetRevision(ctx context.Context, groupID, revision uint) error
+	SetRevision(ctx context.Context, groupID uuid.UUID, revision uint) error
 }

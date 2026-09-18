@@ -1,0 +1,49 @@
+{
+  "topics": [
+    {
+      "id": "comment-events",
+      "name": "comment-service.events",
+      "summary": "События комментариев: создание, изменение, удаление",
+      "description": "Исходящий топик comment-service. Публикуются три типа событий, различающиеся полем type конверта:\n\n  comment.created — комментарий создан\n  comment.updated — текст комментария изменён\n  comment.deleted — комментарий удалён\n\nПотребители разбирают знакомые типы и пропускают остальные молча: smtp-service шлёт письмо автору родительского комментария на comment.created, gamification-service начисляет опыт.\n\nВ comment.deleted текст не попадает: payload вычищается при сборке события, чтобы удалённый комментарий не оставался читаемым в топике до истечения retention.\n\nparentUserId едет в событии, а не резолвится потребителем: comment-service знает его в момент создания ответа, а спросить не у кого — сервис не поднимает gRPC, и ручки «комментарий по id» в proto нет.\n\nПубликация включается флагом kafka.enabled в конфигурации. При выключенном флаге события уходят в NoOp-публикатор и топик не создаётся.",
+      "producers": ["comment-service"],
+      "consumers": ["smtp-service", "gamification-service"],
+      "partitionKey": "user_id",
+      "schema": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID сообщения (конверт)" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: comment.created, comment.updated или comment.deleted" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "Время публикации (ISO 8601, UTC)" },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Состояние комментария",
+          "children": [
+            { "name": "commentId", "type": "integer", "required": true, "description": "ID комментария" },
+            { "name": "userId", "type": "integer", "required": true, "description": "ID автора комментария" },
+            { "name": "username", "type": "string", "required": false, "description": "Имя автора комментария" },
+            { "name": "entityType", "type": "string", "required": true, "description": "Тип сущности, к которой оставлен комментарий" },
+            { "name": "entityId", "type": "integer", "required": true, "description": "ID сущности" },
+            { "name": "parentId", "type": "integer", "required": false, "description": "ID родительского комментария. Пусто для комментария верхнего уровня" },
+            { "name": "content", "type": "string", "required": false, "description": "Текст комментария. Всегда пуст в comment.deleted" },
+            { "name": "parentUserId", "type": "integer", "required": false, "description": "Автор комментария, на который отвечают" }
+          ]
+        }
+      ],
+      "example": {
+        "id": "18617847-4b69-4108-b34e-0693542ad3a2",
+        "type": "comment.created",
+        "timestamp": "2026-09-18T10:15:00Z",
+        "payload": {
+          "commentId": 812,
+          "userId": 60,
+          "username": "john_doe",
+          "entityType": "mark",
+          "entityId": 103,
+          "parentId": 741,
+          "content": "Согласен, место отличное",
+          "parentUserId": 42
+        }
+      }
+    }
+  ]
+}

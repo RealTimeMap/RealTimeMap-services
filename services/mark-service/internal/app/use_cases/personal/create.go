@@ -3,6 +3,8 @@ package personal
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"go.uber.org/zap"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
@@ -31,7 +33,7 @@ type CreatePersonalMarkCommand struct {
 
 	IsVisible bool
 
-	GroupsIds []uint
+	GroupsIds []uuid.UUID
 	Photos    []mediavalidator.PhotoInput
 }
 

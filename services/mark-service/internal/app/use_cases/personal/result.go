@@ -3,6 +3,8 @@ package personal
 import (
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	srv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 )
@@ -29,24 +31,24 @@ type SyncMarkDTO struct {
 	IsShare   bool `json:"isShare"`
 	IsVisible bool `json:"isVisible"`
 
-	GroupIDs []uint   `json:"groupsIds"`
-	Photos   []string `json:"photos"`
+	GroupIDs []uuid.UUID `json:"groupsIds"`
+	Photos   []string    `json:"photos"`
 }
 
 // SyncGroupDTO — группа меток в ответе синхронизации.
 type SyncGroupDTO struct {
-	ID          uint    `json:"id"`
-	Revision    uint    `json:"revision"`
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Color       string  `json:"color"`
-	Icon        string  `json:"icon"`
+	ID          uuid.UUID `json:"id"`
+	Revision    uint      `json:"revision"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description,omitempty"`
+	Color       string    `json:"color"`
+	Icon        string    `json:"icon"`
 }
 
 // ToSyncMarkDTO конвертирует доменную модель в DTO. Вызывается из
 // changeSourceAdapter, пока конкретный тип ещё известен статически.
 func ToSyncMarkDTO(m srv.Model) any {
-	groupIDs := make([]uint, 0, len(m.Groups))
+	groupIDs := make([]uuid.UUID, 0, len(m.Groups))
 	for _, g := range m.Groups {
 		if g == nil {
 			continue
@@ -102,15 +104,15 @@ type PersonalMarkDetailResult struct {
 	IsShare   bool `json:"isShare"`
 	IsVisible bool `json:"isVisible"`
 
-	GroupIDs []uint   `json:"groupsIds"`
-	Photos   []string `json:"photos"`
+	GroupIDs []uuid.UUID `json:"groupsIds"`
+	Photos   []string    `json:"photos"`
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func toPersonalMarkDetailResult(m srv.Model) PersonalMarkDetailResult {
-	groupIDs := make([]uint, 0, len(m.Groups))
+	groupIDs := make([]uuid.UUID, 0, len(m.Groups))
 	for _, g := range m.Groups {
 		if g == nil {
 			continue

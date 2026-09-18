@@ -3,11 +3,13 @@ package group
 import (
 	"time"
 
+	"github.com/google/uuid"
+
 	srv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
 )
 
 type GroupResult struct {
-	ID          uint
+	ID          uuid.UUID
 	UserID      uint
 	Name        string
 	Description *string

@@ -6,14 +6,31 @@
       "path": "/api/v2/auth/register",
       "summary": "Регистрация нового пользователя",
       "description": "Создаёт новый аккаунт пользователя. Возвращает данные созданного пользователя.",
-      "tags": ["Аутентификация"],
+      "tags": [
+        "Аутентификация"
+      ],
       "requestBody": {
         "description": "Данные для регистрации",
         "contentType": "json",
         "schema": [
-          { "name": "email", "type": "string", "required": true, "description": "Email пользователя" },
-          { "name": "password", "type": "string", "required": true, "description": "Пароль (мин. 8 символов)" },
-          { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" }
+          {
+            "name": "email",
+            "type": "string",
+            "required": true,
+            "description": "Email пользователя"
+          },
+          {
+            "name": "password",
+            "type": "string",
+            "required": true,
+            "description": "Пароль (мин. 8 символов)"
+          },
+          {
+            "name": "username",
+            "type": "string",
+            "required": true,
+            "description": "Имя пользователя"
+          }
         ],
         "example": {
           "email": "user@example.com",
@@ -26,14 +43,54 @@
           "statusCode": 201,
           "description": "Пользователь успешно зарегистрирован",
           "schema": [
-            { "name": "id", "type": "integer", "required": true, "description": "ID пользователя" },
-            { "name": "email", "type": "string", "required": true, "description": "Email пользователя" },
-            { "name": "is_active", "type": "boolean", "required": true, "description": "Активен ли аккаунт" },
-            { "name": "is_superuser", "type": "boolean", "required": true, "description": "Является ли суперпользователем" },
-            { "name": "is_verified", "type": "boolean", "required": true, "description": "Подтверждён ли email" },
-            { "name": "phone", "type": "string", "required": false, "description": "Номер телефона" },
-            { "name": "username", "type": "string", "required": true, "description": "Имя пользователя" },
-            { "name": "avatar", "type": "string", "required": false, "description": "URL аватара" }
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID пользователя"
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "required": true,
+              "description": "Email пользователя"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean",
+              "required": true,
+              "description": "Активен ли аккаунт"
+            },
+            {
+              "name": "is_superuser",
+              "type": "boolean",
+              "required": true,
+              "description": "Является ли суперпользователем"
+            },
+            {
+              "name": "is_verified",
+              "type": "boolean",
+              "required": true,
+              "description": "Подтверждён ли email"
+            },
+            {
+              "name": "phone",
+              "type": "string",
+              "required": false,
+              "description": "Номер телефона"
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "required": true,
+              "description": "Имя пользователя"
+            },
+            {
+              "name": "avatar",
+              "type": "string",
+              "required": false,
+              "description": "URL аватара"
+            }
           ],
           "example": {
             "id": 60,
@@ -47,7 +104,11 @@
           }
         }
       ],
-      "errors": ["validation-error", "conflict"]
+      "errors": [
+        "validation-error",
+        "conflict"
+      ],
+      "auth": false
     },
     {
       "id": "login",
@@ -55,13 +116,25 @@
       "path": "/api/v2/auth/login",
       "summary": "Вход в систему",
       "description": "Аутентификация пользователя по email и паролю. Возвращает access token.",
-      "tags": ["Аутентификация"],
+      "tags": [
+        "Аутентификация"
+      ],
       "requestBody": {
         "description": "Данные для входа",
         "contentType": "x-www-form-urlencoded",
         "schema": [
-          { "name": "username", "type": "string", "required": true, "description": "username пользователя" },
-          { "name": "password", "type": "string", "required": true, "description": "Пароль" }
+          {
+            "name": "username",
+            "type": "string",
+            "required": true,
+            "description": "username пользователя"
+          },
+          {
+            "name": "password",
+            "type": "string",
+            "required": true,
+            "description": "Пароль"
+          }
         ],
         "example": {
           "username": "user",
@@ -73,16 +146,30 @@
           "statusCode": 200,
           "description": "Успешная аутентификация",
           "schema": [
-            { "name": "accessToken", "type": "string", "required": true, "description": "JWT access token" },
-            { "name": "tokenType", "type": "string", "required": true, "description": "Тип токена (bearer)" }
+            {
+              "name": "access_token",
+              "type": "string",
+              "required": true,
+              "description": "JWT access token"
+            },
+            {
+              "name": "token_type",
+              "type": "string",
+              "required": true,
+              "description": "Тип токена (bearer)"
+            }
           ],
           "example": {
-            "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-            "tokenType": "bearer"
+            "access_token": "eyJhbGciOiJIUzI1NiIs...",
+            "token_type": "bearer"
           }
         }
       ],
-      "errors": ["validation-error", "unauthorized"]
+      "errors": [
+        "validation-error",
+        "unauthorized"
+      ],
+      "auth": false
     },
     {
       "id": "token-validate",
@@ -90,7 +177,9 @@
       "path": "/api/v2/auth/token-validate",
       "summary": "Валидация токена",
       "description": "Проверяет валидность Bearer токена. Используется Traefik forwardAuth middleware. При успехе возвращает заголовки X-User-Id, X-User-Name, X-User-Ban, X-User-Admin. Служит для внутрисервисной связи.",
-      "tags": ["Аутентификация"],
+      "tags": [
+        "Аутентификация"
+      ],
       "auth": true,
       "parameters": [],
       "responses": [
@@ -103,21 +192,30 @@
           "description": "Токен невалиден или истёк"
         }
       ],
-      "errors": ["unauthorized"]
+      "errors": [
+        "unauthorized"
+      ]
     },
     {
       "id": "forgot-password",
       "method": "POST",
-      "path": "/api/v2/forgot-password",
+      "path": "/api/v2/auth/forgot-password",
       "summary": "Запрос на восстановление пароля",
       "description": "Инициирует процесс сброса пароля и отправляет письмо с токеном/ссылкой для восстановления на указанный email.",
-      "tags": ["Аутентификация"],
+      "tags": [
+        "Аутентификация"
+      ],
       "auth": false,
       "requestBody": {
         "description": "Email пользователя для восстановления доступа",
         "contentType": "json",
         "schema": [
-          { "name": "email", "type": "string", "required": true, "description": "Email пользователя, привязаный к аккаунту" }
+          {
+            "name": "email",
+            "type": "string",
+            "required": true,
+            "description": "Email пользователя, привязаный к аккаунту"
+          }
         ],
         "example": {
           "email": "user@example.com"
@@ -131,22 +229,36 @@
           "example": {}
         }
       ],
-      "errors": ["validation-error"]
+      "errors": [
+        "validation-error"
+      ]
     },
     {
       "id": "reset-password",
       "method": "POST",
-      "path": "/api/v2/reset-password",
+      "path": "/api/v2/auth/reset-password",
       "summary": "Установка нового пароля",
       "description": "Устанавливает новый пароль пользователя с использованием токена сброса, полученного из письма.",
-      "tags": ["Аутентификация"],
+      "tags": [
+        "Аутентификация"
+      ],
       "auth": false,
       "requestBody": {
         "description": "Токен подтверждения и новый пароль",
         "contentType": "json",
         "schema": [
-          { "name": "token", "type": "string", "required": true, "description": "Токен сброса пароля из письма" },
-          { "name": "password", "type": "string", "required": true, "description": "Новый пароль пользователя" }
+          {
+            "name": "token",
+            "type": "string",
+            "required": true,
+            "description": "Токен сброса пароля из письма"
+          },
+          {
+            "name": "password",
+            "type": "string",
+            "required": true,
+            "description": "Новый пароль пользователя"
+          }
         ],
         "example": {
           "token": "d9b2d63d-ce7c-4860-840f-7f59782d8c36",
@@ -161,7 +273,423 @@
           "example": {}
         }
       ],
-      "errors": ["conflict", "validation-error"]
+      "errors": [
+        "conflict",
+        "validation-error"
+      ]
+    },
+    {
+      "id": "logout",
+      "method": "POST",
+      "path": "/api/v2/auth/logout",
+      "summary": "Выход из системы",
+      "description": "Завершает текущую сессию: access token удаляется из БД и становится непригоден. Токен определяется по заголовку Authorization, тело запроса не требуется.",
+      "tags": [
+        "Аутентификация"
+      ],
+      "auth": true,
+      "parameters": [],
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Сессия завершена, токен отозван"
+        },
+        {
+          "statusCode": 401,
+          "description": "Токен отсутствует, невалиден или уже отозван"
+        }
+      ],
+      "errors": [
+        "unauthorized"
+      ]
+    },
+    {
+      "id": "token-validate-optional",
+      "method": "GET",
+      "path": "/api/v2/auth/token-validate-optional",
+      "summary": "Валидация токена (необязательная авторизация)",
+      "description": "Используется Traefik-middleware auth-optional на публичных маршрутах, где авторизация необязательна. В отличие от token-validate всегда отвечает 200: отсутствие или невалидность токена — не ошибка, а анонимный запрос. Gateway различает гостя и пользователя по заголовку X-User-Anonymous. При валидном токене дополнительно проставляются X-User-ID, X-User-Name, X-User-Admin, X-User-Ban и, при активном бане, X-User-Ban-Reason, X-User-Ban-Detail, X-User-Ban-Time. Значения с не-ASCII (имя, текст причины) percent-кодируются — gateway обязан раскодировать их. Служит для внутрисервисной связи.",
+      "tags": [
+        "Аутентификация"
+      ],
+      "auth": false,
+      "parameters": [],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Всегда 200: либо пользователь опознан, либо запрос анонимный"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "request-verify-token",
+      "method": "POST",
+      "path": "/api/v2/auth/request-verify-token",
+      "summary": "Запрос письма для подтверждения email",
+      "description": "Инициирует отправку письма с токеном подтверждения на указанный email. Отвечает 202 независимо от того, существует ли такой пользователь, — чтобы по ответу нельзя было определить наличие аккаунта.",
+      "tags": [
+        "Аутентификация"
+      ],
+      "auth": false,
+      "requestBody": {
+        "description": "Email, на который отправить токен подтверждения",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "email",
+            "type": "string",
+            "required": true,
+            "description": "Email пользователя"
+          }
+        ],
+        "example": {
+          "email": "user@example.com"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 202,
+          "description": "Запрос принят. Если аккаунт существует и не подтверждён, будет отправлено письмо",
+          "schema": [],
+          "example": {}
+        }
+      ],
+      "errors": [
+        "validation-error"
+      ]
+    },
+    {
+      "id": "verify",
+      "method": "POST",
+      "path": "/api/v2/auth/verify",
+      "summary": "Подтверждение email",
+      "description": "Подтверждает email пользователя по токену из письма. Возвращает данные пользователя с is_verified = true.",
+      "tags": [
+        "Аутентификация"
+      ],
+      "auth": false,
+      "requestBody": {
+        "description": "Токен подтверждения из письма",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "token",
+            "type": "string",
+            "required": true,
+            "description": "Токен подтверждения email"
+          }
+        ],
+        "example": {
+          "token": "d9b2d63d-ce7c-4860-840f-7f59782d8c36"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Email подтверждён",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID пользователя"
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "required": true,
+              "description": "Email пользователя"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean",
+              "required": true,
+              "description": "Активен ли аккаунт"
+            },
+            {
+              "name": "is_superuser",
+              "type": "boolean",
+              "required": true,
+              "description": "Является ли суперпользователем"
+            },
+            {
+              "name": "is_verified",
+              "type": "boolean",
+              "required": true,
+              "description": "Подтверждён ли email"
+            },
+            {
+              "name": "phone",
+              "type": "string",
+              "required": false,
+              "description": "Номер телефона"
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "required": true,
+              "description": "Имя пользователя"
+            },
+            {
+              "name": "avatar",
+              "type": "string",
+              "required": false,
+              "description": "URL аватара"
+            }
+          ],
+          "example": {
+            "id": 60,
+            "email": "user@example.com",
+            "is_active": true,
+            "is_superuser": false,
+            "is_verified": true,
+            "phone": null,
+            "username": "john_doe",
+            "avatar": null
+          }
+        }
+      ],
+      "errors": [
+        "validation-error",
+        "conflict"
+      ]
+    },
+    {
+      "id": "google-authorize",
+      "method": "GET",
+      "path": "/api/v2/auth/google/authorize",
+      "summary": "Начало входа через Google",
+      "description": "Возвращает URL страницы согласия Google, на который клиент перенаправляет пользователя. Маршрут регистрируется только если заданы APP_CONFIG__API__V1__AUTH__GOOGLE_CLIENT_ID и GOOGLE_CLIENT_SECRET; иначе возвращается 404.",
+      "tags": [
+        "Аутентификация",
+        "OAuth"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "scopes",
+          "in": "query",
+          "type": "array",
+          "required": false,
+          "description": "Запрашиваемые OAuth-scope (можно передать несколько раз)"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "URL для перехода на страницу согласия Google",
+          "schema": [
+            {
+              "name": "authorization_url",
+              "type": "string",
+              "required": true,
+              "description": "URL страницы согласия Google"
+            }
+          ],
+          "example": {
+            "authorization_url": "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=..."
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "google-callback",
+      "method": "GET",
+      "path": "/api/v2/auth/google/callback",
+      "summary": "Callback Google OAuth",
+      "description": "Обрабатывает возврат пользователя от Google: по code создаёт или связывает аккаунт, выпускает access token и отвечает редиректом (302) на URL фронтенда с токеном в параметрах — в отличие от /auth/login, который отдаёт токен в теле ответа. Маршрут регистрируется только если заданы APP_CONFIG__API__V1__AUTH__GOOGLE_CLIENT_ID и GOOGLE_CLIENT_SECRET; иначе возвращается 404.",
+      "tags": [
+        "Аутентификация",
+        "OAuth"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "code",
+          "in": "query",
+          "type": "string",
+          "required": false,
+          "description": "Код авторизации от Google"
+        },
+        {
+          "name": "state",
+          "in": "query",
+          "type": "string",
+          "required": false,
+          "description": "Значение state для защиты от CSRF"
+        },
+        {
+          "name": "error",
+          "in": "query",
+          "type": "string",
+          "required": false,
+          "description": "Код ошибки, если пользователь отклонил доступ"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 302,
+          "description": "Редирект на фронтенд с access token в параметрах URL"
+        },
+        {
+          "statusCode": 400,
+          "description": "Google вернул ошибку, либо email аккаунта отсутствует или уже занят"
+        }
+      ],
+      "errors": [
+        "validation-error"
+      ]
+    },
+    {
+      "id": "sessions-list",
+      "method": "GET",
+      "path": "/api/v2/sessions",
+      "summary": "Активные сессии текущего пользователя",
+      "description": "Список устройств, с которых выполнен вход. Сессия, из которой пришёл запрос, помечена is_current — клиенту нужно отличать её, чтобы не предлагать завершить её наравне с остальными. Сам токен в ответе не возвращается: снаружи сессия адресуется по session_id.",
+      "tags": [
+        "Сессии"
+      ],
+      "auth": true,
+      "parameters": [],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Список активных сессий",
+          "schema": [
+            {
+              "name": "session_id",
+              "type": "string",
+              "required": true,
+              "description": "Идентификатор сессии (UUID)"
+            },
+            {
+              "name": "device_name",
+              "type": "string",
+              "required": false,
+              "description": "Устройство в человекочитаемом виде"
+            },
+            {
+              "name": "user_agent",
+              "type": "string",
+              "required": false,
+              "description": "Полный User-Agent"
+            },
+            {
+              "name": "ip_address",
+              "type": "string",
+              "required": false,
+              "description": "IP-адрес входа"
+            },
+            {
+              "name": "created_at",
+              "type": "string",
+              "required": true,
+              "description": "Когда был выполнен вход (ISO 8601, UTC)"
+            },
+            {
+              "name": "last_used_at",
+              "type": "string",
+              "required": true,
+              "description": "Последняя активность (с точностью до 5 минут)"
+            },
+            {
+              "name": "expires_at",
+              "type": "string",
+              "required": true,
+              "description": "Когда сессия истечёт (ISO 8601, UTC)"
+            },
+            {
+              "name": "is_current",
+              "type": "boolean",
+              "required": true,
+              "description": "Сессия, из которой сделан этот запрос"
+            }
+          ],
+          "example": [
+            {
+              "session_id": "b3f1c2de-6f1a-4f6e-9c0f-0b1d2e3f4a5b",
+              "device_name": "Chrome на Windows",
+              "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              "ip_address": "203.0.113.42",
+              "created_at": "2026-09-10T12:31:00Z",
+              "last_used_at": "2026-09-18T08:05:00Z",
+              "expires_at": "2026-09-17T12:31:00Z",
+              "is_current": true
+            }
+          ]
+        }
+      ],
+      "errors": [
+        "unauthorized"
+      ]
+    },
+    {
+      "id": "sessions-revoke",
+      "method": "DELETE",
+      "path": "/api/v2/sessions/{session_id}",
+      "summary": "Завершить сессию",
+      "description": "Завершает одну сессию пользователя. Текущую сессию завершить можно — это эквивалент выхода с устройства, которым пользователь сейчас пользуется. Чужие сессии недоступны: удаляется только сессия, принадлежащая текущему пользователю.",
+      "tags": [
+        "Сессии"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "session_id",
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Идентификатор сессии (UUID)"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Сессия завершена"
+        },
+        {
+          "statusCode": 404,
+          "description": "Сессия не найдена или принадлежит другому пользователю"
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "not-found"
+      ]
+    },
+    {
+      "id": "sessions-revoke-others",
+      "method": "DELETE",
+      "path": "/api/v2/sessions",
+      "summary": "Завершить все сессии, кроме текущей",
+      "description": "Выход со всех остальных устройств. Текущая сессия сохраняется: иначе пользователь, нажавший «выйти везде», разлогинивал бы и себя.",
+      "tags": [
+        "Сессии"
+      ],
+      "auth": true,
+      "parameters": [],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Сессии завершены",
+          "schema": [
+            {
+              "name": "revoked",
+              "type": "integer",
+              "required": true,
+              "description": "Сколько сессий было завершено"
+            }
+          ],
+          "example": {
+            "revoked": 3
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized"
+      ]
     }
   ]
 }

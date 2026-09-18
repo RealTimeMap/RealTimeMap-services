@@ -2,9 +2,7 @@ package app
 
 import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	redispkg "github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware/cache"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
@@ -58,12 +56,7 @@ func NewContainer(config *config.Config, db *gorm.DB, logger *zap.Logger) *Conta
 	achievementRepo := postgres.NewPgAchievementRepository(db, logger)
 	xpRewardRepo := postgres.NewPgXPRewardRepository(db, logger)
 	userAchRepo := postgres.NewPgUserAchievementRepository(db, logger)
-	store, err := storage.NewMinIOStorage(config.Storage, logger)
-	if err != nil {
-		panic(err)
-	}
-
-	s := achievement.New(achievementRepo, xpRewardRepo, userAchRepo, op, store, mediavalidator.NewPhotoValidator(), logger)
+	s := achievement.New(achievementRepo, xpRewardRepo, userAchRepo, op, logger)
 	grpcHandler := grpctransport.NewHandler(progressRepo, levelService, logger)
 
 	return &Container{

@@ -174,16 +174,6 @@ services:
       # Service configuration
       - "traefik.http.services.social.loadbalancer.server.port=8080"
 
-    environment:
-      # Внутри сети брокер слушает INTERNAL-листенер на 9092; 9093 анонсирован
-      # как localhost:9093 и из контейнера недоступен — в config.yaml стоит
-      # именно он, для запуска сервиса с хоста.
-      KAFKA_BROKERS: "kafka:9092"
-      KAFKA_GROUP_ID: "social-service"
-      # Публикация profile.updated: auth-сервис держит по нему свою копию
-      # username, которую отдаёт gateway в заголовке X-User-Name.
-      KAFKA_PRODUCER_ENABLED: "true"
-      KAFKA_PRODUCER_TOPIC: "social-service.events"
     networks:
       - web
       - service-network

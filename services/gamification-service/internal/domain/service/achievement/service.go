@@ -3,9 +3,7 @@ package achievement
 import (
 	"context"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/model"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/xp"
@@ -29,9 +27,10 @@ type Input struct {
 	Desc         string
 	TriggerEvent string
 	Threshold    uint
-	Icon         mediavalidator.PhotoInput
-	RewardID     uint
-	NextID       *uint
+	// Icon — имя иконки из iconfy ("mdi:trophy-outline").
+	Icon     string
+	RewardID uint
+	NextID   *uint
 }
 
 type service struct {
@@ -41,15 +40,11 @@ type service struct {
 
 	xpOperator *xp.XPOperator
 
-	store          storage.Storage
-	photoValidator *mediavalidator.PhotoValidator
-
 	logger *zap.Logger
 }
 
 func New(achievementRepo repository.AchievementRepository, rewardRepo repository.XPRewardRepository,
 	userAchievementRepo repository.UserAchievementRepository, xpOperator *xp.XPOperator,
-	store storage.Storage, photoValidator *mediavalidator.PhotoValidator,
 	logger *zap.Logger,
 ) Service {
 	return &service{
@@ -59,9 +54,7 @@ func New(achievementRepo repository.AchievementRepository, rewardRepo repository
 
 		xpOperator: xpOperator,
 
-		store:          store,
-		photoValidator: photoValidator,
-		logger:         logger,
+		logger: logger,
 	}
 }
 
@@ -110,17 +103,7 @@ func (s *service) CreateAchievement(ctx context.Context, input Input) (*model.Ac
 		return nil, err
 	}
 
-	if err := s.photoValidator.ValidateSinglePhoto(input.Icon); err != nil {
-		return nil, err
-	}
-
-	icon, err := s.store.Upload(ctx, input.Icon.Data, storage.UploadOptions{
-		FileName: input.Icon.FileName,
-		Category: storage.CategoryAchievement,
-		MaxSize:  5 * 1024 * 1024,
-		Optimize: true,
-	})
-	if err != nil {
+	if err := validateIcon(input.Icon); err != nil {
 		return nil, err
 	}
 
@@ -132,7 +115,7 @@ func (s *service) CreateAchievement(ctx context.Context, input Input) (*model.Ac
 		TriggerEventType: input.TriggerEvent,
 		IsActive:         true,
 		Reward:           *reward,
-		Icon:             *icon,
+		Icon:             input.Icon,
 	}
 
 	// Проверка следующего уровня если передан

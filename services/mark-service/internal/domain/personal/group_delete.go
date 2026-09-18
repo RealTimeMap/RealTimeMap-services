@@ -3,6 +3,7 @@ package personal
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -11,7 +12,7 @@ import (
 // Непустая группа не удаляется: метка обязана принадлежать хотя бы одной группе
 // (см. ErrGroupsRequired в Create), поэтому удаление последней группы метки
 // оставило бы её висеть без привязки.
-func (s *GroupService) DeleteGroup(ctx context.Context, groupID, userID uint) error {
+func (s *GroupService) DeleteGroup(ctx context.Context, groupID uuid.UUID, userID uint) error {
 	s.logger.Info("start DeleteGroup", zap.String("layer", "domain service"))
 
 	obj, err := s.repo.GetByID(ctx, groupID, userID)

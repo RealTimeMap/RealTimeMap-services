@@ -1,0 +1,45 @@
+{
+  "topics": [
+    {
+      "id": "mark-created",
+      "name": "mark-service.events",
+      "summary": "Метка создана — событие для начисления опыта и достижений",
+      "description": "Исходящий топик mark-service. Публикуется событие mark.created при создании публичной метки; gamification-service начисляет за него опыт и продвигает достижения.\n\nКлюч сообщения — ownerId: события одного владельца попадают в одну партицию и приходят потребителю в порядке публикации.\n\nТип события, ID пользователя и ID источника едут в заголовках Kafka-сообщения (event_type, user_id, source_id, timestamp), а не в теле: потребитель читает их через pkg/transport/kafka.ExtractMeta, и сообщение без event_type или user_id пропускается.\n\nПубликация включается флагом kafka.enabled в конфигурации: при выключенном флаге publisher остаётся nil-интерфейсом и событие просто не отправляется.\n\nВНИМАНИЕ, расхождение конфигурации: имя топика берётся из kafka.producerTopic, а в рабочем config.yaml этот ключ не задан — применяется значение env-default из internal/config, то есть mark-service.events. При этом gamification-service подписан на mark_action-service.events (см. его config.yaml), а example.config.yaml mark-service предлагает то же mark_action-service.events. Пока значения не совпадают, события до потребителя не доходят.",
+      "producers": ["mark-service"],
+      "consumers": ["gamification-service"],
+      "partitionKey": "ownerId",
+      "schema": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID сообщения (конверт)" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: mark.created" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "Время публикации (ISO 8601, UTC)" },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Данные созданной метки",
+          "children": [
+            { "name": "id", "type": "integer", "required": true, "description": "ID метки" },
+            { "name": "categoryId", "type": "integer", "required": true, "description": "ID категории метки" },
+            { "name": "ownerId", "type": "integer", "required": true, "description": "ID владельца метки" },
+            { "name": "markName", "type": "string", "required": true, "description": "Название метки" },
+            { "name": "additionalInfo", "type": "string", "required": false, "description": "Дополнительное описание метки" },
+            { "name": "isEnded", "type": "boolean", "required": true, "description": "Завершена ли метка. При создании всегда false" }
+          ]
+        }
+      ],
+      "example": {
+        "id": "18617847-4b69-4108-b34e-0693542ad3a2",
+        "type": "mark.created",
+        "timestamp": "2026-09-18T10:15:00Z",
+        "payload": {
+          "id": 103,
+          "categoryId": 4,
+          "ownerId": 42,
+          "markName": "Кофейня на углу",
+          "additionalInfo": null,
+          "isEnded": false
+        }
+      }
+    }
+  ]
+}

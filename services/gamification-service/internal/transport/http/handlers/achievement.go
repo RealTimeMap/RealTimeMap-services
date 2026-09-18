@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"io"
 	"net/http"
 
-	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware"
@@ -52,6 +50,9 @@ type AchievementRequest struct {
 	Threshold    uint   `form:"threshold" binding:"required"`
 	RewardID     uint   `form:"rewardId" binding:"required"`
 	NextID       *uint  `form:"nextId" binding:"omitempty"`
+	// Icon — имя иконки из iconfy ("mdi:trophy-outline"). Раньше сюда
+	// загружался файл; теперь картинку рисует клиент по этому имени.
+	Icon string `form:"icon" binding:"required,max=128"`
 }
 
 func (h *handler) CreateAchievement(c *gin.Context) {
@@ -59,28 +60,6 @@ func (h *handler) CreateAchievement(c *gin.Context) {
 	if err := c.ShouldBind(&req); err != nil {
 		validation.AbortWithBindingError(c, err)
 		return
-	}
-
-	var icon mediavalidator.PhotoInput
-	fileHeader, err := c.FormFile("icon")
-	if err != nil {
-		middleware.HandleError(c, err, h.logger)
-		return
-	}
-	file, err := fileHeader.Open()
-	if err != nil {
-		middleware.HandleError(c, err, h.logger)
-		return
-	}
-	data, err := io.ReadAll(file)
-	file.Close()
-	if err != nil {
-		middleware.HandleError(c, err, h.logger)
-		return
-	}
-	icon = mediavalidator.PhotoInput{
-		Data:     data,
-		FileName: fileHeader.Filename,
 	}
 
 	achievement, err := h.service.CreateAchievement(c.Request.Context(), achievement.Input{
@@ -91,7 +70,7 @@ func (h *handler) CreateAchievement(c *gin.Context) {
 		Threshold:    req.Threshold,
 		RewardID:     req.RewardID,
 		NextID:       req.NextID,
-		Icon:         icon,
+		Icon:         req.Icon,
 	})
 	if err != nil {
 		middleware.HandleError(c, err, h.logger)

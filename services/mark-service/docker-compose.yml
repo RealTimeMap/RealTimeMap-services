@@ -211,8 +211,10 @@ services:
 
       # GET /api/v2/group/{groupID} - детальная группа (с auth).
       # PathRegexp, а не PathPrefix: иначе правило перехватило бы и /group/list.
+      # Идентификатор группы — UUID, поэтому шаблон описывает его, а не число:
+      # с [0-9]+ запрос не нашёл бы роутер и ушёл бы в публичный catch-all.
       # Приоритет выше mark-public (5), но ниже group-list (100).
-      - "traefik.http.routers.group-detail.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9]+$`) && Method(`GET`)"
+      - "traefik.http.routers.group-detail.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`) && Method(`GET`)"
       - "traefik.http.routers.group-detail.entrypoints=websecure"
       - "traefik.http.routers.group-detail.priority=98"
       - "traefik.http.routers.group-detail.middlewares=cors-headers@file,auth-check@file"
@@ -220,7 +222,7 @@ services:
       - "traefik.http.routers.group-detail.tls=true"
 
       # PATCH /api/v2/group/{groupID} - обновление группы (с auth)
-      - "traefik.http.routers.group-update.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9]+$`) && Method(`PATCH`)"
+      - "traefik.http.routers.group-update.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`) && Method(`PATCH`)"
       - "traefik.http.routers.group-update.entrypoints=websecure"
       - "traefik.http.routers.group-update.priority=98"
       - "traefik.http.routers.group-update.middlewares=cors-headers@file,auth-check@file"
@@ -228,7 +230,7 @@ services:
       - "traefik.http.routers.group-update.tls=true"
 
       # DELETE /api/v2/group/{groupID} - удаление группы (с auth)
-      - "traefik.http.routers.group-delete.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9]+$`) && Method(`DELETE`)"
+      - "traefik.http.routers.group-delete.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/group/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`) && Method(`DELETE`)"
       - "traefik.http.routers.group-delete.entrypoints=websecure"
       - "traefik.http.routers.group-delete.priority=98"
       - "traefik.http.routers.group-delete.middlewares=cors-headers@file,auth-check@file"

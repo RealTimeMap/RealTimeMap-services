@@ -3,6 +3,8 @@ package personal
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
@@ -22,7 +24,7 @@ type UpdatePersonalMarkParams struct {
 	IsVisible *bool
 
 	// GroupsIds заменяет состав групп целиком, если передан непустым.
-	GroupsIds []uint
+	GroupsIds []uuid.UUID
 
 	// PhotosToDelete — URL существующих фото, ссылки на которые надо убрать.
 	PhotosToDelete []string

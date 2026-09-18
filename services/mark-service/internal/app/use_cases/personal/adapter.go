@@ -48,7 +48,7 @@ func (a changeSourceAdapter[T]) ListChanges(
 
 	removed := ch.Removed
 	if removed == nil {
-		removed = []uint{}
+		removed = []string{}
 	}
 
 	return personalsrv.Changes[any]{

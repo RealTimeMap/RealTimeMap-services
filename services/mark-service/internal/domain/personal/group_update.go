@@ -3,6 +3,7 @@ package personal
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +15,7 @@ type UpdateGroupParams struct {
 	Icon        *string
 }
 
-func (s *GroupService) UpdateGroup(ctx context.Context, params UpdateGroupParams, groupID, userID uint) (*Group, error) {
+func (s *GroupService) UpdateGroup(ctx context.Context, params UpdateGroupParams, groupID uuid.UUID, userID uint) (*Group, error) {
 	s.logger.Info("start UpdateGroup", zap.String("layer", "domain service"))
 
 	if params.Color != nil {

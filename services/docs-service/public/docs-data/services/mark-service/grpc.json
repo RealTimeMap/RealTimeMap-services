@@ -1,0 +1,159 @@
+{
+  "methods": [
+    {
+      "id": "markstats-get-user-marks-count",
+      "service": "markstat.MarkStatsService",
+      "method": "GetUserMarksCount",
+      "type": "unary",
+      "summary": "Количество меток пользователя",
+      "description": "Возвращает общее число меток, созданных пользователем.\n\nВызывается social-service при сборке статистики профиля: метки живут в mark-service, и считать их на стороне профиля не из чего.",
+      "request": {
+        "schema": [
+          { "name": "user_id", "type": "uint64", "required": true, "description": "ID пользователя, чьи метки считаются" }
+        ],
+        "example": { "user_id": 42 }
+      },
+      "response": {
+        "schema": [
+          { "name": "count", "type": "int64", "required": true, "description": "Количество меток пользователя" }
+        ],
+        "example": { "count": 137 }
+      },
+      "statusCodes": [
+        { "code": "OK", "description": "Успешный ответ" },
+        { "code": "INTERNAL", "description": "Ошибка при обращении к хранилищу. Единственный код ошибки, который возвращает обработчик" }
+      ],
+      "protoExample": "rpc GetUserMarksCount(MarksCountRequest) returns (MarksCountResponse);\n\nmessage MarksCountRequest {\n  uint64 user_id = 1;\n}\n\nmessage MarksCountResponse {\n  int64 count = 1;\n}",
+      "supportsGrpcWeb": false
+    },
+    {
+      "id": "markstats-get-user-marks-monthly-activity",
+      "service": "markstat.MarkStatsService",
+      "method": "GetUserMarksMonthlyActivity",
+      "type": "unary",
+      "summary": "Активность пользователя по месяцам за год",
+      "description": "Возвращает число меток, созданных пользователем, с разбивкой по месяцам указанного года. Используется для графика активности в профиле.",
+      "request": {
+        "schema": [
+          { "name": "user_id", "type": "uint64", "required": true, "description": "ID пользователя" },
+          { "name": "year", "type": "int64", "required": true, "description": "Год, за который запрашивается разбивка" }
+        ],
+        "example": { "user_id": 42, "year": 2026 }
+      },
+      "response": {
+        "schema": [
+          {
+            "name": "activities",
+            "type": "repeated MarkMonthResponse",
+            "required": true,
+            "description": "Разбивка по месяцам",
+            "children": [
+              { "name": "month", "type": "string", "required": true, "description": "Месяц" },
+              { "name": "count", "type": "int64", "required": true, "description": "Количество меток за месяц" }
+            ]
+          }
+        ],
+        "example": {
+          "activities": [
+            { "month": "2026-01", "count": 12 },
+            { "month": "2026-02", "count": 8 }
+          ]
+        }
+      },
+      "statusCodes": [
+        { "code": "OK", "description": "Успешный ответ" },
+        { "code": "INTERNAL", "description": "Ошибка при обращении к хранилищу" }
+      ],
+      "protoExample": "rpc GetUserMarksMonthlyActivity(MarksMonthlyActivityRequest) returns (UserMarksActivityResponse);\n\nmessage MarksMonthlyActivityRequest {\n  uint64 user_id = 1;\n  int64 year = 2;\n}\n\nmessage MarkMonthResponse {\n  string month = 1;\n  int64 count = 2;\n}\n\nmessage UserMarksActivityResponse {\n  repeated MarkMonthResponse activities = 1;\n}",
+      "supportsGrpcWeb": false
+    },
+    {
+      "id": "markstats-get-user-marks-heatmap",
+      "service": "markstat.MarkStatsService",
+      "method": "GetUserMarksHeatMap",
+      "type": "unary",
+      "summary": "Тепловая карта активности по дням",
+      "description": "Возвращает число меток по дням за указанный период — данные для тепловой карты в профиле.\n\nГраницы периода передаются как google.protobuf.Timestamp.",
+      "request": {
+        "schema": [
+          { "name": "user_id", "type": "uint64", "required": true, "description": "ID пользователя" },
+          { "name": "start_date", "type": "google.protobuf.Timestamp", "required": true, "description": "Начало периода" },
+          { "name": "end_date", "type": "google.protobuf.Timestamp", "required": true, "description": "Конец периода" }
+        ],
+        "example": {
+          "user_id": 42,
+          "start_date": "2026-01-01T00:00:00Z",
+          "end_date": "2026-12-31T23:59:59Z"
+        }
+      },
+      "response": {
+        "schema": [
+          {
+            "name": "activity",
+            "type": "repeated MarkHeatMapResponse",
+            "required": true,
+            "description": "Активность по дням",
+            "children": [
+              { "name": "day", "type": "google.protobuf.Timestamp", "required": true, "description": "День" },
+              { "name": "count", "type": "int64", "required": true, "description": "Количество меток за день" }
+            ]
+          }
+        ],
+        "example": {
+          "activity": [
+            { "day": "2026-09-17T00:00:00Z", "count": 3 },
+            { "day": "2026-09-18T00:00:00Z", "count": 5 }
+          ]
+        }
+      },
+      "statusCodes": [
+        { "code": "OK", "description": "Успешный ответ" },
+        { "code": "INTERNAL", "description": "Ошибка при обращении к хранилищу" }
+      ],
+      "protoExample": "rpc GetUserMarksHeatMap(MarksHeatMapRequest) returns (MarksHeatMapResponse);\n\nmessage MarksHeatMapRequest {\n  uint64 user_id = 1;\n  google.protobuf.Timestamp start_date = 2;\n  google.protobuf.Timestamp end_date = 3;\n}\n\nmessage MarkHeatMapResponse {\n  google.protobuf.Timestamp day = 1;\n  int64 count = 2;\n}\n\nmessage MarksHeatMapResponse {\n  repeated MarkHeatMapResponse activity = 1;\n}",
+      "supportsGrpcWeb": false
+    },
+    {
+      "id": "markstats-get-popular-user-categories",
+      "service": "markstat.MarkStatsService",
+      "method": "GetPopularUserCategories",
+      "type": "unary",
+      "summary": "Популярные категории меток пользователя",
+      "description": "Возвращает top_n категорий, в которых пользователь создаёт метки чаще всего, с долей каждой категории от общего числа.",
+      "request": {
+        "schema": [
+          { "name": "user_id", "type": "uint64", "required": true, "description": "ID пользователя" },
+          { "name": "top_n", "type": "int64", "required": true, "description": "Сколько категорий вернуть" }
+        ],
+        "example": { "user_id": 42, "top_n": 5 }
+      },
+      "response": {
+        "schema": [
+          {
+            "name": "categories",
+            "type": "repeated PopularCategoriesItem",
+            "required": true,
+            "description": "Категории, отсортированные по популярности",
+            "children": [
+              { "name": "category_name", "type": "string", "required": true, "description": "Название категории" },
+              { "name": "count", "type": "int64", "required": true, "description": "Количество меток в категории" },
+              { "name": "percent", "type": "double", "required": true, "description": "Доля категории от общего числа меток" }
+            ]
+          }
+        ],
+        "example": {
+          "categories": [
+            { "category_name": "Кафе", "count": 48, "percent": 35.0 },
+            { "category_name": "Парки", "count": 31, "percent": 22.6 }
+          ]
+        }
+      },
+      "statusCodes": [
+        { "code": "OK", "description": "Успешный ответ" },
+        { "code": "INTERNAL", "description": "Ошибка при обращении к хранилищу" }
+      ],
+      "protoExample": "rpc GetPopularUserCategories(PopularCategoriesRequest) returns (PopularCategoriesResponse);\n\nmessage PopularCategoriesRequest {\n  uint64 user_id = 1;\n  int64 top_n = 2;\n}\n\nmessage PopularCategoriesItem {\n  string category_name = 1;\n  int64 count = 2;\n  double percent = 3;\n}\n\nmessage PopularCategoriesResponse {\n  repeated PopularCategoriesItem categories = 1;\n}",
+      "supportsGrpcWeb": false
+    }
+  ]
+}

@@ -3,6 +3,8 @@ package personal
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
@@ -19,7 +21,7 @@ type CreatePersonalMarkParams struct {
 
 	IsVisible bool
 
-	GroupsIds []uint
+	GroupsIds []uuid.UUID
 	Photos    []mediavalidator.PhotoInput
 }
 

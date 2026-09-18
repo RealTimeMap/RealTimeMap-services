@@ -3,8 +3,14 @@
     "id": "auth-service",
     "name": "auth-service",
     "description": "Сервис аутентификации и авторизации пользователей. Управление сессиями, JWT-токенами и правами доступа.",
-    "protocols": ["http"],
-    "availableEnvs": ["dev", "staging", "prod"],
+    "protocols": [
+      "http"
+    ],
+    "availableEnvs": [
+      "dev",
+      "staging",
+      "prod"
+    ],
     "healthPath": "/health",
     "team": "Backend",
     "repository": "https://github.com/example/auth-service"
@@ -13,8 +19,17 @@
     "id": "mark-service",
     "name": "mark-service",
     "description": "Сервис геолокационных меток на карте: создание, поиск, кластеризация, real-time обновления.",
-    "protocols": ["http", "socketio"],
-    "availableEnvs": ["dev", "staging", "prod"],
+    "protocols": [
+      "http",
+      "socketio",
+      "grpc",
+      "kafka"
+    ],
+    "availableEnvs": [
+      "dev",
+      "staging",
+      "prod"
+    ],
     "healthPath": "/mark/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/mark-service"
@@ -23,8 +38,16 @@
     "id": "social-service",
     "name": "social-service",
     "description": "Социальный сервис: профили пользователей, блокировки, друзья, чаты с real-time доставкой.",
-    "protocols": ["http", "socketio", "kafka"],
-    "availableEnvs": ["dev", "staging", "prod"],
+    "protocols": [
+      "http",
+      "socketio",
+      "kafka"
+    ],
+    "availableEnvs": [
+      "dev",
+      "staging",
+      "prod"
+    ],
     "healthPath": "/social/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/social-service"
@@ -33,8 +56,15 @@
     "id": "comment-service",
     "name": "comment-service",
     "description": "Сервис комментариев к сущностям приложения с поддержкой ответов и лайков.",
-    "protocols": ["http"],
-    "availableEnvs": ["dev", "staging", "prod"],
+    "protocols": [
+      "http",
+      "kafka"
+    ],
+    "availableEnvs": [
+      "dev",
+      "staging",
+      "prod"
+    ],
     "healthPath": "/comment/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/comment-service"
@@ -43,8 +73,16 @@
     "id": "gamification-service",
     "name": "gamification-service",
     "description": "Сервис геймификации: уровни, опыт, достижения пользователей.",
-    "protocols": ["http", "kafka", "grpc"],
-    "availableEnvs": ["dev", "staging", "prod"],
+    "protocols": [
+      "http",
+      "kafka",
+      "grpc"
+    ],
+    "availableEnvs": [
+      "dev",
+      "staging",
+      "prod"
+    ],
     "healthPath": "/gamification/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/gamification-service"
@@ -53,8 +91,14 @@
     "id": "feedback-service",
     "name": "feedback-service",
     "description": "Сервис обратной связи rtm. Баги/предложения и исправления, все обрабатывается тут",
-    "protocols": ["http"],
-    "availableEnvs": ["dev", "staging", "prod"],
+    "protocols": [
+      "http"
+    ],
+    "availableEnvs": [
+      "dev",
+      "staging",
+      "prod"
+    ],
     "healthPath": "/feedback/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/feedback-service"
@@ -63,8 +107,15 @@
     "id": "smtp-service",
     "name": "smtp-service",
     "description": "Сервис отправки email: очередь писем с ретраями, шаблоны, история доставки.",
-    "protocols": ["http", "kafka"],
-    "availableEnvs": ["dev", "staging", "prod"],
+    "protocols": [
+      "http",
+      "kafka"
+    ],
+    "availableEnvs": [
+      "dev",
+      "staging",
+      "prod"
+    ],
     "healthPath": "/smtp/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/smtp-service"
