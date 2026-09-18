@@ -1,7 +1,7 @@
 http:
   routers:
     auth-public:
-      rule: "Host(`realtimemap.ru`) && (PathPrefix(`/api/v2/auth/`) || PathPrefix(`/api/v2/user/`) || PathPrefix(`/admin/`) || PathPrefix(`/static/`))"
+      rule: "Host(`realtimemap.ru`) && (PathPrefix(`/api/v2/auth/`) || PathPrefix(`/api/v2/user/`) || PathPrefix(`/admin/`) || PathPrefix(`/static/`) || PathPrefix(`/api/v2/sessions/`))"
       entryPoints:
         - websecure
       service: auth-service
@@ -10,14 +10,24 @@ http:
       priority: 100
       tls: {}
 
-    task-manager:
-      rule: "Host(`realtimemap.ru`) && PathPrefix(`/rttask`)"
+    sessions-options:
+      rule: "Host(`realtimemap.ru`) && PathPrefix(`/api/v2/sessions`) && Method(`OPTIONS`)"
       entryPoints:
         - websecure
-      service: rttask-service
+      service: auth-service
       middlewares:
         - cors-headers
-        - strip-rttask
+      priority: 210
+      tls: {}
+
+    sessions:
+      rule: "Host(`realtimemap.ru`) && PathPrefix(`/api/v2/sessions`)"
+      entryPoints:
+        - websecure
+      service: auth-service
+      middlewares:
+        - cors-headers
+        - auth-check
       priority: 100
       tls: {}
 
@@ -51,6 +61,9 @@ http:
           - "https://realtimemap.ru"
           - "https://localhost"
           - "capacitor://localhost"
+          - "https://docs.realtimemap.ru"
+          - "https://task.realtimemap.ru"
+          - "http://127.0.0.1:5173"
         accessControlAllowHeaders:
           - "Origin"
           - "Content-Type"
@@ -59,9 +72,13 @@ http:
           - "Authorization"
           - "X-User-Id"
           - "X-User-Name"
-          - "X-User-Ban"
+          - "X-User-Anonymous"
           - "X-User-Admin"
           - "X-Trace-Id"
+          - "X-User-Ban"
+          - "X-User-Ban-Reason"
+          - "X-User-Ban-Detail"
+          - "X-User-Ban-Time"
         accessControlExposeHeaders:
           - "Content-Length"
           - "Authorization"
@@ -81,6 +98,10 @@ http:
           - "X-User-Name"
           - "X-User-Ban"
           - "X-User-Admin"
+          - "X-User-Anonymous"
+          - "X-User-Ban-Reason"
+          - "X-User-Ban-Detail"
+          - "X-User-Ban-Time"
         authRequestHeaders:
           - "Authorization"
     # ForwardAuth для публичных маршрутов, где авторизация необязательна.
@@ -93,8 +114,12 @@ http:
         authResponseHeaders:
           - "X-User-Id"
           - "X-User-Name"
+          - "X-User-Ban"
           - "X-User-Admin"
           - "X-User-Anonymous"
+          - "X-User-Ban-Reason"
+          - "X-User-Ban-Detail"
+          - "X-User-Ban-Time"
         authRequestHeaders:
           - "Authorization"
     strip-rttask:
