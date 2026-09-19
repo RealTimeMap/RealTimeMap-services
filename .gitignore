@@ -125,3 +125,10 @@ fabric.properties
 /.agents
 /.idea
 /services/*/.air.toml
+services/comment-service/config/config.yaml
+
+# Firebase service account: приватный ключ для отправки push через FCM.
+# Путь передаётся сервису через FCM_CREDENTIALS_FILE.
+/services/*/secrets/
+serviceAccountKey*.json
+*-firebase-adminsdk-*.json
