@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "id": "notification-social-events",
+      "name": "social-service.events",
+      "summary": "Сообщения в чате и новые подписчики — события, порождающие push",
+      "description": "Входящий топик social-service. Сервис читает его целиком и разбирает знакомые типы событий, остальные (profile.updated) пропускает молча — добавление нового события не требует правки конфигурации, пока оно едет в этот топик.\n\nОбрабатываемые события и уведомления, которые они порождают:\n  chat.message.created → «{отправитель}: {текст}»\n  subscription.created → «{имя} подписался на вас»\n\nchat.message.created дублирует realtime-доставку через Socket.IO, а не заменяет её: сокет обслуживает открытое приложение, Kafka — push тем, у кого оно закрыто. Сокет для этого не годится — у отключённого клиента комнаты нет, и событие просто некому доставить.\n\nОтправителя из RecipientIDs вычищает продюсер: в realtime-доставке он участвует намеренно (эхо на другие устройства), но push о собственном сообщении не нужен никому.\n\nsubscription.created публикуется только при реально созданной подписке. Повторный запрос (ретрай клиента) события не порождает — иначе адресат получил бы второй push о том же подписчике. Отписка отдельным событием не публикуется: уведомлять о ней некого.\n\nИмя подписавшегося и отправителя едут в событии, а не резолвятся потребителем: gRPC-ручки «профиль по id» для этого случая нет, а без имени текст уведомления деградирует до безличного.",
+      "producers": ["social-service"],
+      "consumers": ["notification-service", "auth-service"],
+      "partitionKey": "user_id",
+      "schema": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID сообщения (конверт). Нужен для дедупликации: Kafka гарантирует at-least-once" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: chat.message.created или subscription.created" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "Время публикации (ISO 8601, UTC)" },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Данные события. Ниже — поля chat.message.created; состав subscription.created приведён в примере ниже",
+          "children": [
+            { "name": "messageId", "type": "integer", "required": true, "description": "ID сообщения" },
+            { "name": "chatId", "type": "integer", "required": true, "description": "ID чата. По нему схлопываются серии: сообщения одного чата считаются вместе" },
+            { "name": "senderId", "type": "integer", "required": true, "description": "ID отправителя" },
+            { "name": "senderName", "type": "string", "required": false, "description": "Имя отправителя для заголовка уведомления" },
+            { "name": "chatTitle", "type": "string", "required": false, "description": "Название чата. Заполняется только для групповых: в direct заголовком служит имя отправителя" },
+            { "name": "isGroup", "type": "boolean", "required": true, "description": "Групповой ли чат" },
+            { "name": "preview", "type": "string", "required": false, "description": "Усечённый до 160 символов текст сообщения. Полный текст в топик не кладётся: переписка не должна лежать там по retention" },
+            { "name": "recipientIds", "type": "array", "required": true, "description": "Участники чата без отправителя. Резолвится продюсером: состав чата знает только social-service" }
+          ]
+        }
+      ],
+      "example": {
+        "id": "18617847-4b69-4108-b34e-0693542ad3a2",
+        "type": "chat.message.created",
+        "timestamp": "2026-09-19T10:15:00Z",
+        "payload": {
+          "messageId": 512,
+          "chatId": 42,
+          "senderId": 60,
+          "senderName": "john_doe",
+          "chatTitle": "",
+          "isGroup": false,
+          "preview": "привет, ты на месте?",
+          "recipientIds": [61, 62]
+        }
+      }
+    },
+    {
+      "id": "notification-subscription-created",
+      "name": "social-service.events",
+      "summary": "subscription.created — новый подписчик",
+      "description": "Второе обрабатываемое событие того же топика social-service.events. Вынесено отдельной карточкой ради схемы payload: у него другой состав полей.\n\nАдресат уведомления — targetId, то есть тот, на кого подписались. Ключ партиционирования при этом subscriberId: подписки одного пользователя идут в одну партицию и не обгоняют друг друга.\n\nПодписки схлопываются в одну серию на получателя независимо от того, кто именно подписался: десять новых подписчиков за две минуты дадут один push и одну сводку «10 новых подписчиков», а не десять уведомлений.",
+      "producers": ["social-service"],
+      "consumers": ["notification-service"],
+      "partitionKey": "user_id",
+      "schema": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID сообщения (конверт)" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: subscription.created" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "Время публикации (ISO 8601, UTC)" },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Состоявшаяся подписка",
+          "children": [
+            { "name": "subscriberId", "type": "integer", "required": true, "description": "Кто подписался" },
+            { "name": "targetId", "type": "integer", "required": true, "description": "На кого подписались — адресат уведомления" },
+            { "name": "subscriberName", "type": "string", "required": false, "description": "Имя подписавшегося для текста уведомления. Без него текст деградирует до «У вас новый подписчик»" }
+          ]
+        }
+      ],
+      "example": {
+        "id": "2c1f8b90-5d3a-4f21-9e77-1a0b3c4d5e6f",
+        "type": "subscription.created",
+        "timestamp": "2026-09-19T10:16:00Z",
+        "payload": {
+          "subscriberId": 61,
+          "targetId": 60,
+          "subscriberName": "jane_doe"
+        }
+      }
+    },
+    {
+      "id": "notification-comment-events",
+      "name": "comment-service.events",
+      "summary": "Ответы на комментарии к меткам",
+      "description": "Входящий топик comment-service. Обрабатывается только comment.created; comment.updated и comment.deleted игнорируются — уведомлять об изменении или удалении чужого комментария незачем.\n\nУведомление отправляется автору комментария, на который отвечают (parentUserId). Комментарий верхнего уровня уведомления не порождает: владелец метки в событии не едет, а спросить его не у кого — mark-service не поднимает gRPC-ручку «метка по id». Это известное ограничение, см. docs/PLAN.md в репозитории сервиса.\n\nОтвет самому себе и комментарии к сущностям кроме метки (entityType ≠ mark_action) пропускаются.\n\nСерия схлопывания считается по метке (entityId), а не по комментарию: десять ответов под одной меткой — одна серия. Ключ по commentId схлопывал бы только повторы одного и того же комментария, то есть ничего.",
+      "producers": ["comment-service"],
+      "consumers": ["notification-service", "gamification-service"],
+      "partitionKey": "user_id",
+      "schema": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID сообщения (конверт)" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: comment.created" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "Время публикации (ISO 8601, UTC)" },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Состояние комментария на момент события",
+          "children": [
+            { "name": "commentId", "type": "integer", "required": true, "description": "ID комментария" },
+            { "name": "userId", "type": "integer", "required": true, "description": "Автор комментария" },
+            { "name": "username", "type": "string", "required": false, "description": "Имя автора для заголовка уведомления" },
+            { "name": "entityType", "type": "string", "required": true, "description": "Тип сущности. Уведомления строятся только для mark_action" },
+            { "name": "entityId", "type": "integer", "required": true, "description": "ID метки. По нему схлопываются серии ответов" },
+            { "name": "parentId", "type": "integer", "required": false, "description": "ID родительского комментария" },
+            { "name": "parentUserId", "type": "integer", "required": false, "description": "Автор комментария, на который отвечают — адресат уведомления. Без него уведомление построить не из чего" },
+            { "name": "content", "type": "string", "required": false, "description": "Текст комментария. Усекается до 120 символов в теле уведомления" }
+          ]
+        }
+      ],
+      "example": {
+        "id": "7f3e2a10-8c44-4b91-a2d5-6e9f0b1c2d3e",
+        "type": "comment.created",
+        "timestamp": "2026-09-19T10:17:00Z",
+        "payload": {
+          "commentId": 77,
+          "userId": 61,
+          "username": "jane_doe",
+          "entityType": "mark_action",
+          "entityId": 42,
+          "parentId": 70,
+          "parentUserId": 60,
+          "content": "согласен, там сейчас закрыто"
+        }
+      }
+    }
+  ]
+}

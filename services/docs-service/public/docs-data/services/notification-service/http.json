@@ -1,0 +1,40 @@
+{
+  "endpoints": [
+    {
+      "id": "create-token",
+      "method": "POST",
+      "path": "/api/v2/tokens",
+      "summary": "Зарегистрировать токен устройства",
+      "description": "Привязывает FCM registration token устройства к текущему пользователю — без него сервису некуда отправлять push-уведомления.\n\nРучка идемпотентна: клиент переотправляет токен при каждом запуске приложения, и повторная регистрация того же токена тем же пользователем не создаёт дубль и не считается ошибкой — ответ в обоих случаях 204.\n\nВладелец берётся из заголовка X-User-ID, а не из тела запроса: иначе авторизованный пользователь мог бы записать токен на чужой аккаунт и получать его уведомления.\n\nОдин пользователь может иметь несколько активных токенов — по одному на устройство.",
+      "tags": [
+        "Токены"
+      ],
+      "auth": true,
+      "requestBody": {
+        "description": "Токен устройства, выданный клиентским SDK Firebase",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "token",
+            "type": "string",
+            "required": true,
+            "description": "FCM registration token. Не более 4096 символов"
+          }
+        ],
+        "example": {
+          "token": "f6tG-VpdQYO4L_MHWuIJDk:APA91bGPSomSGliXwggSdpDOy_W_HoqXioeJNIJuCS6Ujp577fy5qkedznnXDk9Is7Jin2qnrENIBqAczpZUaxwLPegpLnozCT7WAj60saavWT7wJz__7fM"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Токен зарегистрирован либо уже был привязан к этому пользователю. Тело ответа пустое"
+        }
+      ],
+      "errors": [
+        "validation-error",
+        "unauthorized"
+      ]
+    }
+  ]
+}

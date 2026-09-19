@@ -19,18 +19,34 @@ type MessageSenderHandler struct {
 	sender        MessageSender
 	profileGetter ProfileGetter
 	events        EventPublisher
-	logger        *zap.Logger
+
+	// kafka доставляет событие тем, у кого приложение закрыто: сокет их не
+	// достанет — комнаты у отключённого клиента нет.
+	kafka    KafkaPublisher
+	chatInfo ChatInfoGetter
+
+	logger *zap.Logger
 }
 
 func NewMessageSenderHandler(
 	sender MessageSender,
 	profileGetter ProfileGetter,
 	events EventPublisher,
+	kafka KafkaPublisher,
+	chatInfo ChatInfoGetter,
 	logger *zap.Logger) *MessageSenderHandler {
+	if kafka == nil {
+		kafka = NoOpKafkaPublisher{}
+	}
+	if chatInfo == nil {
+		chatInfo = noopChatInfo{}
+	}
 	return &MessageSenderHandler{
 		sender:        sender,
 		profileGetter: profileGetter,
 		events:        events,
+		kafka:         kafka,
+		chatInfo:      chatInfo,
 		logger:        logger,
 	}
 }
@@ -100,5 +116,36 @@ func (h *MessageSenderHandler) publishNewMessage(ctx context.Context, chatID uin
 	}); err != nil {
 		h.logger.Warn("failed to publish message.new event",
 			zap.Error(err), zap.Uint("chat_id", chatID))
+	}
+
+	h.publishToKafka(ctx, chatID, recipientIDs, payload)
+}
+
+// publishToKafka отправляет событие в шину для push-уведомлений.
+//
+// Получатели берутся те же, что у сокета: список уже разрешён, второй запрос
+// к БД ради него был бы лишним. Отправителя из него вычищает публикатор.
+func (h *MessageSenderHandler) publishToKafka(ctx context.Context, chatID uint, recipientIDs []uint, payload MessageResult) {
+	// Название чата нужно только группам: в direct заголовком пуша служит имя
+	// отправителя, и ходить за чатом незачем.
+	title, isGroup, err := h.chatInfo.ChatInfo(ctx, chatID)
+	if err != nil {
+		// Без данных чата уведомление всё равно осмысленно — уедет как
+		// direct, с именем отправителя в заголовке.
+		h.logger.Warn("failed to resolve chat info for kafka event",
+			zap.Error(err), zap.Uint("chat_id", chatID))
+	}
+
+	if err := h.kafka.PublishMessageCreated(ctx, MessageEventInput{
+		MessageID:    payload.ID,
+		ChatID:       chatID,
+		SenderID:     payload.SenderID,
+		SenderName:   payload.Sender.Username,
+		ChatTitle:    title,
+		IsGroup:      isGroup,
+		Content:      payload.Content,
+		RecipientIDs: recipientIDs,
+	}); err != nil {
+		logKafkaFailure(h.logger, chatID, err)
 	}
 }

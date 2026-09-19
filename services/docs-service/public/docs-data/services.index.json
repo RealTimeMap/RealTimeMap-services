@@ -119,5 +119,22 @@
     "healthPath": "/smtp/health",
     "team": "Backend",
     "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/smtp-service"
+  },
+  {
+    "id": "notification-service",
+    "name": "notification-service",
+    "description": "Сервис push-уведомлений: регистрация токенов устройств и рассылка через FCM по событиям других сервисов.",
+    "protocols": [
+      "http",
+      "kafka"
+    ],
+    "availableEnvs": [
+      "dev",
+      "staging",
+      "prod"
+    ],
+    "healthPath": "/notification/health",
+    "team": "Backend",
+    "repository": "https://github.com/RealTimeMap/RealTimeMap-services/tree/main/services/notification-service"
   }
 ]

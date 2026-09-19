@@ -1,0 +1,66 @@
+services:
+
+  notification-service:
+    image: ghcr.io/realtimemap/notification-service:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+      args:
+        SERVICE: notification-service
+    container_name: notification-service
+    restart: always
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
+    labels:
+      - "traefik.enable=true"
+
+      # CORS preflight для ручек сервиса
+      - "traefik.http.routers.notification-options.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/tokens(/.*)?$`) && Method(`OPTIONS`)"
+      - "traefik.http.routers.notification-options.entrypoints=websecure"
+      - "traefik.http.routers.notification-options.priority=200"
+      - "traefik.http.routers.notification-options.service=notification"
+      - "traefik.http.routers.notification-options.middlewares=cors-headers@file"
+      - "traefik.http.routers.notification-options.tls=true"
+
+      # POST /api/v2/tokens — регистрация FCM-токена устройства.
+      # PathRegexp, а не PathPrefix: последний перехватил бы будущие соседние
+      # пути вроде /api/v2/tokens/refresh с другими правилами доступа.
+      - "traefik.http.routers.notification-tokens.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/tokens/?$`) && Method(`POST`)"
+      - "traefik.http.routers.notification-tokens.entrypoints=websecure"
+      - "traefik.http.routers.notification-tokens.priority=100"
+      - "traefik.http.routers.notification-tokens.service=notification"
+      - "traefik.http.routers.notification-tokens.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.notification-tokens.tls=true"
+
+      # GET /notification/health — health check (публичный)
+      - "traefik.http.routers.notification-health.rule=Host(`realtimemap.ru`) && Path(`/notification/health`) && Method(`GET`)"
+      - "traefik.http.routers.notification-health.entrypoints=websecure"
+      - "traefik.http.routers.notification-health.priority=10"
+      - "traefik.http.routers.notification-health.service=notification"
+      - "traefik.http.routers.notification-health.middlewares=cors-headers@file"
+      - "traefik.http.routers.notification-health.tls=true"
+
+      # Service configuration
+      - "traefik.http.services.notification.loadbalancer.server.port=8080"
+
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+      - ./secrets/serviceAccountKey.json:/app/secrets/serviceAccountKey.json:ro
+    networks:
+      - web
+      - service-network
+      # Consumer читает события чата, комментариев и подписок — без этой сети
+      # брокер из контейнера недоступен.
+      - kafka-network
+
+networks:
+  web:
+    external: true
+  service-network:
+    external: true
+    name: service-network
+  kafka-network:
+    external: true
