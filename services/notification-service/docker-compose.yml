@@ -46,19 +46,8 @@ services:
       # Service configuration
       - "traefik.http.services.notification.loadbalancer.server.port=8080"
 
-    environment:
-      # В контейнере сервис слушает 8080 (EXPOSE в build/Dockerfile), а в
-      # config.yaml стоит локальный 8088 — тот файл монтируется как есть.
-      PORT: "8080"
-      # Тот же config.yaml монтируется как есть, а в нём адреса для запуска с
-      # хоста: изнутри сети брокер и Redis зовутся по именам сервисов.
-      KAFKA_BROKERS: "kafka:9092"
-      KAFKA_TOPICS: "social-service.events,comment-service.events"
-      KAFKA_GROUP_ID: "notification-service"
-      REDIS_ADDRESS: "redis:6379"
     volumes:
       - ./config/config.yaml:/app/config/config.yaml:ro
-      # Service account JSON для FCM: в git не коммитится, лежит на сервере.
       - ./secrets/serviceAccountKey.json:/app/secrets/serviceAccountKey.json:ro
     networks:
       - web
