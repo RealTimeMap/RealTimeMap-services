@@ -3,7 +3,7 @@
 # Прод (2 ядра / 4 ГБ) образы не собирает — только тянет из GHCR.
 # Сборка идёт в GitHub Actions либо локально на машине разработчика.
 
-SERVICES := mark-service comment-service feedback-service gamification-service smtp-service social-service
+SERVICES := mark-service comment-service feedback-service gamification-service smtp-service social-service notification-service
 REGISTRY := ghcr.io
 OWNER    := realtimemap
 TAG      ?= latest
