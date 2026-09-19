@@ -47,3 +47,16 @@ func (s *Service) CreateOrNone(ctx context.Context, params CreateTokenParams) er
 	}
 	return nil
 }
+
+func (s *Service) GetUserTokens(ctx context.Context, userID uint) ([]Model, error) {
+	s.logger.Info("start GetUserTokens", zap.String("layer", "token service"), zap.Uint("userID", userID))
+
+	objs, err := s.repo.GetByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(objs) < 1 {
+		return nil, ErrNotFoundUserToken(userID)
+	}
+	return objs, nil
+}

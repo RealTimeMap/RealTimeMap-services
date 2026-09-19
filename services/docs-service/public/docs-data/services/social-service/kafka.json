@@ -38,6 +38,86 @@
       }
     },
     {
+      "id": "social-chat-message-created",
+      "name": "social-service.events",
+      "summary": "Новое сообщение в чате — для push-уведомлений",
+      "description": "Исходящее событие chat.message.created в том же топике social-service.events. Читает его notification-service и превращает в push.\n\nДублирует realtime-доставку через Socket.IO, а не заменяет её: сокет обслуживает открытое приложение, Kafka — push тем, у кого оно закрыто. Сокет для этого не годится — у отключённого клиента комнаты нет, и событие просто некому доставить.\n\nПубликация best-effort: сообщение уже сохранено и разослано по сокету, поэтому сбой брокера только логируется и не влияет на ответ HTTP. Иначе клиент отретраил бы отправку и создал дубликат сообщения.\n\nОтправитель вычищается из recipientIds на стороне продюсера: в realtime-доставке он участвует намеренно (эхо на его другие устройства), но push о собственном сообщении не нужен никому. Если после вычистки получателей не осталось, событие не публикуется вовсе.\n\nТекст режется до 160 символов: переписка не должна лежать в топике целиком по retention, а в push всё равно попадает только начало. Обрезка идёт по рунам — срез по байтам развалил бы кириллицу на середине символа.\n\nchatTitle заполняется только для групповых чатов: в direct заголовком уведомления служит имя отправителя.",
+      "producers": ["social-service"],
+      "consumers": ["notification-service"],
+      "partitionKey": "user_id",
+      "schema": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID сообщения (конверт)" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: chat.message.created" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "Время публикации (ISO 8601, UTC)" },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Сообщение чата на момент отправки",
+          "children": [
+            { "name": "messageId", "type": "integer", "required": true, "description": "ID сообщения" },
+            { "name": "chatId", "type": "integer", "required": true, "description": "ID чата" },
+            { "name": "senderId", "type": "integer", "required": true, "description": "ID отправителя" },
+            { "name": "senderName", "type": "string", "required": false, "description": "Имя отправителя для заголовка уведомления" },
+            { "name": "chatTitle", "type": "string", "required": false, "description": "Название чата, только для групповых" },
+            { "name": "isGroup", "type": "boolean", "required": true, "description": "Групповой ли чат" },
+            { "name": "preview", "type": "string", "required": false, "description": "Текст сообщения, усечённый до 160 символов" },
+            { "name": "recipientIds", "type": "array", "required": true, "description": "Участники чата без отправителя" }
+          ]
+        }
+      ],
+      "example": {
+        "id": "18617847-4b69-4108-b34e-0693542ad3a2",
+        "type": "chat.message.created",
+        "timestamp": "2026-09-19T10:15:00Z",
+        "payload": {
+          "messageId": 512,
+          "chatId": 42,
+          "senderId": 60,
+          "senderName": "john_doe",
+          "chatTitle": "",
+          "isGroup": false,
+          "preview": "привет, ты на месте?",
+          "recipientIds": [61, 62]
+        }
+      }
+    },
+    {
+      "id": "social-subscription-created",
+      "name": "social-service.events",
+      "summary": "Новая подписка на профиль — для push-уведомлений",
+      "description": "Исходящее событие subscription.created в том же топике social-service.events. Читает его notification-service и уведомляет того, на кого подписались.\n\nПубликуется только при реально созданной подписке: повторный запрос (ретрай клиента) возвращает ошибку «уже подписан» и события не порождает — иначе адресат получил бы второй push о том же подписчике.\n\nОтписка отдельным событием не публикуется: уведомлять о ней некого, а потребителям факт отмены ничего не меняет задним числом.\n\nИмя подписавшегося резолвится здесь, при публикации: у потребителя нет способа его спросить. Если профиль прочитать не удалось, поле уезжает пустым и уведомление деградирует до «У вас новый подписчик» — сбой чтения профиля подписку не отменяет.\n\nКлюч партиционирования — subscriberId, адресат уведомления — targetId: это разные пользователи, и путать их нельзя.",
+      "producers": ["social-service"],
+      "consumers": ["notification-service"],
+      "partitionKey": "user_id",
+      "schema": [
+        { "name": "id", "type": "string", "required": true, "description": "UUID сообщения (конверт)" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: subscription.created" },
+        { "name": "timestamp", "type": "string", "required": true, "description": "Время публикации (ISO 8601, UTC)" },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Состоявшаяся подписка",
+          "children": [
+            { "name": "subscriberId", "type": "integer", "required": true, "description": "Кто подписался" },
+            { "name": "targetId", "type": "integer", "required": true, "description": "На кого подписались — адресат уведомления" },
+            { "name": "subscriberName", "type": "string", "required": false, "description": "Имя подписавшегося для текста уведомления" }
+          ]
+        }
+      ],
+      "example": {
+        "id": "2c1f8b90-5d3a-4f21-9e77-1a0b3c4d5e6f",
+        "type": "subscription.created",
+        "timestamp": "2026-09-19T10:16:00Z",
+        "payload": {
+          "subscriberId": 61,
+          "targetId": 60,
+          "subscriberName": "jane_doe"
+        }
+      }
+    },
+    {
       "id": "social-user-events-in",
       "name": "user-service",
       "summary": "Входящий топик auth-сервиса: создание профиля и признак администратора",

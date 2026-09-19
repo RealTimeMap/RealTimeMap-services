@@ -116,16 +116,25 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	// Publisher исходящих событий профиля. Выключенная или ненастроенная шина
 	// не должна ронять сервис: профили важнее событий, падаем на заглушку.
+	// Все три публикатора делят один продюсер и один топик: события профиля,
+	// чата и подписок — события одного владельца, и разводить их по топикам
+	// значило бы заставить потребителей подписываться на три вместо одного.
 	var (
-		eventPublisher profile.EventPublisher
-		kafkaProducer  *kafkaproducer.Producer
+		eventPublisher        profile.EventPublisher
+		subscriptionPublisher subscription.EventPublisher
+		chatKafkaPublisher    chat.KafkaPublisher
+		kafkaProducer         *kafkaproducer.Producer
 	)
 	switch {
 	case !cfg.Kafka.ProducerEnabled:
 		eventPublisher = profile.NoOpEventPublisher{}
+		subscriptionPublisher = subscription.NoOpEventPublisher{}
+		chatKafkaPublisher = chat.NoOpKafkaPublisher{}
 		logger.Info("Using NoOp event publisher (Kafka producer disabled)")
 	case len(cfg.Kafka.Brokers) == 0:
 		eventPublisher = profile.NoOpEventPublisher{}
+		subscriptionPublisher = subscription.NoOpEventPublisher{}
+		chatKafkaPublisher = chat.NoOpKafkaPublisher{}
 		logger.Error("Kafka producer enabled but no brokers configured, falling back to NoOp publisher")
 	default:
 		kafkaProducer = kafkaproducer.New(
@@ -135,6 +144,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 			kafkaproducer.WithLogger(logger),
 		)
 		eventPublisher = infrakafka.NewProfilePublisher(kafkaProducer, cfg.Kafka.ProducerTopic, logger)
+		subscriptionPublisher = infrakafka.NewSubscriptionPublisher(kafkaProducer, cfg.Kafka.ProducerTopic, logger)
+		chatKafkaPublisher = infrakafka.NewChatPublisher(kafkaProducer, cfg.Kafka.ProducerTopic, logger)
 		logger.Info("Kafka event publisher initialized",
 			zap.Strings("brokers", cfg.Kafka.Brokers),
 			zap.String("topic", cfg.Kafka.ProducerTopic),
@@ -157,7 +168,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	friendshipService := friendship.NewService(friendRepo, profileRepo, blockedUserRepo, logger)
 
-	subscriptionService := subscription.NewService(subscriptionRepo, profileRepo, blockedUserRepo, logger)
+	subscriptionService := subscription.NewService(subscriptionRepo, profileRepo, blockedUserRepo, subscriptionPublisher, logger)
 
 	// V2
 
@@ -183,7 +194,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	chatCases := &chat.Application{
 		Direct:      chat.NewDirectChatHandler(chatServiceV2, profileService, chatEventPublisher, logger),
 		Group:       chat.NewGroupChatHandler(chatServiceV2, chatEventPublisher, logger),
-		SendMessage: chat.NewMessageSenderHandler(messageServiceV2, profileService, chatEventPublisher, logger),
+		SendMessage: chat.NewMessageSenderHandler(messageServiceV2, profileService, chatEventPublisher, chatKafkaPublisher, chat.NewChatInfoGetter(chatServiceV2), logger),
 		History:     chat.NewChatHistoryHandler(messageServiceV2, profileService, logger),
 		ListChats:   chat.NewListUserChatsHandler(chatServiceV2, profileService, logger),
 		MarkRead:    chat.NewMarkReadHandler(chatServiceV2, chatEventPublisher, logger),

@@ -13,6 +13,7 @@ type Service struct {
 	repo        repository.SubscriptionRepository
 	profileRepo repository.ProfileRepository
 	blockedRepo repository.BlockedUserRepository
+	publisher   EventPublisher
 
 	logger *zap.Logger
 }
@@ -21,12 +22,20 @@ func NewService(
 	repo repository.SubscriptionRepository,
 	profileRepo repository.ProfileRepository,
 	blockedRepo repository.BlockedUserRepository,
+	publisher EventPublisher,
 	logger *zap.Logger,
 ) *Service {
+	// nil-публикатор приравнивается к заглушке: вызывающему не нужно знать про
+	// выключенную шину, а Service не должен проверять nil на каждой публикации.
+	if publisher == nil {
+		publisher = NoOpEventPublisher{}
+	}
+
 	return &Service{
 		repo:        repo,
 		profileRepo: profileRepo,
 		blockedRepo: blockedRepo,
+		publisher:   publisher,
 		logger:      logger,
 	}
 }
@@ -50,10 +59,43 @@ func (s *Service) Subscribe(ctx context.Context, subscriberID, targetID uint) er
 		return err
 	}
 	if !created {
+		// Повторная подписка события не порождает: иначе повтор запроса
+		// (ретрай клиента) дал бы адресату второй пуш о том же подписчике.
 		return domainerrors.AlreadySubscribed(targetID)
 	}
 
+	s.publishCreated(ctx, subscriberID, targetID)
+
 	return nil
+}
+
+// publishCreated отправляет событие о новой подписке.
+//
+// Best-effort: подписка уже в БД, и откатывать её из-за недоступного брокера
+// нельзя — пользователь получил бы ошибку на успешном действии. Теряется
+// только уведомление.
+func (s *Service) publishCreated(ctx context.Context, subscriberID, targetID uint) {
+	// Имя подписавшегося берётся здесь, а не у потребителя: у него нет
+	// способа спросить профиль — social не поднимает ручку «профиль по id»
+	// для этого случая, а класть в топик лишний запрос незачем.
+	var name string
+	if prof, err := s.profileRepo.GetProfile(ctx, subscriberID); err != nil {
+		s.logger.Warn("failed to resolve subscriber name for event",
+			zap.Uint("subscriber_id", subscriberID), zap.Error(err))
+	} else if prof != nil {
+		name = prof.Username
+	}
+
+	if err := s.publisher.PublishSubscriptionCreated(ctx, SubscriptionCreated{
+		SubscriberID:   subscriberID,
+		TargetID:       targetID,
+		SubscriberName: name,
+	}); err != nil {
+		s.logger.Warn("failed to publish subscription event",
+			zap.Uint("subscriber_id", subscriberID),
+			zap.Uint("target_id", targetID),
+			zap.Error(err))
+	}
 }
 
 // Unsubscribe отменяет подписку subscriberID на targetID.
