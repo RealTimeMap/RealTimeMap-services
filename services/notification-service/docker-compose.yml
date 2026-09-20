@@ -35,6 +35,17 @@ services:
       - "traefik.http.routers.notification-tokens.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.notification-tokens.tls=true"
 
+      # PATCH /api/v2/tokens/me — настройки уведомлений текущего устройства.
+      # Отдельный роутер, а не расширение предыдущего: у него другой метод и
+      # другой путь, а склеивать их в один PathRegexp значило бы пустить POST
+      # на /me и PATCH на /tokens.
+      - "traefik.http.routers.notification-token-settings.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/tokens/me/?$`) && Method(`PATCH`)"
+      - "traefik.http.routers.notification-token-settings.entrypoints=websecure"
+      - "traefik.http.routers.notification-token-settings.priority=100"
+      - "traefik.http.routers.notification-token-settings.service=notification"
+      - "traefik.http.routers.notification-token-settings.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.notification-token-settings.tls=true"
+
       # GET /notification/health — health check (публичный)
       - "traefik.http.routers.notification-health.rule=Host(`realtimemap.ru`) && Path(`/notification/health`) && Method(`GET`)"
       - "traefik.http.routers.notification-health.entrypoints=websecure"

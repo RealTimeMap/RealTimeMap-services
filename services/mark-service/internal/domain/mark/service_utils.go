@@ -4,14 +4,15 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/domainerrors"
-	"go.uber.org/zap"
 )
 
-func (s *Service) validateInput(ctx context.Context, userID int, input CreateMarkParams) error {
+func (s *Service) validateInput(ctx context.Context, userID int, input *CreateMarkParams) error {
 	// 1. Валидация категории (существует и активна)
 	category, err := s.categoryRepo.GetByID(ctx, input.CategoryId)
 	if err != nil {
@@ -22,20 +23,12 @@ func (s *Service) validateInput(ctx context.Context, userID int, input CreateMar
 	}
 
 	// Валидация лимитов
-	err = s.validateLimit(ctx, userID)
-	if err != nil {
+	if err := s.validateLimit(ctx, userID); err != nil {
 		return err
 	}
 
-	// 4. Валидация start_at (не слишком в прошлом/будущем)
-	now := time.Now().UTC()
-	pastLimit := now.AddDate(0, 0, -maxStartAtPastDays)
-	futureLimit := now.AddDate(0, 0, maxStartAtFutureDays)
-	if input.StartAt.Before(pastLimit) {
-		return domainerrors.ErrStartAtTooOld(maxStartAtPastDays)
-	}
-	if input.StartAt.After(futureLimit) {
-		return domainerrors.ErrStartAtTooFuture(maxStartAtFutureDays)
+	if err := s.validateDate(input, time.Now()); err != nil {
+		return err
 	}
 
 	return nil
@@ -89,5 +82,50 @@ func (s *Service) checkOwnerShip(obj *Mark, userID uint) error {
 	if obj.UserID != userID {
 		return domainerrors.ErrPermissionDenied()
 	}
+	return nil
+}
+
+const (
+	maxStartInPast   = 7 * 24 * time.Hour
+	maxStartInFuture = 3 * 24 * time.Hour
+	maxEndInFuture   = 7 * 24 * time.Hour
+	defaultMarkTTL   = time.Hour
+	minimumMarkTTL   = 30 * time.Minute
+)
+
+func (s *Service) validateDate(obj *CreateMarkParams, now time.Time) error {
+	if obj.StartAt.Before(now.Add(-maxStartInPast)) {
+		return ErrStartAtTooOld(int(maxStartInPast / (24 * time.Hour)))
+	}
+	if obj.StartAt.After(now.Add(maxStartInFuture)) {
+		return ErrStartAtTooFuture(int(maxStartInFuture / (24 * time.Hour)))
+	}
+
+	// Точка, от которой метка реально начинает жить
+	effectiveStart := obj.StartAt
+	if effectiveStart.Before(now) {
+		effectiveStart = now
+	}
+
+	// EndAt не задан — проставляем дефолт. Проверки ниже пропускаем
+	if obj.EndAt == nil {
+		endAt := effectiveStart.Add(defaultMarkTTL)
+		obj.EndAt = &endAt
+		return nil
+	}
+
+	if !obj.EndAt.After(obj.StartAt) {
+		return ErrEndAtBeforeStart(*obj.EndAt)
+	}
+	if !obj.EndAt.After(now) {
+		return ErrEndAtInPast(*obj.EndAt)
+	}
+	if obj.EndAt.Sub(effectiveStart) < minimumMarkTTL {
+		return ErrMarkTTLTooShort(int(minimumMarkTTL / time.Minute))
+	}
+	if obj.EndAt.After(now.Add(maxEndInFuture)) {
+		return ErrEndAtMaxInFuture(int(maxEndInFuture/(24*time.Hour)), *obj.EndAt)
+	}
+
 	return nil
 }

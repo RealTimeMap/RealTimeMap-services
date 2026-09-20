@@ -172,12 +172,60 @@ func TestCreate(t *testing.T) {
 		assert.Zero(t, markRepo.createCalls)
 	})
 
+	t.Run("EndAt не задан — проставляется дефолтный TTL от StartAt", func(t *testing.T) {
+		markRepo := &fakeMarkRepo{}
+		s := newServiceWith(markRepo, &fakeCategoryRepo{getByIDResult: activeCategory()}, &fakeStorage{})
+
+		input := validCreateParams()
+		require.Nil(t, input.EndAt, "предусловие теста: EndAt не задан")
+
+		_, err := s.Create(ctx, testUser(), input)
+		require.NoError(t, err)
+
+		require.NotNil(t, markRepo.createdMark)
+		assert.WithinDuration(t, input.StartAt.Add(defaultMarkTTL), markRepo.createdMark.EndAt, time.Minute)
+		assert.True(t, markRepo.createdMark.IsTemp, "метка без явного EndAt считается временной")
+	})
+
+	t.Run("StartAt в прошлом — дефолтный TTL считается от текущего момента", func(t *testing.T) {
+		markRepo := &fakeMarkRepo{}
+		s := newServiceWith(markRepo, &fakeCategoryRepo{getByIDResult: activeCategory()}, &fakeStorage{})
+
+		input := validCreateParams()
+		input.StartAt = time.Now().UTC().Add(-48 * time.Hour)
+
+		_, err := s.Create(ctx, testUser(), input)
+		require.NoError(t, err)
+
+		require.NotNil(t, markRepo.createdMark)
+		// Метка не должна создаваться уже просроченной.
+		assert.True(t, markRepo.createdMark.EndAt.After(time.Now().UTC()),
+			"EndAt=%v уже в прошлом", markRepo.createdMark.EndAt)
+		assert.WithinDuration(t, time.Now().UTC().Add(defaultMarkTTL), markRepo.createdMark.EndAt, time.Minute)
+	})
+
+	t.Run("явный EndAt сохраняется и метка не временная", func(t *testing.T) {
+		markRepo := &fakeMarkRepo{}
+		s := newServiceWith(markRepo, &fakeCategoryRepo{getByIDResult: activeCategory()}, &fakeStorage{})
+
+		input := validCreateParams()
+		endAt := input.StartAt.Add(5 * time.Hour)
+		input.EndAt = &endAt
+
+		_, err := s.Create(ctx, testUser(), input)
+		require.NoError(t, err)
+
+		require.NotNil(t, markRepo.createdMark)
+		assert.Equal(t, endAt, markRepo.createdMark.EndAt)
+		assert.False(t, markRepo.createdMark.IsTemp)
+	})
+
 	t.Run("StartAt слишком далеко в прошлом", func(t *testing.T) {
 		markRepo := &fakeMarkRepo{}
 		s := newServiceWith(markRepo, &fakeCategoryRepo{getByIDResult: activeCategory()}, &fakeStorage{})
 
 		input := validCreateParams()
-		input.StartAt = time.Now().UTC().AddDate(0, 0, -(maxStartAtPastDays + 1))
+		input.StartAt = time.Now().UTC().Add(-maxStartInPast).Add(-time.Hour)
 
 		_, err := s.Create(ctx, testUser(), input)
 		require.Error(t, err)
@@ -189,7 +237,7 @@ func TestCreate(t *testing.T) {
 		s := newServiceWith(markRepo, &fakeCategoryRepo{getByIDResult: activeCategory()}, &fakeStorage{})
 
 		input := validCreateParams()
-		input.StartAt = time.Now().UTC().AddDate(0, 0, maxStartAtFutureDays+1)
+		input.StartAt = time.Now().UTC().Add(maxStartInFuture).Add(time.Hour)
 
 		_, err := s.Create(ctx, testUser(), input)
 		require.Error(t, err)

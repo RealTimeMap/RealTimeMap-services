@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	ctxHelper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
@@ -12,7 +14,6 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
-	"go.uber.org/zap"
 )
 
 type MarkCreateCommand struct {
@@ -72,7 +73,6 @@ func (h *CreateMarkHandler) Handle(ctx context.Context, cmd MarkCreateCommand) (
 		Geohash:        cmd.Geohash,
 		Photos:         cmd.Photos,
 	})
-
 	if err != nil {
 		return MarkResult{}, err
 	}
@@ -116,7 +116,8 @@ func (h *CreateMarkHandler) publishCreated(ctx context.Context, obj *mark.Mark, 
 		EventType: "mark.created",
 		UserID:    strconv.Itoa(int(obj.UserID)),
 		SourceID:  strconv.Itoa(int(obj.ID)),
-		Timestamp: time.Now().Format(time.RFC3339)},
+		Timestamp: time.Now().Format(time.RFC3339),
+	},
 		event); err != nil {
 		h.logger.Error("publish markCreated event failed", zap.Error(err))
 	}

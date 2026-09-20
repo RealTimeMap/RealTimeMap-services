@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/services/notification-service/internal/domain/collapse"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/notification-service/internal/domain/token"
 )
 
 // Limiter схлопывает серии однотипных уведомлений. Интерфейс объявлен на
@@ -87,6 +88,7 @@ func (h *EventNotifyHandler) Handle(ctx context.Context, cmd NotifyEventCommand)
 		UserID:  cmd.Key.RecipientID,
 		Title:   cmd.Title,
 		Content: cmd.Content,
+		Kind:    token.Kind(cmd.Key.Kind),
 	})
 }
 
@@ -100,5 +102,6 @@ func (h *EventNotifyHandler) HandleSummary(ctx context.Context, key collapse.Key
 		UserID:  key.RecipientID,
 		Title:   title,
 		Content: fmt.Sprintf(template, count),
+		Kind:    token.Kind(key.Kind),
 	})
 }

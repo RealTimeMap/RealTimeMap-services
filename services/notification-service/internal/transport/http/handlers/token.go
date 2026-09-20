@@ -34,6 +34,7 @@ func InitTokenHandler(g *gin.RouterGroup, deps TokenDeps) {
 	r := g.Group("/tokens")
 	{
 		r.POST("", auth.AuthRequired(), h.Create)
+		r.PATCH("/me", auth.AuthRequired(), h.UpdateSettings)
 	}
 }
 
@@ -50,10 +51,33 @@ func (h *tokenHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.CreateOrNone(c.Request.Context(), req.ToParams(uint(userID))); err != nil {
+	if err := h.service.Register(c.Request.Context(), req.ToParams(uint(userID))); err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// UpdateSettings меняет настройки уведомлений устройства, с которого пришёл
+func (h *tokenHandler) UpdateSettings(c *gin.Context) {
+	userID, err := ctxhelper.GetUserID(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	var req dto.UpdateSettingsRequest
+	if err := c.ShouldBind(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	device, err := h.service.UpdateSettings(c.Request.Context(), req.ToParams(uint(userID)))
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.NewSettingsResponse(device))
 }
