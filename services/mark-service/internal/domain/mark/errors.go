@@ -2,6 +2,7 @@ package mark
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 )
@@ -47,6 +48,38 @@ var (
 			fmt.Sprintf("cannot be more than %d days in the future", maxDays),
 			"value_error.date.future_limit",
 			nil,
+		)
+	}
+	ErrEndAtBeforeStart = func(endAt time.Time) error {
+		return apperror.NewFieldValidationError(
+			"endAt",
+			"The end time cannot be earlier than the start time.",
+			"value_error.date.conflict",
+			endAt,
+		)
+	}
+	ErrEndAtInPast = func(endAt time.Time) error {
+		return apperror.NewFieldValidationError(
+			"endAt",
+			"The end time cannot be in the past.",
+			"value_error.date.conflict",
+			endAt,
+		)
+	}
+	ErrEndAtMaxInFuture = func(maxDays int, endAt time.Time) error {
+		return apperror.NewFieldValidationError(
+			"endAt",
+			fmt.Sprintf("The end date cannot be greater than %d days.", maxDays),
+			"value_error.date.conflict",
+			endAt,
+		)
+	}
+	ErrMarkTTLTooShort = func(ttl int) error {
+		return apperror.NewFieldValidationError(
+			"endAt",
+			fmt.Sprintf("The minimum total duration of the mark must be %d minutes.", ttl),
+			"value_error.date.conflict",
+			ttl,
 		)
 	}
 )
@@ -106,5 +139,12 @@ var (
 			fmt.Sprintf("storage %s failed", operation),
 			cause,
 		)
+	}
+
+	// ErrEndAtNotResolved — нарушен внутренний инвариант: validateDate обязан
+	// проставить дефолтный EndAt, когда клиент его не прислал. Ошибка клиенту
+	// не адресована, это сигнал о баге валидации.
+	ErrEndAtNotResolved = func() error {
+		return apperror.WrapInternalError("endAt was not resolved by validation", nil)
 	}
 )
