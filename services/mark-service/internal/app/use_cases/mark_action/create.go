@@ -109,6 +109,8 @@ func (h *CreateMarkHandler) publishCreated(ctx context.Context, obj *mark.Mark, 
 		IsEnded:        obj.IsEnded,
 	}
 
+	now := time.Now()
+
 	event := events.NewMarkCreate(payload)
 
 	// key = ownerId для партиционирования: события одной метки/владельца в одну партицию.
@@ -116,9 +118,42 @@ func (h *CreateMarkHandler) publishCreated(ctx context.Context, obj *mark.Mark, 
 		EventType: "mark.created",
 		UserID:    strconv.Itoa(int(obj.UserID)),
 		SourceID:  strconv.Itoa(int(obj.ID)),
-		Timestamp: time.Now().Format(time.RFC3339),
+		Timestamp: now.Format(time.RFC3339),
 	},
 		event); err != nil {
 		h.logger.Error("publish markCreated event failed", zap.Error(err))
+	}
+
+	h.publishTimeOfDay(ctx, obj, payload, now)
+}
+
+// publishTimeOfDay досылает событие о метке, созданной в ночные или ранние
+// утренние часы — на них завязаны отдельные достижения.
+func (h *CreateMarkHandler) publishTimeOfDay(
+	ctx context.Context,
+	obj *mark.Mark,
+	payload events.MarkPayload,
+	now time.Time,
+) {
+	eventType := events.MarkTimeOfDayEvent(now.Hour())
+	if eventType == "" {
+		return
+	}
+
+	// UserID в meta обязателен: gamification-service читает владельца метки
+	// только из заголовка — в теле события он приходит как ownerId, а его
+	// разбор там не предусмотрен.
+	if err := h.publisher.PublishWithMeta(ctx, producer.EventMeta{
+		EventType: eventType,
+		UserID:    strconv.Itoa(int(obj.UserID)),
+		SourceID:  strconv.Itoa(int(obj.ID)),
+		Timestamp: now.Format(time.RFC3339),
+	},
+		events.NewMarkTimeOfDayEvent(eventType, payload)); err != nil {
+		// Сбой досылки не трогает основное событие: метка создана, опыт за
+		// неё начислится по markCreated, потеряется только достижение.
+		h.logger.Error("publish mark time-of-day event failed",
+			zap.String("event_type", eventType),
+			zap.Error(err))
 	}
 }
