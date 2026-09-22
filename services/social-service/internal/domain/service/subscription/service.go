@@ -14,6 +14,7 @@ type Service struct {
 	profileRepo repository.ProfileRepository
 	blockedRepo repository.BlockedUserRepository
 	publisher   EventPublisher
+	statCache   StatInvalidator
 
 	logger *zap.Logger
 }
@@ -23,6 +24,7 @@ func NewService(
 	profileRepo repository.ProfileRepository,
 	blockedRepo repository.BlockedUserRepository,
 	publisher EventPublisher,
+	statCache StatInvalidator,
 	logger *zap.Logger,
 ) *Service {
 	// nil-публикатор приравнивается к заглушке: вызывающему не нужно знать про
@@ -30,12 +32,16 @@ func NewService(
 	if publisher == nil {
 		publisher = NoOpEventPublisher{}
 	}
+	if statCache == nil {
+		statCache = NoOpStatInvalidator{}
+	}
 
 	return &Service{
 		repo:        repo,
 		profileRepo: profileRepo,
 		blockedRepo: blockedRepo,
 		publisher:   publisher,
+		statCache:   statCache,
 		logger:      logger,
 	}
 }
@@ -63,6 +69,10 @@ func (s *Service) Subscribe(ctx context.Context, subscriberID, targetID uint) er
 		// (ретрай клиента) дал бы адресату второй пуш о том же подписчике.
 		return domainerrors.AlreadySubscribed(targetID)
 	}
+
+	// Обе стороны: у подписавшегося вырос счётчик подписок, у адресата —
+	// подписчиков.
+	s.statCache.InvalidateProfiles(ctx, subscriberID, targetID)
 
 	s.publishCreated(ctx, subscriberID, targetID)
 
@@ -108,7 +118,13 @@ func (s *Service) Unsubscribe(ctx context.Context, subscriberID, targetID uint) 
 		return domainerrors.SubscriptionNotFound(targetID)
 	}
 
-	return s.repo.Unsubscribe(ctx, subscriberID, targetID)
+	if err := s.repo.Unsubscribe(ctx, subscriberID, targetID); err != nil {
+		return err
+	}
+
+	s.statCache.InvalidateProfiles(ctx, subscriberID, targetID)
+
+	return nil
 }
 
 // GetSubscriptionsProfile профили, на которые подписан пользователь.

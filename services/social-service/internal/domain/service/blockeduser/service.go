@@ -18,6 +18,8 @@ type Service struct {
 
 	txm *txmanager.TxManager
 
+	statCache StatInvalidator
+
 	logger *zap.Logger
 }
 
@@ -26,13 +28,19 @@ func NewService(
 	profileRepo repository.ProfileRepository,
 	subsRepo repository.SubscriptionRepository,
 	txm *txmanager.TxManager,
+	statCache StatInvalidator,
 	logger *zap.Logger,
 ) *Service {
+	if statCache == nil {
+		statCache = NoOpStatInvalidator{}
+	}
+
 	return &Service{
 		repo:        repo,
 		profileRepo: profileRepo,
 		subsRepo:    subsRepo,
 		txm:         txm,
+		statCache:   statCache,
 		logger:      logger,
 	}
 }
@@ -50,7 +58,7 @@ func (s *Service) BlockUser(ctx context.Context, userID, blockedUserID uint) err
 	// Блокировка и разрыв подписок — одна операция: иначе при сбое второго
 	// шага заблокированный остался бы подписчиком без возможности отписаться
 	// (подписаться заново ему уже запрещает checkNotBlocked).
-	return s.txm.WithTx(ctx, func(ctx context.Context) error {
+	err := s.txm.WithTx(ctx, func(ctx context.Context) error {
 		created, err := s.repo.Block(ctx, userID, blockedUserID)
 		if err != nil {
 			return err
@@ -61,6 +69,15 @@ func (s *Service) BlockUser(ctx context.Context, userID, blockedUserID uint) err
 
 		return s.subsRepo.DeleteBetween(ctx, userID, blockedUserID)
 	})
+	if err != nil {
+		return err
+	}
+
+	// Только после коммита: при откате подписки остались бы на месте, и сброс
+	// кеша заставил бы пересчитать те же числа заново.
+	s.statCache.InvalidateProfiles(ctx, userID, blockedUserID)
+
+	return nil
 }
 
 func (s *Service) UnBlockUser(ctx context.Context, userID, blockedUserID uint) error {

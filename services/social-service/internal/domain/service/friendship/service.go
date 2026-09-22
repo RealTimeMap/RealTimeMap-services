@@ -13,6 +13,7 @@ type Service struct {
 	repo        repository.FriendShipRepository
 	profileRepo repository.ProfileRepository
 	blockedRepo repository.BlockedUserRepository
+	statCache   StatInvalidator
 
 	logger *zap.Logger
 }
@@ -21,12 +22,18 @@ func NewService(
 	repo repository.FriendShipRepository,
 	profileRepo repository.ProfileRepository,
 	blockedRepo repository.BlockedUserRepository,
+	statCache StatInvalidator,
 	logger *zap.Logger,
 ) *Service {
+	if statCache == nil {
+		statCache = NoOpStatInvalidator{}
+	}
+
 	return &Service{
 		repo:        repo,
 		profileRepo: profileRepo,
 		blockedRepo: blockedRepo,
+		statCache:   statCache,
 		logger:      logger,
 	}
 }
@@ -69,7 +76,14 @@ func (s *Service) AcceptRequest(ctx context.Context, userID, friendID uint) erro
 		return domainerrors.FriendRequestNotFound(friendID)
 	}
 
-	return s.repo.AcceptRequest(ctx, userID, friendID)
+	if err := s.repo.AcceptRequest(ctx, userID, friendID); err != nil {
+		return err
+	}
+
+	// Счёт друзей меняется у обеих сторон.
+	s.statCache.InvalidateProfiles(ctx, userID, friendID)
+
+	return nil
 }
 
 // DeclineRequest отклоняет входящий запрос. userID — получатель, friendID — отправитель.
@@ -95,7 +109,13 @@ func (s *Service) Remove(ctx context.Context, userID, friendID uint) error {
 		return domainerrors.FriendshipNotFound(friendID)
 	}
 
-	return s.repo.Remove(ctx, userID, friendID)
+	if err := s.repo.Remove(ctx, userID, friendID); err != nil {
+		return err
+	}
+
+	s.statCache.InvalidateProfiles(ctx, userID, friendID)
+
+	return nil
 }
 
 // GetFriendsProfile возвращает профили друзей пользователя с пагинацией.

@@ -7,6 +7,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/mediavalidator"
 	pkgredis "github.com/RealTimeMap/RealTimeMap-backend/pkg/redis"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http/middleware/cache"
 	kafkaproducer "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/app/use_cases/chat"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
@@ -22,6 +23,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/persistence/postgres"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/realtime/presence"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/realtime/socketpub"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/infrastructure/statcache"
 	profilegrpc "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/grpc/profile"
 	chatsocket "github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/transport/socket"
 	"github.com/redis/go-redis/v9"
@@ -152,6 +154,12 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 		)
 	}
 
+	redisCli := getRedisCli(cfg.Redis)
+
+	// Сброс кеша статистики: без него подписка или новый друг не меняли бы
+	// числа на профиле до истечения TTL middleware.
+	statCache := statcache.New(cache.NewRedisCache(redisCli, logger), logger)
+
 	profileRepo := postgres.NewPgProfileRepository(db, logger)
 	profileService := profile.NewProfileService(profileRepo, store, photoValidator, progressPort, eventPublisher, logger)
 	friendRepo := postgres.NewPgFriendshipRepository(db, logger)
@@ -159,16 +167,14 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 	profileStatService := profile.NewStatService(markStatPort, friendRepo, subscriptionRepo, logger)
 	profileHandler := profilegrpc.NewHandler(profileService, logger)
 
-	redisCli := getRedisCli(cfg.Redis)
-
 	blockedUserRepo := postgres.NewPgBlockedUserRepository(db, logger)
 	txm := txmanager.NewTxManager(db)
 
-	blockedUserService := blockeduser.NewService(blockedUserRepo, profileRepo, subscriptionRepo, &txm, logger)
+	blockedUserService := blockeduser.NewService(blockedUserRepo, profileRepo, subscriptionRepo, &txm, statCache, logger)
 
-	friendshipService := friendship.NewService(friendRepo, profileRepo, blockedUserRepo, logger)
+	friendshipService := friendship.NewService(friendRepo, profileRepo, blockedUserRepo, statCache, logger)
 
-	subscriptionService := subscription.NewService(subscriptionRepo, profileRepo, blockedUserRepo, subscriptionPublisher, logger)
+	subscriptionService := subscription.NewService(subscriptionRepo, profileRepo, blockedUserRepo, subscriptionPublisher, statCache, logger)
 
 	// V2
 
