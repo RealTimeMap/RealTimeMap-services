@@ -124,3 +124,19 @@ func decode(data []byte, v any) error {
 func encode(v any) ([]byte, error) {
 	return json.Marshal(v)
 }
+
+// KeyForPath строит тот же ключ, что и Middleware для GET-запроса по этому
+// пути без query-параметров.
+func KeyForPath(prefix, path string) string {
+	var sb strings.Builder
+
+	if prefix != "" {
+		sb.WriteString(prefix)
+		sb.WriteString(":")
+	}
+	sb.WriteString(http.MethodGet)
+	sb.WriteString(":")
+	sb.WriteString(path)
+
+	return sb.String()
+}

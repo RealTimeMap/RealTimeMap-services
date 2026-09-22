@@ -22,6 +22,7 @@ type Config struct {
 	AllowHeaders     []string      `env:"ALLOW_HEADERS" yaml:"allow_headers" env-separator:","`
 	AllowCredentials bool          `env:"ALLOW_CREDENTIALS" yaml:"allow_credentials" env-default:"true"`
 	MaxAge           time.Duration `env:"MAX_AGE" yaml:"max_age" env-default:"12h"`
+	Mode             string        `env:"GIN_MODE" yaml:"mode" env-default:"debug"`
 }
 
 var (
@@ -49,6 +50,7 @@ func NewServer(cfg Config, logger *zap.Logger) *Server {
 	// gin.New() вместо gin.Default(): стандартные gin.Logger()/gin.Recovery()
 	// пишут в собственном текстовом формате мимо zap, из-за чего такие записи
 	// попадают в Grafana без уровня (unknown).
+	gin.SetMode(cfg.Mode)
 	router := gin.New()
 	router.Use(middleware.ZapLogger(logger), middleware.ZapRecovery(logger))
 	router.HandleMethodNotAllowed = true
