@@ -22,4 +22,8 @@ const (
 	// туда же из social замкнула бы цикл — свои же события приезжали бы
 	// обратно в консьюмер social, который читает этот топик.
 	SocialEvents = "social-service.events"
+
+	// FeedbackEvents — события feedback-service: подтверждение бага
+	// разработчиком.
+	FeedbackEvents = "feedback-service.events"
 )

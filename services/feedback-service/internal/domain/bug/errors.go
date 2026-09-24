@@ -11,7 +11,10 @@ var (
 		return apperror.NewFieldValidationError("tag", "tag is not allowed", "value_error", tag)
 	}
 	ErrBugStatusUnavailable = func(status string) error {
-		return apperror.NewFieldValidationError("tag", "status is not allowed", "value_error", status)
+		return apperror.NewFieldValidationError("status", "status is not allowed", "value_error", status)
+	}
+	ErrRejectReasonUnavailable = func(reason string) error {
+		return apperror.NewFieldValidationError("reason", "reason is not allowed", "value_error", reason)
 	}
 
 	ErrBugNotFound = func(id uint) error {
@@ -36,6 +39,28 @@ var (
 			"status",
 			fmt.Sprintf("bug %d is %s and cannot be taken into work", id, status),
 			status,
+		)
+	}
+
+	// ErrBugNotConfirmed не даёт взять в задачу баг, который разработчик
+	// ещё не воспроизвёл: большинство отчётов не подтверждается, и
+	// задачи по ним были бы пустой работой.
+	ErrBugNotConfirmed = func(id uint) error {
+		return apperror.NewConflictError(
+			"status",
+			fmt.Sprintf("bug %d is not confirmed yet", id),
+			string(New),
+		)
+	}
+
+	// ErrBugReviewForbidden — решение по багу нельзя принять в его
+	// текущем статусе: например, подтвердить уже отклонённый или
+	// отклонить тот, над которым идёт работа.
+	ErrBugReviewForbidden = func(id uint, status Status, action string) error {
+		return apperror.NewConflictError(
+			"status",
+			fmt.Sprintf("bug %d is %s and cannot be %s", id, status, action),
+			string(status),
 		)
 	}
 )

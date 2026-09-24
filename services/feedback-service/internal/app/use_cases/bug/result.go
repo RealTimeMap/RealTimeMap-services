@@ -29,6 +29,11 @@ type BugResult struct {
 
 	// TaskID — задача, в которой баг ведут. Пусто, пока баг свободен.
 	TaskID *uint
+
+	// Итог проверки разработчиком. Пусто, пока баг не проверен.
+	ReviewedAt    *time.Time
+	RejectReason  string
+	ReviewComment string
 }
 
 func toBugResult(obj bug.Model) BugResult {
@@ -44,6 +49,10 @@ func toBugResult(obj bug.Model) BugResult {
 		Logs:      obj.App.Logs,
 		Build:     obj.App.Build,
 		TaskID:    obj.TaskID,
+
+		ReviewedAt:    obj.Review.At,
+		RejectReason:  string(obj.Review.RejectReason),
+		ReviewComment: obj.Review.Comment,
 
 		OS:         obj.Device.OS,
 		Resolution: obj.Device.Resolution,

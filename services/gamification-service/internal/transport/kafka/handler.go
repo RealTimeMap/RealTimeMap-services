@@ -8,6 +8,9 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
+
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/apperror"
 	pkgkafka "github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/consumer"
@@ -15,8 +18,6 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/repository"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/achievement"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/gamification-service/internal/domain/service/event"
-	"github.com/segmentio/kafka-go"
-	"go.uber.org/zap"
 )
 
 type Handler struct {
@@ -74,10 +75,6 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 	}
 
 	if err := h.service.GreatUserExp(ctx, meta.UserID, meta.EventType, meta.SourceID); err != nil {
-		// Правила нет или событие исчерпало дневной лимит — это штатный
-		// исход, а не сбой: топик несёт события, за которые опыт не положен.
-		// Достижения при этом всё равно проверяются: их пороги считаются по
-		// счётчику событий, а не по начисленному опыту.
 		if isExpected(err) {
 			log.Debug("no xp credited for event", zap.Error(err))
 		} else {
@@ -192,6 +189,7 @@ func parseBody(value []byte) bodyMeta {
 			// зависит от события, поэтому перечислены известные варианты.
 			CommentID *uint `json:"commentId"`
 			MarkID    *uint `json:"markId"`
+			BugID     *uint `json:"bugId"`
 			SourceID  *uint `json:"source_id"`
 		} `json:"payload"`
 	}
@@ -202,7 +200,7 @@ func parseBody(value []byte) bodyMeta {
 	return bodyMeta{
 		EventType: firstNonEmpty(raw.Type, raw.EventType),
 		UserID:    firstNonNil(raw.Payload.UserID, raw.Payload.UserIDSnake, raw.UserID),
-		SourceID:  firstNonNil(raw.Payload.CommentID, raw.Payload.MarkID, raw.Payload.SourceID),
+		SourceID:  firstNonNil(raw.Payload.CommentID, raw.Payload.MarkID, raw.Payload.BugID, raw.Payload.SourceID),
 	}
 }
 

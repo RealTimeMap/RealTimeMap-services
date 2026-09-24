@@ -6,10 +6,19 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/http"
 )
 
+// Kafka — шина событий. По ней gamification-service узнаёт о подтверждённых
+// багах и награждает их авторов.
+type Kafka struct {
+	Enabled       bool     `yaml:"enabled" env:"KAFKA_ENABLED" env-default:"false"`
+	Brokers       []string `yaml:"brokers" env:"KAFKA_BROKERS" env-separator:","`
+	ProducerTopic string   `yaml:"producerTopic" env:"KAFKA_PRODUCER_TOPIC" env-default:"feedback-service.events"`
+}
+
 type Config struct {
 	Env      string          `env:"ENV" env-default:"local"`
 	Http     http.Config     `yaml:"http"`
 	Database database.Config `yaml:"database"`
+	Kafka    Kafka           `yaml:"kafka"`
 
 	// ServiceApiKey — ключ, по которому в сервис ходят другие сервисы
 	// платформы (сейчас — таск-менеджер за перечнем багов и обратной

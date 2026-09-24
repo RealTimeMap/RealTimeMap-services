@@ -15,17 +15,26 @@ entryPoints:
   websecure:
     address: ":443"
 
+  metrics:
+    address: ":8082"
+
 log:
   level: DEBUG
 
 accessLog:
   format: common
 
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+
 providers:
   docker:
     exposedByDefault: false
     network: web
-
   file:
     filename: /etc/traefik/dynamic.yml
     watch: true

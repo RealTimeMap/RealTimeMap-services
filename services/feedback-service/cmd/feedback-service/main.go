@@ -26,6 +26,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to initialize container", zap.Error(err))
 	}
+	defer container.Close()
 
 	httpServer := http.NewServer(cfg.Http, log)
 	httpTransport.RegisterRoutes(httpServer.Router(), container)

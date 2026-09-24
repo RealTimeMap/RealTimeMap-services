@@ -52,7 +52,7 @@ func NewServer(cfg Config, logger *zap.Logger) *Server {
 	// попадают в Grafana без уровня (unknown).
 	gin.SetMode(cfg.Mode)
 	router := gin.New()
-	router.Use(middleware.ZapLogger(logger), middleware.ZapRecovery(logger))
+	router.Use(middleware.ZapLogger(logger), middleware.ZapRecovery(logger), middleware.TimeMiddleware())
 	router.HandleMethodNotAllowed = true
 	router.Use(cors.New(cors.Config{
 		CustomSchemas:    []string{"capacitor://", "ionic://"},

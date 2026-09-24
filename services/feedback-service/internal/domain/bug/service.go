@@ -2,6 +2,7 @@ package bug
 
 import (
 	"context"
+	"time"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"go.uber.org/zap"
@@ -9,6 +10,9 @@ import (
 
 type Service struct {
 	repo Repository
+
+	// now — источник времени решения по багу; подменяется в тестах.
+	now func() time.Time
 
 	logger *zap.Logger
 }
@@ -52,6 +56,19 @@ type LinkParams struct {
 	TaskID uint
 }
 
+// ConfirmParams — разработчик воспроизвёл баг.
+type ConfirmParams struct {
+	BugID   uint
+	Comment string
+}
+
+// RejectParams — проверка не подтвердила баг.
+type RejectParams struct {
+	BugID   uint
+	Reason  RejectReason
+	Comment string
+}
+
 // SyncParams — обратная синхронизация: статус задачи переносится на баг.
 type SyncParams struct {
 	TaskID uint
@@ -59,7 +76,7 @@ type SyncParams struct {
 }
 
 func NewService(repo Repository, logger *zap.Logger) *Service {
-	return &Service{repo: repo, logger: logger}
+	return &Service{repo: repo, now: time.Now, logger: logger}
 }
 
 func (s *Service) Create(ctx context.Context, data CreateBugParams) error {
@@ -78,6 +95,7 @@ func (s *Service) Create(ctx context.Context, data CreateBugParams) error {
 			OS:         data.Device.OS,
 			Platform:   data.Device.Platform,
 			Resolution: data.Device.Resolution,
+			Battery:    data.Device.Battery,
 		},
 	}
 	if err := s.repo.Create(ctx, payload); err != nil {
@@ -140,6 +158,9 @@ func (s *Service) Link(ctx context.Context, params LinkParams) (*Model, error) {
 	if obj.IsLinked() && !obj.IsLinkedTo(params.TaskID) {
 		return nil, ErrBugAlreadyLinked(obj.ID, *obj.TaskID)
 	}
+	if obj.Status == New {
+		return nil, ErrBugNotConfirmed(obj.ID)
+	}
 	if !obj.Status.IsOpen() {
 		return nil, ErrBugClosed(obj.ID, string(obj.Status))
 	}
@@ -194,10 +215,11 @@ func (s *Service) release(ctx context.Context, obj *Model) (*Model, error) {
 
 	previous := *obj.TaskID
 	obj.TaskID = nil
-	// Закрытый баг открывать обратно незачем: работа над ним завершена,
-	// и отвязка от задачи этого не отменяет.
-	if obj.Status.IsOpen() {
-		obj.Status = New
+	// Баг возвращается подтверждённым, а не новым: проверку он уже прошёл,
+	// и снятие с задачи этого не отменяет. Закрытый баг открывать обратно
+	// тоже незачем — работа над ним завершена.
+	if obj.Status == InWork {
+		obj.Status = Confirmed
 	}
 
 	if err := s.repo.Update(ctx, obj); err != nil {
@@ -216,8 +238,17 @@ func (s *Service) release(ctx context.Context, obj *Model) (*Model, error) {
 // Задача — источник истины для бага, который в ней ведут: пока она в
 // работе, баг в работе, а её завершение закрывает баг. Задача без
 // привязки просто ничего не меняет.
+//
+// Статусы проверки задача не выставляет: отклонение — отдельное решение
+// разработчика с причиной (Reject). Возврат задачи в «new» переносится
+// на баг как «confirmed»: привязанный баг проверку уже прошёл, и
+// отправлять его на повторную проверку задача не вправе.
 func (s *Service) SyncStatus(ctx context.Context, params SyncParams) (*Model, error) {
-	if !params.Status.IsValid() {
+	switch params.Status {
+	case New:
+		params.Status = Confirmed
+	case Confirmed, InWork, Closed, Canceled:
+	default:
 		return nil, ErrBugStatusUnavailable(string(params.Status))
 	}
 
@@ -243,4 +274,126 @@ func (s *Service) SyncStatus(ctx context.Context, params SyncParams) (*Model, er
 		zap.String("status", string(params.Status)),
 	)
 	return obj, nil
+}
+
+// Confirm фиксирует, что разработчик воспроизвёл баг: с этого момента
+// его можно брать в задачу.
+//
+// Повторное подтверждение — не ошибка: клиент мог повторить запрос.
+// Подтвердить можно только непроверенный баг; отклонённый сначала
+// возвращается на проверку (Reopen), чтобы смена решения была явной.
+//
+// Второе значение сообщает, что баг подтверждён впервые за всю его
+// историю, — только тогда автору отчёта положена награда.
+func (s *Service) Confirm(ctx context.Context, params ConfirmParams) (*Model, bool, error) {
+	obj, err := s.repo.GetByID(ctx, params.BugID)
+	if err != nil {
+		return nil, false, err
+	}
+
+	switch obj.Status {
+	case Confirmed:
+		return obj, false, nil
+	case New:
+	default:
+		return nil, false, ErrBugReviewForbidden(obj.ID, obj.Status, "confirmed")
+	}
+
+	now := s.stamp()
+	obj.Status = Confirmed
+	obj.Review = Review{At: now, Comment: params.Comment}
+
+	first := obj.FirstConfirmedAt == nil
+	if first {
+		obj.FirstConfirmedAt = now
+	}
+
+	if err := s.repo.Update(ctx, obj); err != nil {
+		return nil, false, err
+	}
+
+	s.logger.Info("bug confirmed",
+		zap.Uint("bug_id", obj.ID),
+		zap.Bool("first_confirmation", first),
+	)
+	return obj, first, nil
+}
+
+// Reject фиксирует, что проверка не подтвердила баг.
+//
+// Причина обязательна и берётся из фиксированного набора: по ней видно,
+// какие отчёты оказываются пустыми. Отклонить можно непроверенный или
+// подтверждённый, но ещё не взятый в задачу баг: у бага в работе
+// источник истины — задача, и снимать его нужно через неё.
+func (s *Service) Reject(ctx context.Context, params RejectParams) (*Model, error) {
+	if !params.Reason.IsValid() {
+		return nil, ErrRejectReasonUnavailable(string(params.Reason))
+	}
+
+	obj, err := s.repo.GetByID(ctx, params.BugID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch obj.Status {
+	case Rejected:
+		return obj, nil
+	case New, Confirmed:
+		if obj.IsLinked() {
+			return nil, ErrBugAlreadyLinked(obj.ID, *obj.TaskID)
+		}
+	default:
+		return nil, ErrBugReviewForbidden(obj.ID, obj.Status, "rejected")
+	}
+
+	obj.Status = Rejected
+	obj.Review = Review{At: s.stamp(), RejectReason: params.Reason, Comment: params.Comment}
+
+	if err := s.repo.Update(ctx, obj); err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("bug rejected",
+		zap.Uint("bug_id", obj.ID),
+		zap.String("reason", string(params.Reason)),
+	)
+	return obj, nil
+}
+
+// Reopen возвращает баг на повторную проверку и стирает прежнее решение.
+//
+// Нужен, когда решение оказалось ошибочным: отклонённый баг всё-таки
+// воспроизвёлся или подтверждение было поспешным. Баг в работе или уже
+// закрытый так не вернуть — им управляет задача.
+func (s *Service) Reopen(ctx context.Context, bugID uint) (*Model, error) {
+	obj, err := s.repo.GetByID(ctx, bugID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch obj.Status {
+	case New:
+		return obj, nil
+	case Rejected, Confirmed:
+		if obj.IsLinked() {
+			return nil, ErrBugAlreadyLinked(obj.ID, *obj.TaskID)
+		}
+	default:
+		return nil, ErrBugReviewForbidden(obj.ID, obj.Status, "reopened")
+	}
+
+	obj.Status = New
+	obj.Review = Review{}
+
+	if err := s.repo.Update(ctx, obj); err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("bug reopened for review", zap.Uint("bug_id", obj.ID))
+	return obj, nil
+}
+
+func (s *Service) stamp() *time.Time {
+	t := s.now().UTC()
+	return &t
 }

@@ -30,6 +30,11 @@ type ServiceBugResponse struct {
 
 	// TaskID — задача, в которой баг ведут. Пусто, пока баг свободен.
 	TaskID *uint `json:"taskId"`
+
+	// Итог проверки разработчиком. Пусто, пока баг не проверен.
+	ReviewedAt    *time.Time `json:"reviewedAt,omitempty"`
+	RejectReason  string     `json:"rejectReason,omitempty"`
+	ReviewComment string     `json:"reviewComment,omitempty"`
 }
 
 func mapToServiceItem(m bug.BugResult) ServiceBugResponse {
@@ -45,6 +50,10 @@ func mapToServiceItem(m bug.BugResult) ServiceBugResponse {
 		HasLogs:   len(m.Logs) > 0,
 		UserID:    m.UserID,
 		TaskID:    m.TaskID,
+
+		ReviewedAt:    m.ReviewedAt,
+		RejectReason:  m.RejectReason,
+		ReviewComment: m.ReviewComment,
 
 		OS:         m.OS,
 		Resolution: m.Resolution,

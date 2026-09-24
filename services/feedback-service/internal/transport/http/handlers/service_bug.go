@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -39,10 +41,16 @@ func NewServiceBugHandler(g *gin.RouterGroup, deps ServiceBugHandlerDeps) {
 
 	r := g.Group("/bugs")
 	{
-		// Перечень багов, которые можно взять в задачу.
+		// Перечень багов, которые можно взять в задачу, а со status=new —
+		// очередь отчётов, ждущих проверки.
 		r.GET("", h.ListOpen)
 		// Один баг целиком — с логами и обстановкой воспроизведения.
 		r.GET("/:id", h.Get)
+		// Проверка отчёта разработчиком: в задачу берут только
+		// подтверждённые баги.
+		r.POST("/:id/confirm", h.Confirm)
+		r.POST("/:id/reject", h.Reject)
+		r.POST("/:id/reopen", h.Reopen)
 		// Привязка бага к задаче и снятие привязки.
 		r.PUT("/:id/task", h.Link)
 		r.DELETE("/:id/task", h.UnlinkBug)
@@ -54,12 +62,15 @@ func NewServiceBugHandler(g *gin.RouterGroup, deps ServiceBugHandlerDeps) {
 
 // ServiceBugListParams — параметры перечня для таск-менеджера.
 //
-// По умолчанию отдаются только открытые и ещё не занятые баги: именно
-// их предлагают привязать к задаче. Флаги позволяют снять сужение —
-// например, чтобы показать баг, уже привязанный к текущей задаче.
+// По умолчанию отдаются только подтверждённые и ещё не занятые баги:
+// именно их предлагают привязать к задаче. Флаги позволяют снять
+// сужение — например, чтобы показать баг, уже привязанный к текущей
+// задаче. Явный status заменяет набор открытых: status=new отдаёт
+// очередь отчётов, ждущих проверки.
 type ServiceBugListParams struct {
 	pagination.Params
-	Tag *string `form:"tag" binding:"omitempty"`
+	Tag    *string `form:"tag" binding:"omitempty"`
+	Status *string `form:"status" binding:"omitempty"`
 
 	IncludeClosed bool `form:"includeClosed"`
 	IncludeLinked bool `form:"includeLinked"`
@@ -74,6 +85,7 @@ func (h *ServiceBugHandler) ListOpen(c *gin.Context) {
 
 	res, err := h.useCase.List.Handle(c.Request.Context(), bug.ListBugCommand{
 		Tag:          req.Tag,
+		Status:       req.Status,
 		Pagination:   req.Params,
 		OnlyOpen:     !req.IncludeClosed,
 		OnlyUnlinked: !req.IncludeLinked,
@@ -220,6 +232,100 @@ func (h *ServiceBugHandler) SyncStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, mapToServiceItem(res))
+}
+
+// ConfirmBugRequest — подтверждение бага. Тело необязательно.
+type ConfirmBugRequest struct {
+	// Comment — как баг воспроизвёлся: пригодится тому, кто возьмёт задачу.
+	Comment string `json:"comment" binding:"omitempty,max=2000"`
+}
+
+// Confirm фиксирует, что разработчик воспроизвёл баг.
+func (h *ServiceBugHandler) Confirm(c *gin.Context) {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	var req ConfirmBugRequest
+	if err := bindOptionalJSON(c, &req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	res, err := h.useCase.Review.Confirm(c.Request.Context(), bug.ConfirmBugCommand{
+		BugID:   id,
+		Comment: req.Comment,
+	})
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, mapToServiceItem(res))
+}
+
+// RejectBugRequest — отклонение бага.
+//
+// Допустимые причины здесь не перечислены: их проверяет домен, он же
+// единственный источник истины по кодам.
+type RejectBugRequest struct {
+	Reason  string `json:"reason" binding:"required"`
+	Comment string `json:"comment" binding:"omitempty,max=2000"`
+}
+
+// Reject фиксирует, что проверка не подтвердила баг.
+func (h *ServiceBugHandler) Reject(c *gin.Context) {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	var req RejectBugRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	res, err := h.useCase.Review.Reject(c.Request.Context(), bug.RejectBugCommand{
+		BugID:   id,
+		Reason:  req.Reason,
+		Comment: req.Comment,
+	})
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, mapToServiceItem(res))
+}
+
+// Reopen возвращает баг на повторную проверку.
+func (h *ServiceBugHandler) Reopen(c *gin.Context) {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	res, err := h.useCase.Review.Reopen(c.Request.Context(), bug.ReopenBugCommand{BugID: id})
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, mapToServiceItem(res))
+}
+
+// bindOptionalJSON разбирает тело, которое можно не присылать: пустое
+// тело оставляет структуру нулевой, а не считается ошибкой разбора.
+func bindOptionalJSON(c *gin.Context, dst any) error {
+	if err := c.ShouldBindJSON(dst); err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+	return nil
 }
 
 // parseUintParam читает положительный числовой параметр пути.
