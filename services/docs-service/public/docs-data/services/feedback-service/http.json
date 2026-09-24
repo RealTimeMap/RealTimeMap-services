@@ -142,9 +142,11 @@
           "description": "Фильтр по статусу бага",
           "enum": [
             "new",
-            "in_progress",
-            "resolved",
-            "closed"
+            "confirmed",
+            "rejected",
+            "in work",
+            "closed",
+            "canceled"
           ]
         },
         {
@@ -242,7 +244,7 @@
               "createdAt": "2026-04-25T15:10:00Z",
               "title": "Ошибка 500 при загрузке профиля",
               "tag": "logic",
-              "status": "in_progress",
+              "status": "in work",
               "platform": "Android",
               "build": "0.1.4",
               "hasLogs": false,
@@ -261,7 +263,7 @@
       "method": "GET",
       "path": "/api/v2/service/bugs",
       "summary": "Перечень багов для привязки к задаче",
-      "description": "Отдаёт баги, которые можно взять в работу задачей таск-менеджера. По умолчанию это только открытые (new, in work) и ещё не занятые другой задачей: именно их имеет смысл предлагать при создании задачи типа bug. Логи в перечень не попадают — они весят прилично и нужны только при чтении одного бага.",
+      "description": "Отдаёт баги, которые можно взять в работу задачей таск-менеджера. По умолчанию это только подтверждённые разработчиком (confirmed, in work) и ещё не занятые другой задачей: непроверенные отчёты в задачу не берутся. С status=new отдаёт очередь отчётов, ждущих проверки. Логи в перечень не попадают — они весят прилично и нужны только при чтении одного бага.",
       "tags": [
         "Межсервисные"
       ],
@@ -280,6 +282,21 @@
           "required": false,
           "location": "query",
           "description": "Фильтр по категории бага"
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "location": "query",
+          "description": "Точный статус вместо набора открытых. status=new — очередь отчётов на проверку",
+          "enum": [
+            "new",
+            "confirmed",
+            "rejected",
+            "in work",
+            "closed",
+            "canceled"
+          ]
         },
         {
           "name": "pageSize",
@@ -360,9 +377,11 @@
                   "name": "status",
                   "type": "string",
                   "required": true,
-                  "description": "Статус бага",
+                  "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
                   "enum": [
                     "new",
+                    "confirmed",
+                    "rejected",
                     "in work",
                     "closed",
                     "canceled"
@@ -397,6 +416,31 @@
                   "type": "integer",
                   "required": false,
                   "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+                },
+                {
+                  "name": "reviewedAt",
+                  "type": "string",
+                  "required": false,
+                  "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+                },
+                {
+                  "name": "rejectReason",
+                  "type": "string",
+                  "required": false,
+                  "description": "Причина отклонения. Есть только у бага в статусе rejected",
+                  "enum": [
+                    "not_reproducible",
+                    "not_a_bug",
+                    "duplicate",
+                    "insufficient_info",
+                    "spam"
+                  ]
+                },
+                {
+                  "name": "reviewComment",
+                  "type": "string",
+                  "required": false,
+                  "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
                 },
                 {
                   "name": "os",
@@ -520,9 +564,11 @@
               "name": "status",
               "type": "string",
               "required": true,
-              "description": "Статус бага",
+              "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
               "enum": [
                 "new",
+                "confirmed",
+                "rejected",
                 "in work",
                 "closed",
                 "canceled"
@@ -557,6 +603,31 @@
               "type": "integer",
               "required": false,
               "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "reviewedAt",
+              "type": "string",
+              "required": false,
+              "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+            },
+            {
+              "name": "rejectReason",
+              "type": "string",
+              "required": false,
+              "description": "Причина отклонения. Есть только у бага в статусе rejected",
+              "enum": [
+                "not_reproducible",
+                "not_a_bug",
+                "duplicate",
+                "insufficient_info",
+                "spam"
+              ]
+            },
+            {
+              "name": "reviewComment",
+              "type": "string",
+              "required": false,
+              "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
             },
             {
               "name": "os",
@@ -634,11 +705,639 @@
       ]
     },
     {
+      "id": "service-confirm-bug",
+      "method": "POST",
+      "path": "/api/v2/service/bugs/{id}/confirm",
+      "summary": "Подтвердить баг",
+      "description": "Разработчик воспроизвёл баг: он переходит из new в confirmed и становится доступен для привязки к задаче. Повторное подтверждение ошибкой не считается. Отклонённый баг так не подтвердить — сначала его нужно вернуть на проверку (reopen), чтобы смена решения была явной.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "location": "header",
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет."
+        },
+        {
+          "name": "id",
+          "type": "integer",
+          "required": true,
+          "location": "path",
+          "description": "Идентификатор бага"
+        }
+      ],
+      "requestBody": {
+        "description": "Необязательное тело: как баг воспроизвёлся",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "comment",
+            "type": "string",
+            "required": false,
+            "description": "Как баг воспроизвёлся — пригодится тому, кто возьмёт задачу. До 2000 символов"
+          }
+        ],
+        "example": {
+          "comment": "Воспроизводится на Android 13 при смене фильтра во время загрузки"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Баг подтверждён",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "Идентификатор бага"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата отправки отчёта (ISO 8601)"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок бага"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Текст отчёта от пользователя"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория бага",
+              "enum": [
+                "feature",
+                "ui",
+                "logic"
+              ]
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
+              "enum": [
+                "new",
+                "confirmed",
+                "rejected",
+                "in work",
+                "closed",
+                "canceled"
+              ]
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Платформа устройства"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": true,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "hasLogs",
+              "type": "boolean",
+              "required": true,
+              "description": "К отчёту приложен журнал"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+            },
+            {
+              "name": "taskId",
+              "type": "integer",
+              "required": false,
+              "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "reviewedAt",
+              "type": "string",
+              "required": false,
+              "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+            },
+            {
+              "name": "rejectReason",
+              "type": "string",
+              "required": false,
+              "description": "Причина отклонения. Есть только у бага в статусе rejected",
+              "enum": [
+                "not_reproducible",
+                "not_a_bug",
+                "duplicate",
+                "insufficient_info",
+                "spam"
+              ]
+            },
+            {
+              "name": "reviewComment",
+              "type": "string",
+              "required": false,
+              "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана строкой вида 1080x2400"
+            },
+            {
+              "name": "battery",
+              "type": "number",
+              "required": false,
+              "description": "Заряд батареи на момент отправки"
+            }
+          ],
+          "example": {
+            "id": 5,
+            "createdAt": "2026-08-01T10:11:47Z",
+            "title": "Маркер не обновляется после смены фильтра",
+            "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+            "tag": "logic",
+            "platform": "Android 13",
+            "build": "0.1.3",
+            "hasLogs": true,
+            "userId": 123,
+            "taskId": null,
+            "os": "Android 13",
+            "resolution": "1080x2400",
+            "battery": 0.68,
+            "status": "confirmed",
+            "reviewedAt": "2026-08-02T09:00:00Z",
+            "reviewComment": "Воспроизводится на Android 13 при смене фильтра во время загрузки"
+          }
+        },
+        {
+          "statusCode": 400,
+          "description": "Неверный идентификатор или слишком длинный комментарий"
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 404,
+          "description": "Бага с таким идентификатором нет"
+        },
+        {
+          "statusCode": 409,
+          "description": "Баг не ждёт проверки: отклонён, в работе или закрыт"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
+      "id": "service-reject-bug",
+      "method": "POST",
+      "path": "/api/v2/service/bugs/{id}/reject",
+      "summary": "Отклонить баг",
+      "description": "Проверка не подтвердила баг: он переходит в rejected и больше не предлагается для привязки. Причина обязательна и берётся из фиксированного набора — по ней видно, какие отчёты оказываются пустыми. Отклонить можно непроверенный или подтверждённый, но ещё не взятый в задачу баг. Повторное отклонение ошибкой не считается и прежнее решение не меняет.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "location": "header",
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет."
+        },
+        {
+          "name": "id",
+          "type": "integer",
+          "required": true,
+          "location": "path",
+          "description": "Идентификатор бага"
+        }
+      ],
+      "requestBody": {
+        "description": "Причина отклонения",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "reason",
+            "type": "string",
+            "required": true,
+            "description": "Код причины: не воспроизводится, не баг, дубликат, недостаточно данных, спам",
+            "enum": [
+              "not_reproducible",
+              "not_a_bug",
+              "duplicate",
+              "insufficient_info",
+              "spam"
+            ]
+          },
+          {
+            "name": "comment",
+            "type": "string",
+            "required": false,
+            "description": "Пояснение разработчика, до 2000 символов"
+          }
+        ],
+        "example": {
+          "reason": "not_reproducible",
+          "comment": "Проверено на трёх устройствах со сборкой 0.1.3"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Баг отклонён",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "Идентификатор бага"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата отправки отчёта (ISO 8601)"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок бага"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Текст отчёта от пользователя"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория бага",
+              "enum": [
+                "feature",
+                "ui",
+                "logic"
+              ]
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
+              "enum": [
+                "new",
+                "confirmed",
+                "rejected",
+                "in work",
+                "closed",
+                "canceled"
+              ]
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Платформа устройства"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": true,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "hasLogs",
+              "type": "boolean",
+              "required": true,
+              "description": "К отчёту приложен журнал"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+            },
+            {
+              "name": "taskId",
+              "type": "integer",
+              "required": false,
+              "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "reviewedAt",
+              "type": "string",
+              "required": false,
+              "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+            },
+            {
+              "name": "rejectReason",
+              "type": "string",
+              "required": false,
+              "description": "Причина отклонения. Есть только у бага в статусе rejected",
+              "enum": [
+                "not_reproducible",
+                "not_a_bug",
+                "duplicate",
+                "insufficient_info",
+                "spam"
+              ]
+            },
+            {
+              "name": "reviewComment",
+              "type": "string",
+              "required": false,
+              "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана строкой вида 1080x2400"
+            },
+            {
+              "name": "battery",
+              "type": "number",
+              "required": false,
+              "description": "Заряд батареи на момент отправки"
+            }
+          ],
+          "example": {
+            "id": 5,
+            "createdAt": "2026-08-01T10:11:47Z",
+            "title": "Маркер не обновляется после смены фильтра",
+            "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+            "tag": "logic",
+            "platform": "Android 13",
+            "build": "0.1.3",
+            "hasLogs": true,
+            "userId": 123,
+            "taskId": null,
+            "os": "Android 13",
+            "resolution": "1080x2400",
+            "battery": 0.68,
+            "status": "rejected",
+            "reviewedAt": "2026-08-02T09:00:00Z",
+            "rejectReason": "not_reproducible",
+            "reviewComment": "Проверено на трёх устройствах со сборкой 0.1.3"
+          }
+        },
+        {
+          "statusCode": 400,
+          "description": "Причина не указана или не из допустимого набора"
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 404,
+          "description": "Бага с таким идентификатором нет"
+        },
+        {
+          "statusCode": 409,
+          "description": "Баг привязан к задаче, в работе или закрыт"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
+      "id": "service-reopen-bug",
+      "method": "POST",
+      "path": "/api/v2/service/bugs/{id}/reopen",
+      "summary": "Вернуть баг на проверку",
+      "description": "Стирает прежнее решение и возвращает баг в new. Нужен, когда решение оказалось ошибочным: отклонённый баг всё-таки воспроизвёлся или подтверждение было поспешным. Баг в работе или закрытый так не вернуть — им управляет задача. Для бага в new ничего не меняет.",
+      "tags": [
+        "Межсервисные"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "X-Api-Key",
+          "type": "string",
+          "required": true,
+          "location": "header",
+          "description": "Ключ межсервисного доступа (service_api_key из конфига). Заголовки пользователя здесь не используются: у фонового вызова пользователя нет."
+        },
+        {
+          "name": "id",
+          "type": "integer",
+          "required": true,
+          "location": "path",
+          "description": "Идентификатор бага"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Баг снова ждёт проверки",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "Идентификатор бага"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата отправки отчёта (ISO 8601)"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок бага"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "description": "Текст отчёта от пользователя"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория бага",
+              "enum": [
+                "feature",
+                "ui",
+                "logic"
+              ]
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
+              "enum": [
+                "new",
+                "confirmed",
+                "rejected",
+                "in work",
+                "closed",
+                "canceled"
+              ]
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Платформа устройства"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": true,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "hasLogs",
+              "type": "boolean",
+              "required": true,
+              "description": "К отчёту приложен журнал"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "Автор отчёта. Пусто, если баг отправлен анонимно"
+            },
+            {
+              "name": "taskId",
+              "type": "integer",
+              "required": false,
+              "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "reviewedAt",
+              "type": "string",
+              "required": false,
+              "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+            },
+            {
+              "name": "rejectReason",
+              "type": "string",
+              "required": false,
+              "description": "Причина отклонения. Есть только у бага в статусе rejected",
+              "enum": [
+                "not_reproducible",
+                "not_a_bug",
+                "duplicate",
+                "insufficient_info",
+                "spam"
+              ]
+            },
+            {
+              "name": "reviewComment",
+              "type": "string",
+              "required": false,
+              "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана строкой вида 1080x2400"
+            },
+            {
+              "name": "battery",
+              "type": "number",
+              "required": false,
+              "description": "Заряд батареи на момент отправки"
+            }
+          ],
+          "example": {
+            "id": 5,
+            "createdAt": "2026-08-01T10:11:47Z",
+            "title": "Маркер не обновляется после смены фильтра",
+            "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
+            "tag": "logic",
+            "platform": "Android 13",
+            "build": "0.1.3",
+            "hasLogs": true,
+            "userId": 123,
+            "taskId": null,
+            "os": "Android 13",
+            "resolution": "1080x2400",
+            "battery": 0.68,
+            "status": "new"
+          }
+        },
+        {
+          "statusCode": 400,
+          "description": "Неверный идентификатор"
+        },
+        {
+          "statusCode": 401,
+          "description": "Ключ сервиса отсутствует или неверен"
+        },
+        {
+          "statusCode": 404,
+          "description": "Бага с таким идентификатором нет"
+        },
+        {
+          "statusCode": 409,
+          "description": "Баг привязан к задаче, в работе или закрыт"
+        },
+        {
+          "statusCode": 503,
+          "description": "Межсервисный доступ выключен: service_api_key не задан в конфиге"
+        }
+      ]
+    },
+    {
       "id": "service-link-bug",
       "method": "PUT",
       "path": "/api/v2/service/bugs/{id}/task",
       "summary": "Привязать баг к задаче",
-      "description": "Отмечает баг занятым задачей таск-менеджера и переводит его в in work. Привязка и статус меняются вместе: баг, взятый в задачу, по определению в работе. Повторный вызов с той же задачей ошибкой не считается — результат от этого не меняется.",
+      "description": "Отмечает баг занятым задачей таск-менеджера и переводит его в in work. Взять в задачу можно только подтверждённый баг (confirmed): непроверенный отчёт сначала подтверждается через POST /api/v2/service/bugs/{id}/confirm. Привязка и статус меняются вместе: баг, взятый в задачу, по определению в работе. Повторный вызов с той же задачей ошибкой не считается — результат от этого не меняется.",
       "tags": [
         "Межсервисные"
       ],
@@ -718,9 +1417,11 @@
               "name": "status",
               "type": "string",
               "required": true,
-              "description": "Статус бага",
+              "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
               "enum": [
                 "new",
+                "confirmed",
+                "rejected",
                 "in work",
                 "closed",
                 "canceled"
@@ -755,6 +1456,31 @@
               "type": "integer",
               "required": false,
               "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "reviewedAt",
+              "type": "string",
+              "required": false,
+              "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+            },
+            {
+              "name": "rejectReason",
+              "type": "string",
+              "required": false,
+              "description": "Причина отклонения. Есть только у бага в статусе rejected",
+              "enum": [
+                "not_reproducible",
+                "not_a_bug",
+                "duplicate",
+                "insufficient_info",
+                "spam"
+              ]
+            },
+            {
+              "name": "reviewComment",
+              "type": "string",
+              "required": false,
+              "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
             },
             {
               "name": "os",
@@ -802,7 +1528,7 @@
         },
         {
           "statusCode": 409,
-          "description": "Баг уже привязан к другой задаче либо закрыт и в работу не берётся"
+          "description": "Баг ещё не подтверждён, уже привязан к другой задаче, отклонён или закрыт"
         },
         {
           "statusCode": 503,
@@ -815,7 +1541,7 @@
       "method": "DELETE",
       "path": "/api/v2/service/bugs/{id}/task",
       "summary": "Освободить конкретный баг",
-      "description": "Снимает привязку с бага и возвращает его в перечень свободных. Нужен, когда задача меняет баг: прежний уже не найти по идентификатору задачи — её привязка указывает на новый. Закрытый баг обратно не открывается: работа над ним завершена, и отвязка этого не отменяет.",
+      "description": "Снимает привязку с бага и возвращает его в перечень свободных в статусе confirmed: проверку он уже прошёл. Нужен, когда задача меняет баг: прежний уже не найти по идентификатору задачи — её привязка указывает на новый. Закрытый баг обратно не открывается: работа над ним завершена, и отвязка этого не отменяет.",
       "tags": [
         "Межсервисные"
       ],
@@ -880,9 +1606,11 @@
               "name": "status",
               "type": "string",
               "required": true,
-              "description": "Статус бага",
+              "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
               "enum": [
                 "new",
+                "confirmed",
+                "rejected",
                 "in work",
                 "closed",
                 "canceled"
@@ -919,6 +1647,31 @@
               "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
             },
             {
+              "name": "reviewedAt",
+              "type": "string",
+              "required": false,
+              "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+            },
+            {
+              "name": "rejectReason",
+              "type": "string",
+              "required": false,
+              "description": "Причина отклонения. Есть только у бага в статусе rejected",
+              "enum": [
+                "not_reproducible",
+                "not_a_bug",
+                "duplicate",
+                "insufficient_info",
+                "spam"
+              ]
+            },
+            {
+              "name": "reviewComment",
+              "type": "string",
+              "required": false,
+              "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
+            },
+            {
               "name": "os",
               "type": "string",
               "required": false,
@@ -943,7 +1696,7 @@
             "title": "Маркер не обновляется после смены фильтра",
             "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
             "tag": "logic",
-            "status": "new",
+            "status": "confirmed",
             "platform": "Android 13",
             "build": "0.1.3",
             "hasLogs": true,
@@ -977,7 +1730,7 @@
       "method": "DELETE",
       "path": "/api/v2/service/bugs/task/{taskId}",
       "summary": "Освободить баг, который вела задача",
-      "description": "Снимает привязку по идентификатору задачи. Вызывается, когда задачу удалили или баг отвязали вручную. Задача без бага — штатный случай, тогда ответ 204.",
+      "description": "Снимает привязку по идентификатору задачи; баг возвращается в статус confirmed. Вызывается, когда задачу удалили или баг отвязали вручную. Задача без бага — штатный случай, тогда ответ 204.",
       "tags": [
         "Межсервисные"
       ],
@@ -1042,9 +1795,11 @@
               "name": "status",
               "type": "string",
               "required": true,
-              "description": "Статус бага",
+              "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
               "enum": [
                 "new",
+                "confirmed",
+                "rejected",
                 "in work",
                 "closed",
                 "canceled"
@@ -1081,6 +1836,31 @@
               "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
             },
             {
+              "name": "reviewedAt",
+              "type": "string",
+              "required": false,
+              "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+            },
+            {
+              "name": "rejectReason",
+              "type": "string",
+              "required": false,
+              "description": "Причина отклонения. Есть только у бага в статусе rejected",
+              "enum": [
+                "not_reproducible",
+                "not_a_bug",
+                "duplicate",
+                "insufficient_info",
+                "spam"
+              ]
+            },
+            {
+              "name": "reviewComment",
+              "type": "string",
+              "required": false,
+              "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
+            },
+            {
               "name": "os",
               "type": "string",
               "required": false,
@@ -1105,7 +1885,7 @@
             "title": "Маркер не обновляется после смены фильтра",
             "desc": "Открыть карту, сменить фильтр — маркер остаётся на прежнем месте.",
             "tag": "logic",
-            "status": "new",
+            "status": "confirmed",
             "platform": "Android 13",
             "build": "0.1.3",
             "hasLogs": true,
@@ -1135,7 +1915,7 @@
       "method": "PATCH",
       "path": "/api/v2/service/bugs/task/{taskId}/status",
       "summary": "Перенести статус задачи на баг",
-      "description": "Обратная синхронизация: задача — источник истины для бага, который в ней ведут. Задачу взяли в работу — баг in work, задачу завершили — баг closed. Задача без привязанного бага ничего не меняет и получает 204.",
+      "description": "Обратная синхронизация: задача — источник истины для бага, который в ней ведут. Задачу взяли в работу — баг in work, задачу завершили — баг closed. Возврат задачи в new переносится на баг как confirmed: привязанный баг проверку уже прошёл. Отклонить баг задача не может — для этого есть POST /api/v2/service/bugs/{id}/reject. Задача без привязанного бага ничего не меняет и получает 204.",
       "tags": [
         "Межсервисные"
       ],
@@ -1167,6 +1947,7 @@
             "description": "Статус бага",
             "enum": [
               "new",
+              "confirmed",
               "in work",
               "closed",
               "canceled"
@@ -1221,9 +2002,11 @@
               "name": "status",
               "type": "string",
               "required": true,
-              "description": "Статус бага",
+              "description": "Статус бага: new — ждёт проверки разработчиком, confirmed — подтверждён и может быть взят в задачу, rejected — проверка не подтвердила баг",
               "enum": [
                 "new",
+                "confirmed",
+                "rejected",
                 "in work",
                 "closed",
                 "canceled"
@@ -1258,6 +2041,31 @@
               "type": "integer",
               "required": false,
               "description": "Задача таск-менеджера, в которой баг ведут. Пусто, пока баг свободен"
+            },
+            {
+              "name": "reviewedAt",
+              "type": "string",
+              "required": false,
+              "description": "Когда разработчик вынес решение по отчёту (ISO 8601). Пусто, пока баг не проверен"
+            },
+            {
+              "name": "rejectReason",
+              "type": "string",
+              "required": false,
+              "description": "Причина отклонения. Есть только у бага в статусе rejected",
+              "enum": [
+                "not_reproducible",
+                "not_a_bug",
+                "duplicate",
+                "insufficient_info",
+                "spam"
+              ]
+            },
+            {
+              "name": "reviewComment",
+              "type": "string",
+              "required": false,
+              "description": "Пояснение разработчика: как баг воспроизвёлся или почему отклонён"
             },
             {
               "name": "os",
