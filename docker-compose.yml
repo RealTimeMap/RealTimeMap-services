@@ -5,6 +5,7 @@ include:
   - services/gamification-service/docker-compose.yml
   - services/smtp-service/docker-compose.yml
   - services/social-service/docker-compose.yml
+  - services/notification-service/docker-compose.yml
 #  - docker-compose.kafka.yml
 
 services:
@@ -61,7 +62,10 @@ services:
       - service-network
 
   minio:
-    image: minio/minio:latest
+    # quay.io, а не Docker Hub: MinIO убрала оттуда публичные образы, и
+    # minio/minio теперь отдаёт "pull access denied ... repository does not
+    # exist". quay.io — реестр, на который MinIO публикует их сама.
+    image: quay.io/minio/minio:latest
     container_name: rtm_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -112,7 +116,7 @@ services:
   # Одноразовая инициализация: создаёт бакет и открывает публичное чтение
   # префикса v1/. Без неё бакета не будет, и NewMinIOStorage упадёт на старте.
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     container_name: rtm_minio_init
     depends_on:
       minio:
