@@ -58,7 +58,7 @@ func (r *PgBugRepository) GetByTaskID(ctx context.Context, taskID uint) (*bug.Mo
 	return &record, nil
 }
 
-// Update сохраняет поля, которые меняет привязка к задаче.
+// Update сохраняет поля, которые меняют привязка к задаче и проверка бага.
 //
 // Колонки перечислены явно: Save записал бы модель целиком и затёр бы
 // поля, которых у нас на руках может не быть в актуальном виде.
@@ -71,6 +71,12 @@ func (r *PgBugRepository) Update(ctx context.Context, data *bug.Model) error {
 		Updates(map[string]any{
 			"status":  data.Status,
 			"task_id": data.TaskID,
+			// Решение проверки тоже сбрасывается в пустоту при возврате
+			// на повторную проверку, поэтому оно здесь же, в карте.
+			"review_at":            data.Review.At,
+			"review_reject_reason": data.Review.RejectReason,
+			"review_comment":       data.Review.Comment,
+			"first_confirmed_at":   data.FirstConfirmedAt,
 		})
 
 	if result.Error != nil {
