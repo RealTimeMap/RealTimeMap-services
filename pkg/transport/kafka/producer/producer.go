@@ -3,6 +3,7 @@ package producer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -59,10 +60,11 @@ func New(cfg Config, opts ...Option) *Producer {
 	writer := &kafka.Writer{
 		Addr: kafka.TCP(cfg.Brokers...),
 		// Topic НЕ устанавливается в Writer - будет в Message
-		Balancer:     &kafka.Hash{}, // партиционирование по ключу
-		BatchSize:    cfg.BatchSize,
-		BatchTimeout: cfg.BatchTimeout,
-		Async:        cfg.Async,
+		Balancer:               &kafka.Hash{}, // партиционирование по ключу
+		BatchSize:              cfg.BatchSize,
+		BatchTimeout:           cfg.BatchTimeout,
+		Async:                  cfg.Async,
+		AllowAutoTopicCreation: true,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -107,7 +109,8 @@ func (c Config) WithTopic(topic string) Config {
 // Сам writer работает по требованию (Publish/PublishTo); Run нужен, чтобы Producer
 // можно было передать в runner.Run наравне с HTTP/gRPC серверами.
 func (p *Producer) Run() error {
-	p.logger.Info("kafka producer ready",
+	p.logger.Info(
+		"kafka producer ready",
 		zap.String("default_topic", p.defaultTopic),
 	)
 	<-p.ctx.Done()
@@ -164,8 +167,9 @@ func (p *Producer) PublishTo(ctx context.Context, topic, key string, event any, 
 		Headers: kafkaHeaders,
 	}
 
-	if err := p.writer.WriteMessages(ctx, msg); err != nil {
-		p.logger.Error("publish failed",
+	if err := p.write(ctx, msg); err != nil {
+		p.logger.Error(
+			"publish failed",
 			zap.String("topic", topic),
 			zap.String("key", key),
 			zap.String("error", err.Error()),
@@ -173,12 +177,60 @@ func (p *Producer) PublishTo(ctx context.Context, topic, key string, event any, 
 		return fmt.Errorf("write message: %w", err)
 	}
 
-	p.logger.Debug("event published",
+	p.logger.Debug(
+		"event published",
 		zap.String("topic", topic),
 		zap.String("key", key),
 	)
 
 	return nil
+}
+
+// Повтор записи в топик, который брокер только что создал.
+const (
+	topicNotReadyAttempts = 5
+	topicNotReadyBackoff  = 200 * time.Millisecond
+)
+
+// write отправляет сообщение, пережидая создание топика.
+func (p *Producer) write(ctx context.Context, msg kafka.Message) error {
+	var err error
+	for attempt := 1; attempt <= topicNotReadyAttempts; attempt++ {
+		err = p.writer.WriteMessages(ctx, msg)
+		if err == nil || !isTopicNotReady(err) || attempt == topicNotReadyAttempts {
+			return err
+		}
+
+		p.logger.Debug(
+			"topic not ready, retrying",
+			zap.String("topic", msg.Topic),
+			zap.Int("attempt", attempt),
+			zap.Error(err),
+		)
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(topicNotReadyBackoff):
+		}
+	}
+	return err
+}
+
+// isTopicNotReady сообщает, что топик ещё создаётся. Для одиночного
+// сообщения kafka-go может вернуть ошибку как есть или внутри WriteErrors.
+func isTopicNotReady(err error) bool {
+	if errors.Is(err, kafka.LeaderNotAvailable) || errors.Is(err, kafka.UnknownTopicOrPartition) {
+		return true
+	}
+	var writeErrs kafka.WriteErrors
+	if errors.As(err, &writeErrs) {
+		for _, e := range writeErrs {
+			if e != nil && isTopicNotReady(e) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // PublishBatch отправляет несколько событий одним batch.

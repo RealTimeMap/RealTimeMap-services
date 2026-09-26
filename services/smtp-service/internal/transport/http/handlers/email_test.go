@@ -107,6 +107,10 @@ func (r *memoryRepo) OldestQueuedAge(context.Context, time.Time) (time.Duration,
 	return 0, nil
 }
 
+func (r *memoryRepo) DeleteByRecipient(context.Context, string) (int64, error) {
+	return 0, nil
+}
+
 type memoryEvents struct {
 	mu     sync.Mutex
 	events []email.Event

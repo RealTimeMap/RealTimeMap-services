@@ -35,7 +35,7 @@ func main() {
 	httpServer := httpserver.NewServer(cfg.HTTP, log)
 	httptransport.RegisterRoutes(httpServer.Router(), container)
 
-	kafkaHandler := kafkatransport.NewHandler(container.NotifyUseCase.NotifyEvent, log)
+	kafkaHandler := kafkatransport.NewHandler(container.NotifyUseCase.NotifyEvent, container.TokenService, log)
 	kafkaConsumer := consumer.New(
 		consumer.DefaultConfig().
 			WithBrokers(cfg.Kafka.Brokers...).

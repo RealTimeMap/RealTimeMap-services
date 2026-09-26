@@ -78,6 +78,22 @@ func NewReadResponse(r chatuc.ReadResult) ReadResponse {
 	}
 }
 
+// DeletedResponse — событие chat.deleted. Уходит только через socket (у HTTP
+// DELETE тело ответа пустое, 204).
+type DeletedResponse struct {
+	ChatID      uint `json:"chatId"`
+	DeletedBy   uint `json:"deletedBy"`
+	ForEveryone bool `json:"forEveryone"`
+}
+
+func NewDeletedResponse(r chatuc.DeletedResult) DeletedResponse {
+	return DeletedResponse{
+		ChatID:      r.ChatID,
+		DeletedBy:   r.DeletedBy,
+		ForEveryone: r.ForEveryone,
+	}
+}
+
 // DirectChatResponse — ответ создания/получения личного чата.
 type DirectChatResponse struct {
 	ChatID    uint           `json:"chatId"`

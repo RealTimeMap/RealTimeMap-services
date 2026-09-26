@@ -30,6 +30,9 @@ type Handler struct {
 	// прогресса до первого засчитанного действия.
 	progressRepo repository.UserProgressRepository
 
+	// accountRepo стирает игровые данные удалённого аккаунта.
+	accountRepo repository.AccountRepository
+
 	logger *zap.Logger
 }
 
@@ -37,12 +40,14 @@ func NewHandler(
 	service *event.Service,
 	achService achievement.Service,
 	progressRepo repository.UserProgressRepository,
+	accountRepo repository.AccountRepository,
 	logger *zap.Logger,
 ) *Handler {
 	return &Handler{
 		service:      service,
 		achService:   achService,
 		progressRepo: progressRepo,
+		accountRepo:  accountRepo,
 		logger:       logger,
 	}
 }
@@ -74,6 +79,12 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 		return h.createProgress(ctx, meta.UserID, log)
 	}
 
+	// Удаление обрабатывается до начисления: иначе счётчик достижений
+	// завёл бы строку удалённому пользователю уже после стирания.
+	if meta.EventType == events.UserDeleted {
+		return h.eraseUser(ctx, meta.UserID, log)
+	}
+
 	if err := h.service.GreatUserExp(ctx, meta.UserID, meta.EventType, meta.SourceID); err != nil {
 		if isExpected(err) {
 			log.Debug("no xp credited for event", zap.Error(err))
@@ -100,6 +111,18 @@ func (h *Handler) createProgress(ctx context.Context, userID uint, log *zap.Logg
 	}
 
 	log.Info("user progress created")
+	return nil
+}
+
+// eraseUser стирает прогресс, историю начислений и достижения удалённого
+// аккаунта.
+func (h *Handler) eraseUser(ctx context.Context, userID uint, log *zap.Logger) error {
+	if err := h.accountRepo.EraseUser(ctx, userID); err != nil {
+		log.Error("failed to erase user data, will retry", zap.Error(err))
+		return consumer.Retryable(err)
+	}
+
+	log.Info("user data erased")
 	return nil
 }
 

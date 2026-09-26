@@ -146,6 +146,10 @@ func (r *queueRepo) OldestQueuedAge(context.Context, time.Time) (time.Duration, 
 	return 0, nil
 }
 
+func (r *queueRepo) DeleteByRecipient(context.Context, string) (int64, error) {
+	return 0, nil
+}
+
 type recordingEvents struct {
 	mu     sync.Mutex
 	events []email.Event

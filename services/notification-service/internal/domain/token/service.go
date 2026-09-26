@@ -138,3 +138,16 @@ func (s *Service) UpdateSettings(ctx context.Context, params UpdateSettingsParam
 	device.Settings = settings
 	return device, nil
 }
+
+// DeleteUser удаляет push-токены удалённого аккаунта: после удаления
+// уведомлений ему больше не шлём, а токен — идентификатор устройства.
+func (s *Service) DeleteUser(ctx context.Context, userID uint) error {
+	deleted, err := s.repo.DeleteByUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	s.logger.Info("device tokens of deleted user removed",
+		zap.Uint("user_id", userID), zap.Int64("deleted", deleted))
+	return nil
+}

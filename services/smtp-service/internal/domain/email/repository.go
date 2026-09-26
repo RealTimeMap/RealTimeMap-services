@@ -56,6 +56,12 @@ type Repository interface {
 	// Единственный симптом вставшей очереди, видимый до жалоб пользователей:
 	// письмо не имеет обратной связи в UI. Возвращает 0, если очередь пуста.
 	OldestQueuedAge(ctx context.Context, now time.Time) (time.Duration, error)
+
+	// DeleteByRecipient удаляет все письма на адрес вместе с журналом их
+	// событий — по удалению аккаунта. Адрес сравнивается без учёта регистра.
+	// Письмо, которое воркер уже отправляет, тоже удаляется: отметка об
+	// отправке просто не найдёт строку.
+	DeleteByRecipient(ctx context.Context, toEmail string) (int64, error)
 }
 
 // EventRepository — append-only история переходов письма.

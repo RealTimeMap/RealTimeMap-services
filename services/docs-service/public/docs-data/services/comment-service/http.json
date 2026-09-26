@@ -267,7 +267,7 @@
                   "name": "author",
                   "type": "object",
                   "required": true,
-                  "description": "Автор комментария",
+                  "description": "Автор комментария. Если автор удалил аккаунт, комментарий остаётся обезличенным: id = 0, username, tag и avatar пустые.",
                   "children": [
                     {
                       "name": "id",
@@ -482,7 +482,7 @@
                   "name": "author",
                   "type": "object",
                   "required": true,
-                  "description": "Автор ответа",
+                  "description": "Автор ответа. Если автор удалил аккаунт, комментарий остаётся обезличенным: id = 0, username, tag и avatar пустые.",
                   "children": [
                     {
                       "name": "id",

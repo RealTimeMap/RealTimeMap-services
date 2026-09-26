@@ -28,6 +28,11 @@ type Kafka struct {
 	Enabled       bool     `yaml:"enabled" env:"KAFKA_ENABLED" env-default:"false"`
 	Brokers       []string `yaml:"brokers" env:"KAFKA_BROKERS" env-separator:","`
 	ProducerTopic string   `yaml:"producerTopic" env:"KAFKA_PRODUCER_TOPIC" env-default:"mark-service.events"`
+
+	// Topics — подписки консьюмера. Нужен только топик auth-сервиса: из него
+	// приходит user.deleted. Пустой список — консьюмер не запускается.
+	Topics  []string `yaml:"topics" env:"KAFKA_TOPICS" env-separator:","`
+	GroupID string   `yaml:"group_id" env:"KAFKA_GROUP_ID" env-default:"mark-service"`
 }
 
 type Profile struct {

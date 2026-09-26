@@ -42,13 +42,20 @@ type Notifier interface {
 	Handle(ctx context.Context, cmd notify.NotifyEventCommand) error
 }
 
+// UserEraser удаляет устройства пользователя, удалившего аккаунт.
+// *token.Service удовлетворяет ему напрямую.
+type UserEraser interface {
+	DeleteUser(ctx context.Context, userID uint) error
+}
+
 type Handler struct {
 	notifier Notifier
+	eraser   UserEraser
 	logger   *zap.Logger
 }
 
-func NewHandler(notifier Notifier, logger *zap.Logger) *Handler {
-	return &Handler{notifier: notifier, logger: logger}
+func NewHandler(notifier Notifier, eraser UserEraser, logger *zap.Logger) *Handler {
+	return &Handler{notifier: notifier, eraser: eraser, logger: logger}
 }
 
 // HandleMessage разбирает сообщение и направляет его обработчику по типу.
@@ -76,6 +83,8 @@ func (h *Handler) HandleMessage(ctx context.Context, msg segmentio.Message) erro
 	)
 
 	switch eventType {
+	case events.UserDeleted:
+		return h.handleUserDeleted(ctx, msg, log)
 	case events.ChatMessageCreated:
 		return h.handleChatMessage(ctx, raw.Payload, log)
 	case events.CommentCreated:
@@ -88,6 +97,21 @@ func (h *Handler) HandleMessage(ctx context.Context, msg segmentio.Message) erro
 		log.Debug("event type is not handled, skipping")
 		return nil
 	}
+}
+
+// handleUserDeleted удаляет push-токены удалённого аккаунта.
+func (h *Handler) handleUserDeleted(ctx context.Context, msg segmentio.Message, log *zap.Logger) error {
+	deleted, _, err := events.ParseUserDeleted(msg.Value)
+	if err != nil {
+		return consumer.Skip(err)
+	}
+
+	if err := h.eraser.DeleteUser(ctx, deleted.UserID); err != nil {
+		log.Error("failed to delete device tokens, will retry",
+			zap.Uint("user_id", deleted.UserID), zap.Error(err))
+		return consumer.Retryable(err)
+	}
+	return nil
 }
 
 // handleChatMessage уведомляет участников чата о новом сообщении.

@@ -124,6 +124,61 @@
           "content": "согласен, там сейчас закрыто"
         }
       }
+    },
+    {
+      "id": "notification-user-deleted",
+      "name": "user-service",
+      "summary": "Входящий топик auth-сервиса: удаление push-токенов удалённого аккаунта",
+      "description": "Входящий топик auth-сервиса. Сервис читает из него только user.deleted, остальные события пропускает молча.\n\nПо user.deleted удаляются все устройства (push-токены) пользователя. Уведомлений ему больше не отправляется.\n\nОбработка идемпотентна: повторная доставка события ничего не меняет. Сбой БД — повтор сообщения, а не пропуск: пропустить удаление значит оставить персональные данные, которые пользователь попросил стереть.\n\nИмя топика — без суффикса .events, исторически: значение совпадает с topic.UserEvents в auth-сервисе.",
+      "producers": [
+        "auth-service"
+      ],
+      "consumers": [
+        "notification-service"
+      ],
+      "partitionKey": "user_id",
+      "schema": [
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Тип события. Сервис обрабатывает только user.deleted, остальные пропускает"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Данные удалённого аккаунта",
+          "children": [
+            {
+              "name": "user_id",
+              "type": "number",
+              "required": true,
+              "description": "Идентификатор удалённого пользователя"
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "required": true,
+              "description": "Адрес удалённого пользователя"
+            },
+            {
+              "name": "deleted_at",
+              "type": "string",
+              "required": true,
+              "description": "Время удаления, RFC 3339"
+            }
+          ]
+        }
+      ],
+      "example": {
+        "type": "user.deleted",
+        "payload": {
+          "user_id": 60,
+          "email": "john@example.com",
+          "deleted_at": "2026-09-26T10:00:00Z"
+        }
+      }
     }
   ]
 }

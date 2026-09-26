@@ -77,6 +77,48 @@
       "codeExample": "// Собеседник продвинул курсор прочтения — рисуем галочки и/или обнуляем unread.\nsocket.on('chat.read', (e) => {\n  // e = { chatId, userId, lastReadMessageId }\n  if (e.userId === myUserId) {\n    // эхо с другого моего устройства — синхронизируем локальный unread\n    resetUnread(e.chatId, e.lastReadMessageId)\n  } else {\n    // собеседник прочитал мои сообщения до lastReadMessageId\n    markMessagesRead(e.chatId, e.userId, e.lastReadMessageId)\n  }\n})\n\n// Отправка отметки о прочтении — троттлить (≤ 1 раз / 1–2с), только при новых\n// увиденных сообщениях или возврате фокуса на чат.\nasync function markChatRead(chatId) {\n  await fetch(`/api/v2/chats/${chatId}/read`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })\n}"
     },
     {
+      "id": "chats-chat-deleted",
+      "name": "chat.deleted",
+      "direction": "server-to-client",
+      "namespace": "/chats",
+      "auth": true,
+      "summary": "Чат удалён",
+      "description": "Сервер пушит событие после DELETE /api/v2/chats/{chatID}. Адресуется в личные комнаты пользователей (user:<id>), а не в комнату чата.\n\n- forEveryone = false — чат удалён «у себя». Событие получают только другие устройства удалившего: им нужно убрать чат из списка и очистить открытую историю. Собеседник событие не получает. Комната чата сохраняется: новое сообщение (message.new) вернёт чат в список.\n- forEveryone = true — чат удалён у всех (direct у обоих или группа её владельцем). Событие получают все участники, после чего их сокеты покидают комнату чата. Клиент удаляет чат локально и закрывает экран, если он открыт.",
+      "tags": [
+        "Чаты",
+        "Real-time"
+      ],
+      "payload": {
+        "description": "Какой чат, кем и в каком объёме удалён",
+        "schema": [
+          {
+            "name": "chatId",
+            "type": "integer",
+            "required": true,
+            "description": "ID удалённого чата"
+          },
+          {
+            "name": "deletedBy",
+            "type": "integer",
+            "required": true,
+            "description": "ID пользователя, удалившего чат"
+          },
+          {
+            "name": "forEveryone",
+            "type": "boolean",
+            "required": true,
+            "description": "true — чат удалён у всех; false — только у пользователя deletedBy"
+          }
+        ],
+        "example": {
+          "chatId": 12,
+          "deletedBy": 2,
+          "forEveryone": true
+        }
+      },
+      "codeExample": "socket.on('chat.deleted', (e) => {\n  // e = { chatId, deletedBy, forEveryone }\n  removeChatFromList(e.chatId)\n  if (openedChatId === e.chatId) closeChatScreen()\n})\n\n// Удалить direct-чат у себя (без параметра) или у обоих (forEveryone=true).\nasync function deleteChat(chatId, forEveryone = false) {\n  const q = forEveryone ? '?forEveryone=true' : ''\n  await fetch(`/api/v2/chats/${chatId}${q}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })\n}"
+    },
+    {
       "id": "chats-presence-snapshot",
       "name": "presence.snapshot",
       "direction": "server-to-client",

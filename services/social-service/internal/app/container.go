@@ -13,6 +13,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/config"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat/services"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/repository"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/account"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/blockeduser"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/friendship"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/service/profile"
@@ -34,6 +35,7 @@ import (
 type Container struct {
 	ProfileRepo        repository.ProfileRepository
 	ProfileService     *profile.Service
+	AccountService     *account.Service
 	ProfileStatService *profile.StatService
 	ProfileGRPCHandler *profilegrpc.Handler
 
@@ -174,6 +176,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 
 	friendshipService := friendship.NewService(friendRepo, profileRepo, blockedUserRepo, statCache, logger)
 
+	accountService := account.NewService(postgres.NewPgAccountEraser(db), statCache, logger)
 	subscriptionService := subscription.NewService(subscriptionRepo, profileRepo, blockedUserRepo, subscriptionPublisher, statCache, logger)
 
 	// V2
@@ -205,11 +208,13 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) *Containe
 		ListChats:   chat.NewListUserChatsHandler(chatServiceV2, profileService, logger),
 		MarkRead:    chat.NewMarkReadHandler(chatServiceV2, chatEventPublisher, logger),
 		Leave:       chat.NewLeaveHandler(chatServiceV2, chatEventPublisher, logger),
+		Delete:      chat.NewDeleteHandler(chatServiceV2, chatEventPublisher, logger),
 	}
 
 	return &Container{
 		ProfileRepo:        profileRepo,
 		ProfileService:     profileService,
+		AccountService:     accountService,
 		ProfileStatService: profileStatService,
 		ProfileGRPCHandler: profileHandler,
 

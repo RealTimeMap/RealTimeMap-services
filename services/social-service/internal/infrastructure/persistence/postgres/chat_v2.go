@@ -117,11 +117,15 @@ func (r *ChatRepository) ListByUser(ctx context.Context, userID uint) ([]*chat.C
 	// 1. Чаты, где пользователь — активный участник (не вышел).
 	// Preload участников нужен, чтобы на уровне use-case определить собеседника
 	// в direct-чатах (имя/аватар чата = профиль второго участника).
+	//
+	// Чат, удалённый участником «у себя», скрыт, пока в нём не появится
+	// сообщение новее курсора очистки: новое сообщение возвращает чат в список.
 	var chats []chat.Chat
 	err := r.dbCtx(ctx).
 		Preload("Participants").
 		Joins("JOIN chat_participants cp ON cp.chat_id = chats.id").
 		Where("cp.user_id = ? AND cp.left_at IS NULL", userID).
+		Where("cp.cleared_message_id IS NULL OR COALESCE(chats.last_message_id, 0) > cp.cleared_message_id").
 		Order("chats.last_message_id DESC NULLS LAST").
 		Find(&chats).Error
 	if err != nil {
@@ -176,6 +180,7 @@ func (r *ChatRepository) ListByUser(ctx context.Context, userID uint) ([]*chat.C
 
 // unreadCounts считает непрочитанные сообщения по каждому чату для пользователя:
 // сообщения с id > last_read_message_id участника и не им самим отправленные.
+// Сообщения до курсора очистки истории не считаются: пользователь их удалил.
 func (r *ChatRepository) unreadCounts(ctx context.Context, userID uint, chatIDs []uint) (map[uint]int, error) {
 	type row struct {
 		ChatID uint
@@ -189,7 +194,8 @@ func (r *ChatRepository) unreadCounts(ctx context.Context, userID uint, chatIDs 
 		Joins("JOIN chat_participants cp ON cp.chat_id = messages.chat_id AND cp.user_id = ?", userID).
 		Where("messages.chat_id IN ?", chatIDs).
 		Where("messages.sender_id <> ?", userID).
-		Where("cp.last_read_message_id IS NULL OR messages.id > cp.last_read_message_id").
+		// GREATEST игнорирует NULL: работает и без прочтения, и без очистки.
+		Where("messages.id > COALESCE(GREATEST(cp.last_read_message_id, cp.cleared_message_id), 0)").
 		Group("messages.chat_id").
 		Scan(&rows).Error
 	if err != nil {
@@ -201,6 +207,25 @@ func (r *ChatRepository) unreadCounts(ctx context.Context, userID uint, chatIDs 
 		counts[rw.ChatID] = rw.Cnt
 	}
 	return counts, nil
+}
+
+// Delete физически удаляет чат вместе с участниками и всей историей, включая
+// мягко удалённые сообщения. Одна транзакция: частично удалённого чата — без
+// участников, но с сообщениями — возникнуть не может.
+//
+// Чат удаляется Unscoped, а не мягко: мягко удалённая строка держала бы
+// уникальный direct_key, и GetOrCreateDirect с тем же собеседником упёрся бы
+// в конфликт, не найдя при этом живого чата.
+func (r *ChatRepository) Delete(ctx context.Context, chatID uint) error {
+	return r.dbCtx(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Where("chat_id = ?", chatID).Delete(&message.Message{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("chat_id = ?", chatID).Delete(&chat.ChatParticipant{}).Error; err != nil {
+			return err
+		}
+		return tx.Unscoped().Delete(&chat.Chat{}, chatID).Error
+	})
 }
 
 // UpdateLastMessage обновляет денормализованный указатель на последнее сообщение чата.

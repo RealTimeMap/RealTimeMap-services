@@ -120,13 +120,13 @@
     {
       "id": "social-user-events-in",
       "name": "user-service",
-      "summary": "Входящий топик auth-сервиса: создание профиля и признак администратора",
-      "description": "Топик auth-сервиса, который social-service читает как consumer. Оттуда берутся user.registered (завести профиль новому пользователю) и user.updated (обновить признак администратора).\n\nИмя топика — без суффикса .events, исторически: значение совпадает с topic.UserEvents в auth-сервисе.\n\nСервис читает топик целиком и разбирает знакомые типы событий, остальные пропускает молча.",
+      "summary": "Входящий топик auth-сервиса: создание и удаление профиля, признак администратора",
+      "description": "Топик auth-сервиса, который social-service читает как consumer. Оттуда берутся user.registered (завести профиль новому пользователю) user.updated (обновить признак администратора) и user.deleted (стереть данные удалённого аккаунта).\n\nПо user.deleted удаляются профиль, дружбы, подписки и блокировки в обе стороны, участие в чатах. Сообщения остаются у собеседников, но обезличиваются: sender_id = 0, client_message_id = NULL. Кеш статистики затронутых профилей сбрасывается.\n\nИмя топика — без суффикса .events, исторически: значение совпадает с topic.UserEvents в auth-сервисе.\n\nСервис читает топик целиком и разбирает знакомые типы событий, остальные пропускает молча.",
       "producers": ["auth-service"],
       "consumers": ["social-service"],
       "partitionKey": "user_id",
       "schema": [
-        { "name": "type", "type": "string", "required": true, "description": "Тип события: user.registered или user.updated" },
+        { "name": "type", "type": "string", "required": true, "description": "Тип события: user.registered, user.updated или user.deleted" },
         { "name": "payload", "type": "object", "required": true, "description": "Данные пользователя из auth-сервиса" }
       ],
       "example": {

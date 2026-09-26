@@ -148,6 +148,82 @@ func (s *ChatService) Leave(ctx context.Context, chatID, userID uint) error {
 	return s.partRepo.Remove(ctx, chatID, userID)
 }
 
+// DeleteResult — итог удаления чата.
+type DeleteResult struct {
+	// ForEveryone — чат удалён целиком у всех участников. false — только
+	// история очищена у удалившего.
+	ForEveryone bool
+	// ParticipantIDs — активные участники на момент удаления; при
+	// ForEveryone их нужно уведомить и вывести из комнаты чата.
+	ParticipantIDs []uint
+}
+
+// Delete удаляет чат по запросу участника.
+//
+// Direct-чат удаляется на выбор:
+//   - forEveryone = false — «у себя»: история до текущего последнего сообщения
+//     скрывается от удалившего, чат пропадает из его списка и вернётся с
+//     первым новым сообщением. Собеседник ничего не теряет.
+//   - forEveryone = true — у обоих: чат и вся история удаляются физически.
+//
+// Групповой чат удаляется только целиком и только владельцем; forEveryone для
+// группы не влияет на результат. Остальные участники выходят через Leave.
+func (s *ChatService) Delete(ctx context.Context, chatID, userID uint, forEveryone bool) (*DeleteResult, error) {
+	obj, err := s.chatRepo.GetByID(ctx, chatID)
+	if err != nil {
+		return nil, err
+	}
+
+	part := activeParticipant(obj, userID)
+	if part == nil {
+		return nil, chat.ErrNotParticipant()
+	}
+
+	if obj.Type == chat.GroupType {
+		if part.Role != chat.OwnerParticipantType {
+			return nil, chat.ErrNotChatOwner()
+		}
+		forEveryone = true
+	}
+
+	if !forEveryone {
+		var upTo uint
+		if obj.LastMessageID != nil {
+			upTo = *obj.LastMessageID
+		}
+		if err := s.partRepo.ClearHistory(ctx, chatID, userID, upTo); err != nil {
+			return nil, err
+		}
+		return &DeleteResult{ParticipantIDs: []uint{userID}}, nil
+	}
+
+	participants := activeParticipantIDs(obj)
+	if err := s.chatRepo.Delete(ctx, chatID); err != nil {
+		return nil, err
+	}
+	return &DeleteResult{ForEveryone: true, ParticipantIDs: participants}, nil
+}
+
+func activeParticipant(obj *chat.Chat, userID uint) *chat.ChatParticipant {
+	for i := range obj.Participants {
+		p := &obj.Participants[i]
+		if p.UserID == userID && p.LeftAt == nil {
+			return p
+		}
+	}
+	return nil
+}
+
+func activeParticipantIDs(obj *chat.Chat) []uint {
+	ids := make([]uint, 0, len(obj.Participants))
+	for _, p := range obj.Participants {
+		if p.LeftAt == nil {
+			ids = append(ids, p.UserID)
+		}
+	}
+	return ids
+}
+
 // checkNotBlocked запрещает операцию, если между пользователями есть блок в любую
 // сторону. Открыть direct-чат или писать в него с заблокированным нельзя.
 func (s *ChatService) checkNotBlocked(ctx context.Context, userID, otherID uint) error {

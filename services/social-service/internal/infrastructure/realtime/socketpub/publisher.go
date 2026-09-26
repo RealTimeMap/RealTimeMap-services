@@ -113,6 +113,10 @@ func toSocketPayload(e chatuc.ChatEvent) any {
 		if r, ok := e.Payload.(chatuc.ReadResult); ok {
 			return dto.NewReadResponse(r)
 		}
+	case chatuc.EventChatDeleted:
+		if r, ok := e.Payload.(chatuc.DeletedResult); ok {
+			return dto.NewDeletedResponse(r)
+		}
 	}
 	return e.Payload
 }

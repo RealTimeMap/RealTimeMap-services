@@ -15,6 +15,8 @@ type Repository interface {
 	// UpdateLastMessage обновляет денормализованный указатель на последнее
 	// сообщение — для сортировки списка чатов и превью.
 	UpdateLastMessage(ctx context.Context, chatID, messageID uint) error
+	// Delete физически удаляет чат с участниками и всей историей сообщений.
+	Delete(ctx context.Context, chatID uint) error
 }
 
 type ParticipantRepository interface {
@@ -32,4 +34,7 @@ type ParticipantRepository interface {
 	//UpdateRole(ctx context.Context)
 	UpdateLastRead(ctx context.Context, chatID, userID, lastReadID uint) error
 	Remove(ctx context.Context, chatID, userID uint) error
+	// ClearHistory скрывает от участника историю до upToMessageID включительно
+	// (см. ChatParticipant.ClearedMessageID). Курсор только растёт.
+	ClearHistory(ctx context.Context, chatID, userID, upToMessageID uint) error
 }

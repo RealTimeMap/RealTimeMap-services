@@ -301,3 +301,20 @@ func (r *PgEmailRepository) OldestQueuedAge(ctx context.Context, now time.Time) 
 
 	return now.Sub(oldest.Time), nil
 }
+
+func (r *PgEmailRepository) DeleteByRecipient(ctx context.Context, toEmail string) (int64, error) {
+	var deleted int64
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		recipient := tx.Model(&email.Email{}).Select("id").Where("lower(to_email) = lower(?)", toEmail)
+
+		// Unscoped: мягко удалённые события тоже содержат ссылку на письмо.
+		if err := tx.Unscoped().Where("email_id IN (?)", recipient).Delete(&email.Event{}).Error; err != nil {
+			return err
+		}
+
+		res := tx.Where("lower(to_email) = lower(?)", toEmail).Delete(&email.Email{})
+		deleted = res.RowsAffected
+		return res.Error
+	})
+	return deleted, err
+}

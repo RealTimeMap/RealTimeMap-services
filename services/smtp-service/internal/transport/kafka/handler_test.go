@@ -108,11 +108,11 @@ func (s *stubUsers) GetUserByID(_ context.Context, id int64) (*userclient.User, 
 }
 
 func newHandler(enq *recordingEnqueuer) *Handler {
-	return NewHandler(enq, &stubUsers{}, "https://realtimemap.ru", logger.NewNop())
+	return NewHandler(enq, &stubUsers{}, &recordingEraser{}, "https://realtimemap.ru", logger.NewNop())
 }
 
 func newHandlerWithUsers(enq *recordingEnqueuer, users UserResolver) *Handler {
-	return NewHandler(enq, users, "https://realtimemap.ru", logger.NewNop())
+	return NewHandler(enq, users, &recordingEraser{}, "https://realtimemap.ru", logger.NewNop())
 }
 
 func TestHandlerQueuesWelcomeEmail(t *testing.T) {
@@ -205,7 +205,7 @@ func TestHandlerAcceptsDuplicate(t *testing.T) {
 func TestHandlerIgnoresUnknownEvent(t *testing.T) {
 	enq := &recordingEnqueuer{}
 	msg := registeredMessage(t, func(p map[string]any) {
-		p["event_type"] = "user.deleted"
+		p["event_type"] = "user.updated"
 	})
 
 	if err := newHandler(enq).HandleMessage(context.Background(), msg); err != nil {
@@ -531,7 +531,7 @@ func newRenderingHandler(t *testing.T, users UserResolver) (*Handler, *rendering
 	}
 
 	enq := &renderingEnqueuer{renderer: domaintemplate.NewRenderer(provider)}
-	return NewHandler(enq, users, "https://realtimemap.ru", logger.NewNop()), enq
+	return NewHandler(enq, users, &recordingEraser{}, "https://realtimemap.ru", logger.NewNop()), enq
 }
 
 // Данные, которые хендлер собирает для приветствия, должны покрывать контракт

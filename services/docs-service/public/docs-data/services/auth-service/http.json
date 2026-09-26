@@ -456,6 +456,51 @@
       ]
     },
     {
+      "id": "delete-me",
+      "method": "DELETE",
+      "path": "/api/v2/auth/me",
+      "summary": "Удаление своего аккаунта",
+      "description": "Необратимо удаляет аккаунт текущего пользователя. Требует повторного ввода пароля. В auth-сервисе стираются учётная запись, сессии и OAuth-привязки; затем публикуется событие user.deleted в топик user-service, по которому остальные сервисы удаляют профиль, связи, метки, прогресс, push-токены и письма, а комментарии, сообщения в чатах и баг-репорты обезличивают. Пока на аккаунте действует бан, удаление запрещено.",
+      "tags": [
+        "Аутентификация"
+      ],
+      "auth": true,
+      "requestBody": {
+        "description": "Текущий пароль для подтверждения",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "password",
+            "type": "string",
+            "required": true,
+            "description": "Текущий пароль пользователя"
+          }
+        ],
+        "example": {
+          "password": "SecurePassword123!"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Аккаунт удалён"
+        },
+        {
+          "statusCode": 400,
+          "description": "Неверный пароль: detail = DELETE_ACCOUNT_BAD_PASSWORD"
+        },
+        {
+          "statusCode": 403,
+          "description": "На аккаунте действует бан"
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "validation-error"
+      ]
+    },
+    {
       "id": "google-authorize",
       "method": "GET",
       "path": "/api/v2/auth/google/authorize",

@@ -92,3 +92,8 @@ func (r *PgUserTokenRepository) UpdateSettings(ctx context.Context, id uint, set
 			"updated_at": time.Now(),
 		}).Error
 }
+
+func (r *PgUserTokenRepository) DeleteByUser(ctx context.Context, userID uint) (int64, error) {
+	res := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&token.Model{})
+	return res.RowsAffected, res.Error
+}

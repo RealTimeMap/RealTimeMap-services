@@ -38,6 +38,9 @@ type achievementSpec struct {
 	Desc       string
 	Threshold  uint
 	RewardCode string
+	// Icon — имя иконки из набора проекта (preview.html), клиент рисует её
+	// сам.
+	Icon string
 }
 
 // commentRewards — награды, связанные с комментариями.
@@ -57,6 +60,7 @@ var commentAchievements = []achievementSpec{
 		Desc:       "Оставьте свой первый комментарий",
 		Threshold:  1,
 		RewardCode: "ach_first_comment",
+		Icon:       "app:chat-loop",
 	},
 	{
 		Code:       "commenter_10",
@@ -64,6 +68,7 @@ var commentAchievements = []achievementSpec{
 		Desc:       "Оставьте 10 комментариев",
 		Threshold:  10,
 		RewardCode: "ach_commenter_10",
+		Icon:       "app:star-loop",
 	},
 	{
 		Code:       "commenter_50",
@@ -71,6 +76,7 @@ var commentAchievements = []achievementSpec{
 		Desc:       "Оставьте 50 комментариев",
 		Threshold:  50,
 		RewardCode: "ach_commenter_50",
+		Icon:       "app:medal-loop",
 	},
 	{
 		Code:       "commenter_100",
@@ -78,51 +84,7 @@ var commentAchievements = []achievementSpec{
 		Desc:       "Оставьте 100 комментариев",
 		Threshold:  100,
 		RewardCode: "ach_commenter_100",
-	},
-}
-
-// bugRewards — награды за баги, подтверждённые разработчиком.
-//
-// Опыт за подтверждённый баг выше, чем за комментарий: засчитывается только
-// отчёт, который разработчик воспроизвёл, а большинство отчётов проверку не
-// проходит.
-var bugRewards = []rewardSpec{
-	{Code: "bug_confirmed", Amount: 30, Desc: "Опыт за подтверждённый баг"},
-	{Code: "ach_first_bug", Amount: 20, Desc: "Награда за первый подтверждённый баг"},
-	{Code: "ach_bug_hunter_5", Amount: 50, Desc: "Награда за 5 подтверждённых багов"},
-	{Code: "ach_bug_hunter_15", Amount: 100, Desc: "Награда за 15 подтверждённых багов"},
-	{Code: "ach_bug_hunter_30", Amount: 200, Desc: "Награда за 30 подтверждённых багов"},
-}
-
-// bugAchievements — цепочка достижений за подтверждённые баги.
-var bugAchievements = []achievementSpec{
-	{
-		Code:       "first_bug",
-		Title:      "Внимательный глаз",
-		Desc:       "Сообщите о баге, который подтвердит разработчик",
-		Threshold:  1,
-		RewardCode: "ach_first_bug",
-	},
-	{
-		Code:       "bug_hunter_5",
-		Title:      "Охотник за багами",
-		Desc:       "Найдите 5 подтверждённых багов",
-		Threshold:  5,
-		RewardCode: "ach_bug_hunter_5",
-	},
-	{
-		Code:       "bug_hunter_15",
-		Title:      "Тестировщик",
-		Desc:       "Найдите 15 подтверждённых багов",
-		Threshold:  15,
-		RewardCode: "ach_bug_hunter_15",
-	},
-	{
-		Code:       "bug_hunter_30",
-		Title:      "Страж качества",
-		Desc:       "Найдите 30 подтверждённых багов",
-		Threshold:  30,
-		RewardCode: "ach_bug_hunter_30",
+		Icon:       "app:rosette-loop",
 	},
 }
 
@@ -133,19 +95,12 @@ var bugAchievements = []achievementSpec{
 // не начисления.
 const commentDailyLimit uint = 20
 
-// Run заводит недостающие правила и достижения для событий комментариев и
-// подтверждённых багов.
+// Run заводит недостающие правила и достижения для событий комментариев.
+//
+// Остальной каталог (метки, баги, подписки, уникальные) живёт в
+// migrations/0002_seed_achievements.sql: заводить одно достижение и здесь, и
+// там нельзя — коды совпадут, а награды разойдутся.
 func Run(ctx context.Context, db *gorm.DB, logger *zap.Logger) error {
-	if err := seedComments(ctx, db, logger); err != nil {
-		return err
-	}
-	if err := seedBugs(ctx, db, logger); err != nil {
-		return err
-	}
-	return nil
-}
-
-func seedComments(ctx context.Context, db *gorm.DB, logger *zap.Logger) error {
 	rewards, err := ensureRewards(ctx, db, logger, commentRewards)
 	if err != nil {
 		return fmt.Errorf("seed rewards: %w", err)
@@ -165,38 +120,6 @@ func seedComments(ctx context.Context, db *gorm.DB, logger *zap.Logger) error {
 
 	if err := ensureAchievementChain(ctx, db, logger, events.CommentCreated, commentAchievements, rewards); err != nil {
 		return fmt.Errorf("seed achievements: %w", err)
-	}
-
-	return nil
-}
-
-// seedBugs заводит правило и достижения за подтверждённые баги.
-//
-// Правило обязательно, хотя цель — достижения: счётчик, по которому они
-// открываются, растёт только вместе с начислением опыта по правилу.
-//
-// Дневного лимита нет: событие шлёт не пользователь, а разработчик,
-// подтвердив отчёт, — накрутить его автор не может. Повторы отсекает сам
-// feedback-service: событие уходит только при первом подтверждении бага.
-func seedBugs(ctx context.Context, db *gorm.DB, logger *zap.Logger) error {
-	rewards, err := ensureRewards(ctx, db, logger, bugRewards)
-	if err != nil {
-		return fmt.Errorf("seed bug rewards: %w", err)
-	}
-
-	if err := ensureEventRule(ctx, db, logger, model.EventRule{
-		EventType:      events.BugConfirmed,
-		KafkaEventType: events.BugConfirmed,
-		Description:    strPtr("Опыт за баг, подтверждённый разработчиком"),
-		RewardID:       rewards["bug_confirmed"],
-		IsActive:       true,
-		IsRepeatable:   true,
-	}); err != nil {
-		return fmt.Errorf("seed bug event rule: %w", err)
-	}
-
-	if err := ensureAchievementChain(ctx, db, logger, events.BugConfirmed, bugAchievements, rewards); err != nil {
-		return fmt.Errorf("seed bug achievements: %w", err)
 	}
 
 	return nil
@@ -276,6 +199,9 @@ func ensureAchievementChain(
 		switch {
 		case err == nil:
 			ids[i] = existing.ID
+			if err := fillMissingIcon(ctx, db, logger, existing, spec.Icon); err != nil {
+				return err
+			}
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			created := model.Achievement{
 				Code:             spec.Code,
@@ -283,6 +209,7 @@ func ensureAchievementChain(
 				Desc:             spec.Desc,
 				TriggerEventType: triggerEvent,
 				Threshold:        spec.Threshold,
+				Icon:             spec.Icon,
 				RewardID:         rewardID,
 				IsActive:         true,
 			}
@@ -312,6 +239,29 @@ func ensureAchievementChain(
 		}
 	}
 
+	return nil
+}
+
+// fillMissingIcon ставит иконку достижению, у которого её нет.
+//
+// Исключение из правила «существующие строки не трогаем»: пустая иконка —
+// не правка администратора, а пробел засеянных до появления иконок записей.
+// Заданная вручную иконка не перетирается.
+func fillMissingIcon(ctx context.Context, db *gorm.DB, logger *zap.Logger, existing model.Achievement, icon string) error {
+	if icon == "" || existing.Icon != "" {
+		return nil
+	}
+
+	if err := db.WithContext(ctx).
+		Model(&model.Achievement{}).
+		Where("id = ? AND (icon IS NULL OR icon = '')", existing.ID).
+		Update("icon", icon).Error; err != nil {
+		return err
+	}
+	logger.Info("filled achievement icon",
+		zap.String("code", existing.Code),
+		zap.String("icon", icon),
+	)
 	return nil
 }
 

@@ -12,6 +12,9 @@ const (
 	// Адресуется в комнату чата (ChatID), чтобы дошло до всех участников, включая
 	// другие устройства самого читающего (обнуление unread на всех девайсах).
 	EventChatRead ChatEventType = "chat.read"
+	// EventChatDeleted — чат удалён у всех или очищен «у себя». Payload =
+	// DeletedResult. Клиент убирает чат из списка и закрывает открытый экран.
+	EventChatDeleted ChatEventType = "chat.deleted"
 )
 
 // ChatEvent — доменное событие, которое useCase публикует после изменения
