@@ -46,7 +46,7 @@ func message(t *testing.T, eventType string, payload any) segmentio.Message {
 
 func newHandler() (*Handler, *notifierStub) {
 	stub := &notifierStub{}
-	return NewHandler(stub, zap.NewNop()), stub
+	return NewHandler(stub, &stubEraser{}, zap.NewNop()), stub
 }
 
 func TestChatMessageNotifiesEveryRecipientExceptSender(t *testing.T) {
