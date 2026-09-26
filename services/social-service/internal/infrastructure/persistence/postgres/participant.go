@@ -109,6 +109,15 @@ func (r *ChatParticipantRepository) UpdateLastRead(ctx context.Context, chatID, 
 		Update("last_read_message_id", lastReadID).Error
 }
 
+// ClearHistory сдвигает курсор очистки истории участника. Курсор монотонный:
+// GREATEST не даёт устаревшему запросу вернуть уже скрытые сообщения.
+func (r *ChatParticipantRepository) ClearHistory(ctx context.Context, chatID, userID, upToMessageID uint) error {
+	return r.dbCtx(ctx).
+		Model(&chat.ChatParticipant{}).
+		Where("chat_id = ? AND user_id = ?", chatID, userID).
+		Update("cleared_message_id", gorm.Expr("GREATEST(COALESCE(cleared_message_id, 0), ?)", upToMessageID)).Error
+}
+
 // Remove помечает участника вышедшим (soft-leave через left_at), сохраняя историю
 // членства. Физически строку не удаляем.
 func (r *ChatParticipantRepository) Remove(ctx context.Context, chatID, userID uint) error {

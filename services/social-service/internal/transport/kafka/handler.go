@@ -1,5 +1,6 @@
 // Package kafka принимает доменные события auth-сервиса: заводит профиль
-// пользователя и поддерживает признак администратора в актуальном состоянии.
+// пользователя, поддерживает признак администратора в актуальном состоянии и
+// стирает данные удалённого аккаунта.
 package kafka
 
 import (
@@ -17,15 +18,22 @@ import (
 	"go.uber.org/zap"
 )
 
+// UserEraser стирает данные пользователя, удалившего аккаунт.
+type UserEraser interface {
+	DeleteUser(ctx context.Context, userID uint) error
+}
+
 type Handler struct {
 	service *profile.Service
+	eraser  UserEraser
 
 	logger *zap.Logger
 }
 
-func NewHandler(service *profile.Service, logger *zap.Logger) *Handler {
+func NewHandler(service *profile.Service, eraser UserEraser, logger *zap.Logger) *Handler {
 	return &Handler{
 		service: service,
+		eraser:  eraser,
 		logger:  logger,
 	}
 }
@@ -47,6 +55,8 @@ func (h *Handler) HandleMessage(ctx context.Context, msg kafka.Message) error {
 		return h.handleRegistered(ctx, payload)
 	case events.UserUpdated:
 		return h.handleUpdated(ctx, payload)
+	case events.UserDeleted:
+		return h.handleDeleted(ctx, msg)
 	default:
 		// Событие чужого типа — не наше дело.
 		return nil
@@ -122,6 +132,24 @@ func (h *Handler) handleUpdated(ctx context.Context, payload json.RawMessage) er
 		}
 
 		h.logger.Error("Error syncing admin flag", zap.Error(err))
+		return consumer.Retryable(err)
+	}
+
+	return nil
+}
+
+// handleDeleted стирает профиль, связи и участие в чатах удалённого
+// пользователя. Сообщения в чатах остаются у собеседников обезличенными.
+func (h *Handler) handleDeleted(ctx context.Context, msg kafka.Message) error {
+	deleted, _, err := events.ParseUserDeleted(msg.Value)
+	if err != nil {
+		h.logger.Warn("skipping user.deleted: malformed payload", zap.Error(err))
+		return consumer.Skip(err)
+	}
+
+	if err := h.eraser.DeleteUser(ctx, deleted.UserID); err != nil {
+		h.logger.Error("Error erasing user data",
+			zap.Uint("user_id", deleted.UserID), zap.Error(err))
 		return consumer.Retryable(err)
 	}
 

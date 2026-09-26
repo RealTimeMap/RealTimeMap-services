@@ -45,6 +45,13 @@ type ChatParticipant struct {
 
 	LastReadMessageID *uint
 
+	// ClearedMessageID — история очищена участником «у себя» до этого
+	// сообщения включительно (0 — чат удалён, когда сообщений ещё не было).
+	// Более старые сообщения ему не показываются и не считаются
+	// непрочитанными, а сам чат скрыт из списка, пока в нём не появится
+	// сообщение новее. nil — история не очищалась.
+	ClearedMessageID *uint
+
 	JoinedAt time.Time  `gorm:"not null;default:now()"`
 	LeftAt   *time.Time `gorm:"index"`
 

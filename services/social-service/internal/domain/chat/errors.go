@@ -22,6 +22,9 @@ var (
 	ErrBlocked = func() error {
 		return apperror.NewForbiddenError("chat is not allowed due to a block between users")
 	}
+	ErrNotChatOwner = func() error {
+		return apperror.NewForbiddenError("only the owner can delete a group chat; use leave instead")
+	}
 	ErrCantLeaveDirect = func() error {
 		return apperror.NewConflictError("chat_id", "can't leave a direct chat", 0)
 	}

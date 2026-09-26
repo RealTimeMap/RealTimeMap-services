@@ -14,6 +14,7 @@ type Application struct {
 	ListChats   *ListUserChatsHandler
 	MarkRead    *MarkReadHandler
 	Leave       *LeaveHandler
+	Delete      *DeleteHandler
 }
 
 type ProfileGetter interface {

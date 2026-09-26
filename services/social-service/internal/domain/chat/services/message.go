@@ -130,14 +130,20 @@ func (s *MessageService) checkNotBlockedInDirect(ctx context.Context, chatID, se
 
 // History метод используется для получения истории чата
 func (s *MessageService) History(ctx context.Context, params MessageGetParams) ([]*message.Message, error) {
-	if err := s.validateParticipant(ctx, params.ChatID, params.UserID); err != nil {
+	part, err := s.partRepo.Get(ctx, params.ChatID, params.UserID)
+	if err != nil {
 		return nil, err
 	}
+	if part == nil || part.LeftAt != nil {
+		return nil, chat.ErrNotParticipant()
+	}
 
+	// Сообщения до курсора очистки участник удалил «у себя» — не показываем.
 	return s.messageRepo.GetMessages(ctx, message.Filter{
-		ChatID:        params.ChatID,
-		LastMessageID: params.LastMessageID,
-		Limit:         messageLimit,
+		ChatID:         params.ChatID,
+		LastMessageID:  params.LastMessageID,
+		AfterMessageID: part.ClearedMessageID,
+		Limit:          messageLimit,
 	})
 }
 

@@ -100,7 +100,7 @@ services:
       - "traefik.http.routers.social-chats-list.middlewares=cors-headers@file,auth-check@file"
       - "traefik.http.routers.social-chats-list.tls=true"
 
-      # /api/v2/chats/* — вложенные пути чата (direct, group, messages, history)
+      # /api/v2/chats/* — вложенные пути чата (direct, group, messages, history, DELETE /{id})
       - "traefik.http.routers.social-chats.rule=Host(`realtimemap.ru`) && PathPrefix(`/api/v2/chats/`)"
       - "traefik.http.routers.social-chats.entrypoints=websecure"
       - "traefik.http.routers.social-chats.priority=100"

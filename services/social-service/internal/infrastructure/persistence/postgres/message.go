@@ -94,6 +94,9 @@ func (r *MessageRepository) GetMessages(ctx context.Context, filter message.Filt
 	if filter.LastMessageID != nil {
 		q = q.Where("id < ?", *filter.LastMessageID)
 	}
+	if filter.AfterMessageID != nil {
+		q = q.Where("id > ?", *filter.AfterMessageID)
+	}
 
 	var messages []*message.Message
 	err := q.Order("id DESC").

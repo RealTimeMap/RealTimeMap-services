@@ -50,7 +50,7 @@ func main() {
 		log.Fatal("failed to init gRPC server", zap.Error(err))
 	}
 
-	kafkaHandler := kafka.NewHandler(container.ProfileService, log)
+	kafkaHandler := kafka.NewHandler(container.ProfileService, container.AccountService, log)
 	kafkaConsumer := consumer.New(
 		consumer.DefaultConfig().
 			WithBrokers(cfg.Kafka.Brokers...).

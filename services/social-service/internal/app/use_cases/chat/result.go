@@ -100,6 +100,13 @@ type ReadResult struct {
 	LastReadMessageID uint
 }
 
+// DeletedResult — payload события chat.deleted.
+type DeletedResult struct {
+	ChatID      uint
+	DeletedBy   uint
+	ForEveryone bool
+}
+
 // CHATS
 
 type DirectChatResult struct {

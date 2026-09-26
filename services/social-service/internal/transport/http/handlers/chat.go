@@ -40,6 +40,7 @@ func InitChatHandler(g *gin.RouterGroup, deps ChatHandlerDeps) {
 		chatGroup.GET("/:chatID/history", auth.AuthRequired(), h.GetChatHistory)
 		chatGroup.POST("/:chatID/read", auth.AuthRequired(), h.MarkChatRead)
 		chatGroup.POST("/:chatID/leave", auth.AuthRequired(), h.LeaveChat)
+		chatGroup.DELETE("/:chatID", auth.AuthRequired(), h.DeleteChat)
 	}
 }
 
@@ -230,6 +231,41 @@ func (h *Handler) LeaveChat(c *gin.Context) {
 	if err = h.useCase.Leave.Handle(c.Request.Context(), chat.LeaveCommand{
 		ChatID: chatID,
 		UserID: uint(userID),
+	}); err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// DeleteChat удаляет чат. Query-параметр forEveryone=true удаляет direct-чат у
+// обоих собеседников; без него — только у себя. Группу удаляет владелец, и
+// всегда у всех.
+func (h *Handler) DeleteChat(c *gin.Context) {
+	userID, err := helper.GetUserID(c)
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+	chatID, err := middleware.ParsePathParams(c, "chatID")
+	if err != nil {
+		middleware.HandleError(c, err, h.logger)
+		return
+	}
+
+	var query struct {
+		ForEveryone bool `form:"forEveryone"`
+	}
+	if err = c.ShouldBindQuery(&query); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	if err = h.useCase.Delete.Handle(c.Request.Context(), chat.DeleteCommand{
+		ChatID:      chatID,
+		UserID:      uint(userID),
+		ForEveryone: query.ForEveryone,
 	}); err != nil {
 		middleware.HandleError(c, err, h.logger)
 		return
