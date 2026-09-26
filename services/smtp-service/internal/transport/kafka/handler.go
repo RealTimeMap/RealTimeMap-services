@@ -42,9 +42,15 @@ type UserResolver interface {
 	GetUserByID(ctx context.Context, id int64) (*userclient.User, error)
 }
 
+// RecipientEraser удаляет письма на адрес удалённого аккаунта.
+type RecipientEraser interface {
+	DeleteByRecipient(ctx context.Context, toEmail string) (int64, error)
+}
+
 type Handler struct {
 	emails Enqueuer
 	users  UserResolver
+	eraser RecipientEraser
 
 	// frontendURL — база для ссылок в письмах.
 	frontendURL string
@@ -52,10 +58,11 @@ type Handler struct {
 	logger *zap.Logger
 }
 
-func NewHandler(emails Enqueuer, users UserResolver, frontendURL string, logger *zap.Logger) *Handler {
+func NewHandler(emails Enqueuer, users UserResolver, eraser RecipientEraser, frontendURL string, logger *zap.Logger) *Handler {
 	return &Handler{
 		emails:      emails,
 		users:       users,
+		eraser:      eraser,
 		frontendURL: frontendURL,
 		logger:      logger,
 	}
@@ -99,10 +106,35 @@ func (h *Handler) HandleMessage(ctx context.Context, msg segmentio.Message) erro
 		return h.handlePasswordChanged(ctx, msg)
 	case EventUserLoggedIn:
 		return h.handleLoggedIn(ctx, msg)
+	case events.UserDeleted:
+		return h.handleUserDeleted(ctx, msg)
 	default:
 		// Топик может содержать события, до которых сервису нет дела.
 		return nil
 	}
+}
+
+// handleUserDeleted удаляет письма удалённого аккаунта: в них адрес, имя и
+// ссылки, то есть персональные данные.
+func (h *Handler) handleUserDeleted(ctx context.Context, msg segmentio.Message) error {
+	event, _, err := events.ParseUserDeleted(msg.Value)
+	if err != nil {
+		return consumer.Skip(err)
+	}
+	if event.Email == "" {
+		return consumer.Skip(fmt.Errorf("user.deleted for user %d has no email", event.UserID))
+	}
+
+	deleted, err := h.eraser.DeleteByRecipient(ctx, event.Email)
+	if err != nil {
+		h.logger.Error("failed to delete emails of deleted user",
+			zap.Uint("user_id", event.UserID), zap.Error(err))
+		return consumer.Retryable(err)
+	}
+
+	h.logger.Info("emails of deleted user removed",
+		zap.Uint("user_id", event.UserID), zap.Int64("deleted", deleted))
+	return nil
 }
 
 func (h *Handler) handleUserRegistered(ctx context.Context, msg segmentio.Message) error {

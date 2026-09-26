@@ -93,6 +93,10 @@ func (r *fakeRepo) OldestQueuedAge(context.Context, time.Time) (time.Duration, e
 	return 0, nil
 }
 
+func (r *fakeRepo) DeleteByRecipient(context.Context, string) (int64, error) {
+	return 0, nil
+}
+
 type fakeEvents struct {
 	mu     sync.Mutex
 	events []Event
