@@ -22,6 +22,7 @@ import (
 type Container struct {
 	LevelService    *level.Service
 	ProgressRepo    repository.UserProgressRepository
+	AccountRepo     repository.AccountRepository
 	ProgressService *progress.ProgressService
 
 	EventGamificationService *event.Service
@@ -62,6 +63,7 @@ func NewContainer(config *config.Config, db *gorm.DB, logger *zap.Logger) *Conta
 	return &Container{
 		LevelService: levelService,
 		ProgressRepo: progressRepo,
+		AccountRepo:  postgres.NewPgAccountRepository(db),
 
 		ProgressService: progressService,
 
