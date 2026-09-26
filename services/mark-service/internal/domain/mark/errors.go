@@ -11,6 +11,10 @@ var (
 	ErrMarkNotFound = func(id uint) error {
 		return apperror.NewNotFoundErrorByID("mark_action", id)
 	}
+	// ErrNoActiveMarks — случайную метку выбрать не из чего: активных нет.
+	ErrNoActiveMarks = func() error {
+		return apperror.NewNotFoundError("mark_action", "status", "active")
+	}
 	ErrMarkNameTooShort = func(name string) error {
 		return apperror.NewFieldValidationError(
 			"markName",

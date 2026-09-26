@@ -594,6 +594,80 @@
       ]
     },
     {
+      "id": "random-mark",
+      "method": "GET",
+      "path": "/api/v2/marks/random",
+      "summary": "Случайная активная метка",
+      "description": "Возвращает одну случайную активную метку: не завершённую, у которой текущий момент попадает в интервал [startAt, endAt]. Ответ в кратком формате, как в списках. Если активных меток нет, возвращается 404.",
+      "tags": [
+        "Метки"
+      ],
+      "auth": false,
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Случайная активная метка",
+          "schema": [
+            {
+              "name": "id",
+              "type": "integer",
+              "required": true,
+              "description": "ID метки"
+            },
+            {
+              "name": "markName",
+              "type": "string",
+              "required": true,
+              "description": "Название метки"
+            },
+            {
+              "name": "geom",
+              "type": "object",
+              "required": true,
+              "description": "Координаты метки в формате GeoJSON",
+              "children": [
+                {
+                  "name": "type",
+                  "type": "string",
+                  "required": true,
+                  "description": "Тип геометрии GeoJSON"
+                },
+                {
+                  "name": "coordinates",
+                  "type": "number[]",
+                  "required": true,
+                  "description": "Координаты в порядке [долгота, широта]"
+                }
+              ]
+            },
+            {
+              "name": "photos",
+              "type": "string[]",
+              "required": false,
+              "description": "URL фотографий метки"
+            }
+          ],
+          "example": {
+            "id": 42,
+            "markName": "Концерт в парке",
+            "geom": {
+              "type": "Point",
+              "coordinates": [
+                37.6176,
+                55.7558
+              ]
+            },
+            "photos": [
+              "https://realtimemap.ru/store/photos/marks/2026/04/photo1.jpg"
+            ]
+          }
+        }
+      ],
+      "errors": [
+        "not-found"
+      ]
+    },
+    {
       "id": "create-data",
       "method": "GET",
       "path": "/api/v2/marks/create-data",

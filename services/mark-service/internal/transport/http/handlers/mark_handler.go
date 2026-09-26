@@ -1,7 +1,13 @@
 package handlers
 
 import (
+	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/mmcloughlin/geohash"
+	"github.com/paulmach/orb"
+	"go.uber.org/zap"
 
 	helper "github.com/RealTimeMap/RealTimeMap-backend/pkg/helpers/context"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/middleware/auth"
@@ -13,10 +19,6 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
 	subdto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/dto/mark"
 	dto "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/http/dto/mark"
-	"github.com/gin-gonic/gin"
-	"github.com/mmcloughlin/geohash"
-	"github.com/paulmach/orb"
-	"go.uber.org/zap"
 )
 
 type markHandler struct {
@@ -39,6 +41,7 @@ func InitMarkHandler(g *gin.RouterGroup, deps MarkDeps) {
 		markGroup.GET("/:markID", handler.DetailMark)
 		markGroup.DELETE("/:markID", auth.AuthRequired(), handler.DeleteMark)
 		markGroup.PATCH("/:markID", auth.AuthRequired(), handler.UpdateMark)
+		markGroup.GET("/random", handler.GetRandomMark)
 	}
 }
 
@@ -127,7 +130,6 @@ func (h *markHandler) DeleteMark(c *gin.Context) {
 		MarkID: markID,
 		UserID: uint(userInfo.UserID),
 	})
-
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -177,7 +179,6 @@ func (h *markHandler) UpdateMark(c *gin.Context) {
 		PhotosToDelete: req.PhotosToDelete,
 		Photos:         photos,
 	})
-
 	if err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
@@ -222,4 +223,15 @@ func (h *markHandler) GetUserMarks(c *gin.Context) {
 	}
 	response := dto.NewMultipleResponseMarkV2(marks)
 	c.JSON(200, pagination.NewResponse(response, params, count))
+}
+
+func (h *markHandler) GetRandomMark(c *gin.Context) {
+	obj, err := h.useCases.RandomMark.Handle(c.Request.Context())
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+	res := dto.NewResponseMark(obj)
+
+	c.JSON(http.StatusOK, res)
 }

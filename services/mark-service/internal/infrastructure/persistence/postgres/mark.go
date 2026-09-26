@@ -4,15 +4,17 @@ import (
 	"context"
 	"errors"
 	"math"
+	"time"
+
+	"github.com/paulmach/orb"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/logger/sl"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/pagination"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
-	"github.com/paulmach/orb"
-	"go.uber.org/zap"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 const clusterPixelThreshold = 60.0
@@ -221,4 +223,23 @@ func (r *MarkRepository) IncShare(ctx context.Context, markID uint) (int64, erro
 	}
 
 	return obj.SharedCount, nil
+}
+
+func (r *MarkRepository) GetRandomActiveMark(ctx context.Context) (mark.Mark, error) {
+	var obj mark.Mark
+	now := time.Now().UTC()
+	err := r.db.WithContext(ctx).
+		Model(&mark.Mark{}).
+		Where("is_ended = ?", false).
+		Where("start_at <= ?", now).
+		Where("end_at >= ?", now).
+		Order("RANDOM()").Take(&obj).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return mark.Mark{}, mark.ErrNoActiveMarks()
+		}
+		r.log.Error("get_random_active_mark err: ", sl.String("layer", r.layer), zap.Error(err))
+		return mark.Mark{}, err
+	}
+	return obj, nil
 }
