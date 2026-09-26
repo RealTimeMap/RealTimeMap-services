@@ -116,7 +116,7 @@
       "id": "gamification-user-events",
       "name": "user-service",
       "summary": "События пользователей — регистрация профиля в геймификации",
-      "description": "Consumer-группа gamification-service подписана на события жизненного цикла пользователя.\n\nТип события, ID пользователя и ID источника передаются в заголовках Kafka-сообщения (event_type, user_id, source_id, timestamp), а не в теле. Consumer читает их через pkg/transport/kafka.ExtractMeta: сообщения без event_type или user_id пропускаются (Skip) без повторной обработки.\n\nИмя топика — без суффикса .events, исторически: значение совпадает с topic.UserEvents в auth-сервисе и со списком topics в config.yaml.",
+      "description": "Consumer-группа gamification-service подписана на события жизненного цикла пользователя.\n\nТип события, ID пользователя и ID источника передаются в заголовках Kafka-сообщения (event_type, user_id, source_id, timestamp), а не в теле. Consumer читает их через pkg/transport/kafka.ExtractMeta: сообщения без event_type или user_id пропускаются (Skip) без повторной обработки.\n\nИмя топика — без суффикса .events, исторически: значение совпадает с topic.UserEvents в auth-сервисе и со списком topics в config.yaml.\n\nuser.deleted стирает прогресс, историю начислений, открытые достижения и счётчики событий удалённого аккаунта. Событие обрабатывается до начисления опыта, чтобы счётчик достижений не завёл строку уже стёртому пользователю.",
       "producers": [
         "auth-service"
       ],
