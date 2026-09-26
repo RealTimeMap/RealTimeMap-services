@@ -57,6 +57,15 @@ services:
       - "traefik.http.routers.marks-person.middlewares=cors-headers@file"
       - "traefik.http.routers.marks-person.tls=true"
 
+      # GET /api/v2/marks/random - случайная активная метка (публичный)
+      # Статический путь: приоритет выше marks-detail, чтобы не зависеть от `/marks/[^/]+$`.
+      - "traefik.http.routers.marks-random.rule=Host(`realtimemap.ru`) && Path(`/api/v2/marks/random`) && Method(`GET`)"
+      - "traefik.http.routers.marks-random.entrypoints=websecure"
+      - "traefik.http.routers.marks-random.priority=100"
+      - "traefik.http.routers.marks-random.service=mark"
+      - "traefik.http.routers.marks-random.middlewares=cors-headers@file"
+      - "traefik.http.routers.marks-random.tls=true"
+
       # POST /api/v2/marks/create - создание метки (с auth)
       - "traefik.http.routers.marks-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/marks/create`) && Method(`POST`)"
       - "traefik.http.routers.marks-create.entrypoints=websecure"

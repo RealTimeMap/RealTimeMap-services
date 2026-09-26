@@ -13,7 +13,6 @@ func (s *Service) GetMarksInArea(ctx context.Context, filter Filter) ([]*Mark, e
 		return nil, err
 	}
 	return marks, nil
-
 }
 
 // GetMarksInCluster получение сгруппированных меток по кластерам для отображения при большой области карты
@@ -40,4 +39,8 @@ func (s *Service) GetUserMarks(ctx context.Context, userID uint, paginationParam
 		return nil, 0, err
 	}
 	return objs, count, nil
+}
+
+func (s *Service) GetRandomMark(ctx context.Context) (Mark, error) {
+	return s.markRepo.GetRandomActiveMark(ctx)
 }

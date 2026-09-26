@@ -94,7 +94,6 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	personalSrv := personalsrv.NewService(personalRepo, groupRepo, revisionRepo, manager, store, log)
 	revisionSrv := personalsrv.NewRevisionService(revisionRepo, log)
 	// USE CASE
-
 	markUseCases := &mark_action.Application{
 		CreateMark:  mark_action.NewCreateMarkHandler(markService, eventPublisher, log),
 		GetMark:     mark_action.NewMarkGetterHandler(markService, log),
@@ -102,6 +101,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		DeleteMark:  mark_action.NewRemoverMarkHandler(markService, log),
 		GetUserMark: mark_action.NewUserMarkGetterHandler(markService, log),
 		UpdateMark:  mark_action.NewUpdateMarkHandler(markService, log),
+		RandomMark:  mark_action.NewRandomMarkHandler(markService, log),
 	}
 
 	markStatUseCases := &mark_stat.Application{
@@ -136,7 +136,8 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		Get:    personal.NewGetPersonalHandler(personalSrv, log),
 		Update: personal.NewUpdatePersonalHandler(personalSrv, log),
 		Delete: personal.NewDeletePersonalHandler(personalSrv, log),
-		Sync: personal.NewSyncMarkHandler(revisionSrv, log,
+		Sync: personal.NewSyncMarkHandler(
+			revisionSrv, log,
 			personal.NewChangeSource(personalSrv, personal.ToSyncMarkDTO),
 			personal.NewChangeSource(groupSrv, personal.ToSyncGroupDTO),
 		),

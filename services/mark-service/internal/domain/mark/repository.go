@@ -12,6 +12,7 @@ type Repository interface {
 	GetMarksInArea(ctx context.Context, filter Filter) ([]*Mark, error)
 	GetUserMarks(ctx context.Context, userID uint, params pagination.Params) ([]*Mark, int64, error)
 	GetMarksInCluster(ctx context.Context, filter Filter) ([]*Cluster, error)
+	GetRandomActiveMark(ctx context.Context) (Mark, error)
 	Exist(ctx context.Context, id uint) (bool, error)
 	Delete(ctx context.Context, id uint) error
 	GetByID(ctx context.Context, id uint) (*Mark, error)

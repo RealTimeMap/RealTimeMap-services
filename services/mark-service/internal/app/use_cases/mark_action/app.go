@@ -7,4 +7,5 @@ type Application struct {
 	DeleteMark  *RemoverMarkHandler
 	GetUserMark *UserMarkGetterHandler
 	UpdateMark  *UpdateMarkHandler
+	RandomMark  *RandomMarkHandler
 }

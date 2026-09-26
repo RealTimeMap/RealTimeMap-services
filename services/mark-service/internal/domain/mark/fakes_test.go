@@ -167,6 +167,10 @@ func (f *fakeMarkRepo) IncShare(_ context.Context, _ uint) (int64, error) {
 	return 0, nil
 }
 
+func (f *fakeMarkRepo) GetRandomActiveMark(_ context.Context) (Mark, error) {
+	return Mark{}, nil
+}
+
 // fakeCategoryRepo — реализация category.Repository под тесты.
 type fakeCategoryRepo struct {
 	getByIDResult *category.Category
