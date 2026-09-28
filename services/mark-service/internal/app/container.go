@@ -18,6 +18,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	category2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 	personalsrv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/asyncstorage"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/infrastructure/persistence/postgres"
 	grpcstat "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/grpc/stats"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/transport/socket"
@@ -38,15 +39,23 @@ type Container struct {
 	// grpc
 	MarkStatServer *grpcstat.Handler
 	Logger         *zap.Logger
+
+	// UploadPool — фоновая загрузка фото в S3. Должен быть в runner, чтобы при
+	// остановке сервиса очередь успела долиться.
+	UploadPool *asyncstorage.Storage
 }
 
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
 	// Создание вспомогательных компонентов
 	// imageValidator := mediavalidator.NewPhotoValidator()
-	store, err := storage.NewMinIOStorage(cfg.Storage, log)
+	minioStore, err := storage.NewMinIOStorage(cfg.Storage, log)
 	if err != nil {
 		panic(err)
 	}
+	// ВРЕМЕННО: запись фото в S3 вынесена из запроса в пул воркеров.
+	// Чтобы вернуть синхронную загрузку, передай в сервисы minioStore.
+	uploadPool := asyncstorage.New(minioStore, asyncstorage.Config{}, log)
+	var store storage.Storage = uploadPool
 
 	// Kafka producer (только если включен).
 	// eventPublisher остаётся nil-интерфейсом, если Kafka выключена —
@@ -162,5 +171,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		PersonalUseCases:        personalUseCases,
 
 		Logger: log,
+
+		UploadPool: uploadPool,
 	}
 }
