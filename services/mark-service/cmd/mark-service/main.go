@@ -54,7 +54,7 @@ func main() {
 		log.Fatal("Failed to start Mark Service", zap.Error(err))
 	}
 
-	servers := []runner.Server{httpServer, grpcServer}
+	servers := []runner.Server{httpServer, grpcServer, container.UploadPool}
 	if cfg.Kafka.Enabled && len(cfg.Kafka.Brokers) > 0 && len(cfg.Kafka.Topics) > 0 {
 		servers = append(servers, consumer.New(
 			consumer.DefaultConfig().

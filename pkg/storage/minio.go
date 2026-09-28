@@ -75,14 +75,23 @@ func buildKey(hash string, ext string) string {
 	return fmt.Sprintf("v1/%s/%s/%s%s", hash[0:2], hash[2:4], hash, ext)
 }
 
-// Upload загружает файл, если объекта с таким содержимым ещё нет.
-func (s *MinIOStorage) Upload(ctx context.Context, data []byte, opts UploadOptions) (*types.Photo, error) {
+// ResolvedObject — то, что известно об объекте до записи в бакет.
+type ResolvedObject struct {
+	Key      string
+	Hash     string
+	MimeType string
+}
+
+// Resolve валидирует файл и вычисляет его ключ без обращения к хранилищу.
+// Upload использует её же, поэтому ключ, посчитанный заранее (например, для
+// отложенной загрузки), совпадёт с ключом, под которым объект будет записан.
+func Resolve(data []byte, opts UploadOptions) (ResolvedObject, error) {
 	if err := opts.Category.Validate(); err != nil {
-		return nil, err
+		return ResolvedObject{}, err
 	}
 
 	if opts.MaxSize > 0 && int64(len(data)) > opts.MaxSize {
-		return nil, fmt.Errorf("%w: %d bytes, max: %d", ErrFileTooLarge, len(data), opts.MaxSize)
+		return ResolvedObject{}, fmt.Errorf("%w: %d bytes, max: %d", ErrFileTooLarge, len(data), opts.MaxSize)
 	}
 
 	mimeType := opts.MimeType
@@ -90,11 +99,11 @@ func (s *MinIOStorage) Upload(ctx context.Context, data []byte, opts UploadOptio
 		mimeType = imageprocessor.DetectMimeType(data)
 	}
 	if !isValidMimeType(mimeType) {
-		return nil, fmt.Errorf("%w: %s", ErrInvalidMimeType, mimeType)
+		return ResolvedObject{}, fmt.Errorf("%w: %s", ErrInvalidMimeType, mimeType)
 	}
 
 	// Хеш считается от ИСХОДНЫХ байтов, а не от результата оптимизации.
-	// Благодаря этому ранний выход ниже срабатывает и при Optimize: true —
+	// Благодаря этому ранний выход в Upload срабатывает и при Optimize: true —
 	// повторная заливка не перекодирует файл заново.
 	sum := sha256.Sum256(data)
 	hash := hex.EncodeToString(sum[:])
@@ -103,7 +112,17 @@ func (s *MinIOStorage) Upload(ctx context.Context, data []byte, opts UploadOptio
 	if ext == "" {
 		ext = imageprocessor.GetExtensionByMimeType(mimeType)
 	}
-	key := buildKey(hash, ext)
+
+	return ResolvedObject{Key: buildKey(hash, ext), Hash: hash, MimeType: mimeType}, nil
+}
+
+// Upload загружает файл, если объекта с таким содержимым ещё нет.
+func (s *MinIOStorage) Upload(ctx context.Context, data []byte, opts UploadOptions) (*types.Photo, error) {
+	obj, err := Resolve(data, opts)
+	if err != nil {
+		return nil, err
+	}
+	key, hash, mimeType := obj.Key, obj.Hash, obj.MimeType
 
 	// Дедупликация: объект уже есть — не пишем.
 	info, err := s.client.StatObject(ctx, s.bucket, key, minio.StatObjectOptions{})
