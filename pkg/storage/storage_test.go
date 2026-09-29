@@ -9,8 +9,8 @@ import (
 )
 
 // Юнит-тесты чистых функций пакета: ключ, валидация категорий и mime.
-// MinIO здесь не нужен — всё, что требует живого хранилища, лежит в
-// minio_integration_test.go.
+// Живое хранилище здесь не нужно — всё, что его требует, лежит в
+// s3_integration_test.go.
 
 func TestBuildKey(t *testing.T) {
 	const hash = "abcd1234ef567890abcd1234ef567890abcd1234ef567890abcd1234ef567890"
@@ -29,8 +29,8 @@ func TestBuildKey(t *testing.T) {
 	})
 
 	t.Run("префикс v1 обязателен: по нему открыт публичный доступ", func(t *testing.T) {
-		// Бакет публичен на чтение ТОЛЬКО для v1/ (см. minio-init в
-		// docker-compose). Ключ без этого префикса вернёт 403 клиенту.
+		// Бакет публичен на чтение ТОЛЬКО для v1/ (см. s3.json сервиса
+		// seaweedfs в docker-compose). Ключ без этого префикса вернёт 403 клиенту.
 		assert.True(t, len(buildKey(hash, ".jpg")) > 3 && buildKey(hash, ".jpg")[:3] == "v1/")
 	})
 
@@ -101,7 +101,7 @@ func TestIsImage(t *testing.T) {
 }
 
 func TestGetURL(t *testing.T) {
-	s := &MinIOStorage{baseURL: "https://realtimemap.ru/files"}
+	s := &S3Storage{baseURL: "https://realtimemap.ru/files"}
 	assert.Equal(t,
 		"https://realtimemap.ru/files/v1/ab/cd/hash.jpg",
 		s.GetURL("v1/ab/cd/hash.jpg"),

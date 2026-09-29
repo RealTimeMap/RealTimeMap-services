@@ -16,7 +16,7 @@ import (
 )
 
 // Тесты остальных методов сервисного слоя. Репозитории и хранилище —
-// фейки из fakes_test.go, БД и MinIO не нужны.
+// фейки из fakes_test.go, БД и хранилище не нужны.
 
 func testUser() ctxHelper.UserInput {
 	return ctxHelper.UserInput{UserID: 42, UserName: "tester"}

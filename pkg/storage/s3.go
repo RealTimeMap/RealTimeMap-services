@@ -21,8 +21,8 @@ import (
 // maxWorkers ограничивает число параллельных загрузок внутри UploadMultiple.
 const maxWorkers = 5
 
-// MinIOStorage — реализация Storage поверх S3-совместимого хранилища.
-type MinIOStorage struct {
+// S3Storage — реализация Storage поверх S3-совместимого хранилища.
+type S3Storage struct {
 	client    *minio.Client
 	bucket    string
 	baseURL   string
@@ -30,19 +30,20 @@ type MinIOStorage struct {
 	logger    *zap.Logger
 }
 
-// NewMinIOStorage создаёт клиент и проверяет, что бакет существует.
+// NewS3Storage создаёт клиент и проверяет, что бакет существует.
 //
-// Бакет намеренно НЕ создаётся из кода: политику публичного чтения префикса
-// v1/ выставляет minio-init в docker-compose. Созданный отсюда бакет был бы
-// приватным, и раздача через traefik молча сломалась бы.
-func NewMinIOStorage(cfg StorageConfig, logger *zap.Logger) (Storage, error) {
+// Бакет намеренно НЕ создаётся из кода: его создаёт seaweedfs в docker-compose
+// (S3_BUCKET), и публичное чтение префикса v1/ выдано в s3.json именно на это
+// имя. Бакет, созданный отсюда под другим именем, был бы приватным, и раздача
+// через traefik молча сломалась бы.
+func NewS3Storage(cfg StorageConfig, logger *zap.Logger) (Storage, error) {
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
 		Secure: cfg.UseSSL,
 		Region: cfg.Region,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create minio client: %w", err)
+		return nil, fmt.Errorf("failed to create s3 client: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -53,10 +54,10 @@ func NewMinIOStorage(cfg StorageConfig, logger *zap.Logger) (Storage, error) {
 		return nil, fmt.Errorf("failed to check bucket %q: %w", cfg.Bucket, err)
 	}
 	if !exists {
-		return nil, fmt.Errorf("bucket %q does not exist: создаётся сервисом minio-init", cfg.Bucket)
+		return nil, fmt.Errorf("bucket %q does not exist: создаётся сервисом seaweedfs (S3_BUCKET)", cfg.Bucket)
 	}
 
-	return &MinIOStorage{
+	return &S3Storage{
 		client:    client,
 		bucket:    cfg.Bucket,
 		baseURL:   cfg.BaseURL,
@@ -117,7 +118,7 @@ func Resolve(data []byte, opts UploadOptions) (ResolvedObject, error) {
 }
 
 // Upload загружает файл, если объекта с таким содержимым ещё нет.
-func (s *MinIOStorage) Upload(ctx context.Context, data []byte, opts UploadOptions) (*types.Photo, error) {
+func (s *S3Storage) Upload(ctx context.Context, data []byte, opts UploadOptions) (*types.Photo, error) {
 	obj, err := Resolve(data, opts)
 	if err != nil {
 		return nil, err
@@ -200,7 +201,7 @@ func (s *MinIOStorage) Upload(ctx context.Context, data []byte, opts UploadOptio
 }
 
 // UploadMultiple загружает файлы параллельно, fail-fast.
-func (s *MinIOStorage) UploadMultiple(ctx context.Context, files []FileUpload) (types.Photos, error) {
+func (s *S3Storage) UploadMultiple(ctx context.Context, files []FileUpload) (types.Photos, error) {
 	photos := make(types.Photos, len(files))
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -225,12 +226,12 @@ func (s *MinIOStorage) UploadMultiple(ctx context.Context, files []FileUpload) (
 }
 
 // GetURL возвращает публичный URL объекта.
-func (s *MinIOStorage) GetURL(storageKey string) string {
+func (s *S3Storage) GetURL(storageKey string) string {
 	return fmt.Sprintf("%s/%s", s.baseURL, storageKey)
 }
 
 // Exists проверяет существование объекта.
-func (s *MinIOStorage) Exists(ctx context.Context, storageKey string) (bool, error) {
+func (s *S3Storage) Exists(ctx context.Context, storageKey string) (bool, error) {
 	_, err := s.client.StatObject(ctx, s.bucket, storageKey, minio.StatObjectOptions{})
 	if err == nil {
 		return true, nil

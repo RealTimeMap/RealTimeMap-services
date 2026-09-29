@@ -19,7 +19,7 @@ type Photo struct {
 	// При Optimize: true в бакет попадают перекодированные байты, чей хеш
 	// отличается. Не использовать для проверки целостности объекта или как ETag.
 	Hash       string    `json:"hash,omitempty"`
-	StorageKey string    `json:"storage_key,omitempty"` // Ключ/путь в хранилище (S3, MinIO и т.д.)
+	StorageKey string    `json:"storage_key,omitempty"` // Ключ/путь в хранилище (S3, SeaweedFS и т.д.)
 	UploadedAt time.Time `json:"uploaded_at,omitempty"` // Время загрузки
 }
 

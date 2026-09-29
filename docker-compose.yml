@@ -16,6 +16,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -61,84 +62,84 @@ services:
     networks:
       - service-network
 
-  minio:
-    # quay.io, а не Docker Hub: MinIO убрала оттуда публичные образы, и
-    # minio/minio теперь отдаёт "pull access denied ... repository does not
-    # exist". quay.io — реестр, на который MinIO публикует их сама.
-    image: quay.io/minio/minio:latest
-    container_name: rtm_minio
+  # SeaweedFS вместо MinIO: MinIO перестала публиковать open-source образы.
+  # weed mini — master + volume + filer + S3 в одном процессе, для одной ноды
+  # этого достаточно. Наружу нужен только S3 (8333).
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48
+    container_name: rtm_seaweedfs
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    # .env compose использует только для подстановки ${...} в этом файле —
+    # внутрь контейнера он не попадает. Всё, что читает entrypoint, нужно
+    # передать явно.
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      # weed mini сам создаёт бакет на старте, если его нет.
+      S3_BUCKET: ${S3_BUCKET}
+      # Вход в Admin UI (23646). weed mini слушает его на всех интерфейсах, так
+      # что без пароля он открыт любому контейнеру в service-network и web.
+      WEED_ADMIN_USER: ${SEAWEEDFS_ADMIN_USER:-admin}
+      WEED_ADMIN_PASSWORD: ${SEAWEEDFS_ADMIN_PASSWORD}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat > /etc/seaweedfs/s3.json <<EOF
+        {
+          "identities": [
+            {
+              "name": "anonymous",
+              "actions": ["Read:$${S3_BUCKET}/v1/*"]
+            },
+            {
+              "name": "admin",
+              "credentials": [{"accessKey": "$${S3_ACCESS_KEY}", "secretKey": "$${S3_SECRET_KEY}"}],
+              "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+            }
+          ]
+        }
+        EOF
+        exec weed mini -dir=/data -s3.config=/etc/seaweedfs/s3.json
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8333/healthz"]
       interval: 5s
       timeout: 3s
       retries: 5
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "8333:8333"
     volumes:
-      - minio_data:/data
+      - seaweedfs_data:/data
     labels:
       - "traefik.enable=true"
 
-
-      - "traefik.http.routers.media-ui.rule=Host(`realtimemap.ru`) && PathPrefix(`/minio`)"
-      - "traefik.http.routers.media-ui.entrypoints=websecure"
-      - "traefik.http.routers.media-ui.service=media"
-      - "traefik.http.routers.media-ui.tls=true"
-
       # Раздача медиафайлов: /files/v1/... -> бакет rtm-media.
-      # Бакет публичен на чтение только для префикса v1/ (см. minio-init),
+      # Анонимно читается только префикс v1/ (см. s3.json выше),
       # поэтому auth-check здесь намеренно не подключён.
       - "traefik.http.routers.media-public.rule=Host(`realtimemap.ru`) && PathPrefix(`/files/`)"
       - "traefik.http.routers.media-public.entrypoints=websecure"
       - "traefik.http.routers.media-public.priority=100"
       - "traefik.http.routers.media-public.service=media"
-      - "traefik.http.routers.media-public.middlewares=cors-headers@file,media-path"
+      - "traefik.http.routers.media-public.middlewares=cors-headers@file,media-path,media-cache"
       - "traefik.http.routers.media-public.tls=true"
+      - "traefik.http.middlewares.media-cache.headers.customresponseheaders.Cache-Control=public, max-age=31536000, immutable"
 
       # /files/v1/ab/cd/<hash>.jpg -> /rtm-media/v1/ab/cd/<hash>.jpg
       - "traefik.http.middlewares.media-path.replacepathregex.regex=^/files/(.*)"
       - "traefik.http.middlewares.media-path.replacepathregex.replacement=/rtm-media/$$1"
 
 
-      - "traefik.http.services.media.loadbalancer.server.port=9000"
+      - "traefik.http.services.media.loadbalancer.server.port=8333"
     networks:
       # service-network — доступ из Go-сервисов; web — раздача через traefik
       # (providers.docker.network: web в traefik.yml)
       - service-network
       - web
 
-  # Одноразовая инициализация: создаёт бакет и открывает публичное чтение
-  # префикса v1/. Без неё бакета не будет, и NewMinIOStorage упадёт на старте.
-  minio-init:
-    image: quay.io/minio/mc:latest
-    container_name: rtm_minio_init
-    depends_on:
-      minio:
-        condition: service_healthy
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      MINIO_BUCKET: ${MINIO_BUCKET}
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
-      mc mb --ignore-existing local/$$MINIO_BUCKET &&
-      mc anonymous set download local/$$MINIO_BUCKET/v1 &&
-      echo 'minio bucket ready'
-      "
-    networks:
-      - service-network
-
 volumes:
   redis_data:
   postgres_data:
-  minio_data:
+  seaweedfs_data:
 
 networks:
   web:

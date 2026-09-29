@@ -122,6 +122,16 @@ http:
           - "X-User-Ban-Time"
         authRequestHeaders:
           - "Authorization"
+    compress:
+      compress:
+        includedContentTypes:
+          - "application/json"
+          - "application/javascript"
+          - "text/html"
+          - "text/plain"
+          - "text/css"
+          - "image/svg+xml"
+        minResponseBodyBytes: 1024
     strip-rttask:
       stripPrefix:
         prefixes:
