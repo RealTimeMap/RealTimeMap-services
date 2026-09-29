@@ -55,6 +55,11 @@ type Handler struct {
 	// frontendURL — база для ссылок в письмах.
 	frontendURL string
 
+	// bugRecipients и adminURL — адресаты и база ссылок для писем о новых
+	// баг-репортах. Без адресатов письма не ставятся.
+	bugRecipients []string
+	adminURL      string
+
 	logger *zap.Logger
 }
 
@@ -66,6 +71,13 @@ func NewHandler(emails Enqueuer, users UserResolver, eraser RecipientEraser, fro
 		frontendURL: frontendURL,
 		logger:      logger,
 	}
+}
+
+// WithBugReports включает письма о новых баг-репортах.
+func (h *Handler) WithBugReports(recipients []string, adminURL string) *Handler {
+	h.bugRecipients = recipients
+	h.adminURL = strings.TrimRight(adminURL, "/")
+	return h
 }
 
 // HandleMessage разбирает сообщение и направляет его обработчику по типу.
@@ -108,10 +120,113 @@ func (h *Handler) HandleMessage(ctx context.Context, msg segmentio.Message) erro
 		return h.handleLoggedIn(ctx, msg)
 	case events.UserDeleted:
 		return h.handleUserDeleted(ctx, msg)
+	case EventBugCreated:
+		return h.handleBugCreated(ctx, msg)
 	default:
 		// Топик может содержать события, до которых сервису нет дела.
 		return nil
 	}
+}
+
+// handleBugCreated ставит письмо о новом баг-репорте каждому адресату.
+func (h *Handler) handleBugCreated(ctx context.Context, msg segmentio.Message) error {
+	if len(h.bugRecipients) == 0 {
+		return nil
+	}
+
+	payload, err := decodePayload[events.BugCreatedPayload](msg.Value)
+	if err != nil {
+		return consumer.Skip(err)
+	}
+	if payload.BugID == 0 {
+		return consumer.Skip(errors.New("bug.created without bugId"))
+	}
+
+	bugCode := fmt.Sprintf("BR-%d", payload.BugID)
+	data := map[string]any{
+		"bugCode":     bugCode,
+		"title":       orDash(payload.Title),
+		"description": strings.TrimSpace(payload.Desc),
+		"tagLabel":    bugTagLabel(payload.Tag),
+		"author":      h.bugAuthor(ctx, payload.UserID),
+		"device":      joinNonEmpty(" · ", payload.Platform, payload.OS),
+		"resolution":  strings.TrimSpace(payload.Resolution),
+		"build":       orDash(payload.Build),
+		"reportedAt":  formatMoment(orNow(payload.CreatedAt)),
+		"bugUrl":      fmt.Sprintf("%s/bugs/%d", h.adminURL, payload.BugID),
+		"bugsUrl":     h.adminURL + "/bugs",
+	}
+
+	for _, to := range h.bugRecipients {
+		to = strings.TrimSpace(to)
+		if to == "" {
+			continue
+		}
+		_, err := h.emails.Enqueue(ctx, email.EnqueueInput{
+			TemplateID:     "newBugReport",
+			ToEmail:        to,
+			Data:           data,
+			IdempotencyKey: fmt.Sprintf("%s:%d:%s", EventBugCreated, payload.BugID, to),
+			TraceID:        traceID(msg),
+		})
+		if err != nil {
+			return h.classifyEnqueueErrorFor(err, "bug report", zap.Uint("bug_id", payload.BugID))
+		}
+	}
+
+	h.logger.Info("bug report emails queued",
+		zap.Uint("bug_id", payload.BugID), zap.Int("recipients", len(h.bugRecipients)))
+	return nil
+}
+
+// bugAuthor подписывает автора отчёта. Сбой UserService письмо не
+// останавливает: без имени оно всё равно полезно.
+func (h *Handler) bugAuthor(ctx context.Context, userID *uint) string {
+	if userID == nil {
+		return "Аноним"
+	}
+	fallback := fmt.Sprintf("Пользователь #%d", *userID)
+
+	user, err := h.users.GetUserByID(ctx, int64(*userID))
+	if err != nil {
+		h.logger.Warn("failed to resolve bug author", zap.Uint("user_id", *userID), zap.Error(err))
+		return fallback
+	}
+	if strings.TrimSpace(user.Username) == "" {
+		return fallback
+	}
+	return "@" + user.Username
+}
+
+func bugTagLabel(tag string) string {
+	switch tag {
+	case "ui":
+		return "ИНТЕРФЕЙС"
+	case "logic":
+		return "ЛОГИКА"
+	case "feature":
+		return "ФУНКЦИЯ"
+	}
+	return "БЕЗ КАТЕГОРИИ"
+}
+
+func joinNonEmpty(sep string, parts ...string) string {
+	kept := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			kept = append(kept, p)
+		}
+	}
+	return orDash(strings.Join(kept, sep))
+}
+
+// orDash подставляет прочерк вместо пустого значения: контракт шаблона не
+// допускает пустых полей.
+func orDash(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "—"
+	}
+	return strings.TrimSpace(s)
 }
 
 // handleUserDeleted удаляет письма удалённого аккаунта: в них адрес, имя и

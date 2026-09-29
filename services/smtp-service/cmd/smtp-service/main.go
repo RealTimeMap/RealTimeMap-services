@@ -53,7 +53,8 @@ func main() {
 
 	// Kafka-вход: хендлер только ставит письмо в очередь и отдаёт управление,
 	// чтобы offset коммитился сразу, а не после SMTP-диалога.
-	kafkaHandler := kafkatransport.NewHandler(container.Emailer, users, container.Emails, cfg.Frontend.BaseURL, log)
+	kafkaHandler := kafkatransport.NewHandler(container.Emailer, users, container.Emails, cfg.Frontend.BaseURL, log).
+		WithBugReports(cfg.BugReport.Recipients, cfg.BugReport.AdminURL)
 	kafkaConsumer := consumer.New(
 		consumer.DefaultConfig().
 			WithBrokers(cfg.Kafka.Brokers...).

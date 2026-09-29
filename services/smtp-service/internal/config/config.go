@@ -137,15 +137,24 @@ type Frontend struct {
 	BaseURL string `yaml:"base_url" env:"FRONTEND_BASE_URL" env-default:"https://realtimemap.ru"`
 }
 
+// BugReport — уведомления разработчиков о новых баг-репортах.
+type BugReport struct {
+	// Recipients — адреса получателей. Пусто — письма не отправляются.
+	Recipients []string `yaml:"recipients" env:"BUG_REPORT_RECIPIENTS" env-separator:","`
+	// AdminURL — база админ-панели для ссылок на репорт.
+	AdminURL string `yaml:"admin_url" env:"BUG_REPORT_ADMIN_URL" env-default:"https://admin.realtimemap.ru"`
+}
+
 type Config struct {
-	Env      string      `yaml:"env" env:"ENV" env-default:"local"`
-	SMTP     SMTP        `yaml:"smtp"`
-	Database Database    `yaml:"database"`
-	Kafka    Kafka       `yaml:"kafka"`
-	HTTP     http.Config `yaml:"http"`
-	Worker   Worker      `yaml:"worker"`
-	User     UserGRPC    `yaml:"user"`
-	Frontend Frontend    `yaml:"frontend"`
+	Env       string      `yaml:"env" env:"ENV" env-default:"local"`
+	SMTP      SMTP        `yaml:"smtp"`
+	Database  Database    `yaml:"database"`
+	Kafka     Kafka       `yaml:"kafka"`
+	HTTP      http.Config `yaml:"http"`
+	Worker    Worker      `yaml:"worker"`
+	User      UserGRPC    `yaml:"user"`
+	Frontend  Frontend    `yaml:"frontend"`
+	BugReport BugReport   `yaml:"bug_report"`
 }
 
 func MustLoad() *Config {
