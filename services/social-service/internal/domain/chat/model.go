@@ -60,6 +60,29 @@ type ChatParticipant struct {
 	Chat Chat `gorm:"foreignKey:ChatID"`
 }
 
+// ReadCursor — до какого сообщения участник прочитал чат (0 — ничего).
+type ReadCursor struct {
+	UserID            uint
+	LastReadMessageID uint
+}
+
+// ActiveReadCursors возвращает курсоры прочтения не вышедших участников.
+func ActiveReadCursors(participants []ChatParticipant) []ReadCursor {
+	cursors := make([]ReadCursor, 0, len(participants))
+	for i := range participants {
+		p := &participants[i]
+		if p.LeftAt != nil {
+			continue
+		}
+		var lastRead uint
+		if p.LastReadMessageID != nil {
+			lastRead = *p.LastReadMessageID
+		}
+		cursors = append(cursors, ReadCursor{UserID: p.UserID, LastReadMessageID: lastRead})
+	}
+	return cursors
+}
+
 type ChatListItem struct {
 	Chat        Chat
 	LastMessage *message.Message

@@ -89,9 +89,7 @@ func (s *SocketServer) handlePresenceConnect(sock *socket.Socket, userID uint, c
 // handlePresenceDisconnect снимает регистрацию соединения и рассылает
 // presence.offline, если закрылось последнее соединение пользователя.
 //
-// chatIDs — список, посчитанный при подключении. Комнаты сокета к моменту
-// disconnect уже очищены библиотекой, поэтому адресовать рассылку по
-// sock.Rooms() здесь нельзя — используем сохранённый срез.
+// chatIDs — чаты сокета, снятые с его комнат в disconnecting.
 func (s *SocketServer) handlePresenceDisconnect(sock *socket.Socket, userID uint, chatIDs []uint) {
 	if s.presence == nil {
 		return

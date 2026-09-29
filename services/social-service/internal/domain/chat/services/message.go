@@ -147,6 +147,21 @@ func (s *MessageService) History(ctx context.Context, params MessageGetParams) (
 	})
 }
 
+// ReadCursors возвращает курсоры прочтения активных участников. Участие не
+// проверяет — это уже делает History.
+func (s *MessageService) ReadCursors(ctx context.Context, chatID uint) ([]chat.ReadCursor, error) {
+	participants, err := s.partRepo.ListByChat(ctx, chatID)
+	if err != nil {
+		return nil, err
+	}
+
+	values := make([]chat.ChatParticipant, 0, len(participants))
+	for _, p := range participants {
+		values = append(values, *p)
+	}
+	return chat.ActiveReadCursors(values), nil
+}
+
 // RecipientIDs возвращает id всех активных участников чата, кому нужно доставить
 // realtime-событие о новом сообщении, — включая самого отправителя. Отправитель
 // получает эхо на свои другие устройства/вкладки; девайс-инициатор дедупит

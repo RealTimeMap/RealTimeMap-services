@@ -3,6 +3,7 @@ package chatsocket
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/zishang520/socket.io/servers/socket/v3"
 	"go.uber.org/zap"
@@ -45,7 +46,26 @@ func UserRoom(userID uint) socket.Room {
 // проверки участия в БД. Единая точка формирования имени: Join (namespace),
 // SocketsJoin/Leave (room-sync) и Emit (publisher).
 func ChatRoom(chatID uint) socket.Room {
-	return socket.Room("chat:" + strconv.FormatUint(uint64(chatID), 10))
+	return socket.Room(chatRoomPrefix + strconv.FormatUint(uint64(chatID), 10))
+}
+
+const chatRoomPrefix = "chat:"
+
+// chatIDsFromRooms возвращает id чатов из комнат chat:<id>.
+func chatIDsFromRooms(rooms []socket.Room) []uint {
+	ids := make([]uint, 0, len(rooms))
+	for _, room := range rooms {
+		raw, ok := strings.CutPrefix(string(room), chatRoomPrefix)
+		if !ok {
+			continue
+		}
+		id, err := strconv.ParseUint(raw, 10, 64)
+		if err != nil || id == 0 {
+			continue
+		}
+		ids = append(ids, uint(id))
+	}
+	return ids
 }
 
 // InitChatNamespace вешает на namespace /chats аутентификацию и обработчик
@@ -122,6 +142,13 @@ func InitChatNamespace(s *SocketServer) {
 			zap.Uint("user_id", data.userID),
 			zap.String("socket_id", string(sock.Id())))
 
+		// presence.offline — в актуальные чаты сокета. Снимаем их в
+		// disconnecting: в disconnect комнаты уже очищены.
+		offlineChatIDs := chatIDs
+		sock.On("disconnecting", func(...any) {
+			offlineChatIDs = chatIDsFromRooms(sock.Rooms().Keys())
+		})
+
 		sock.On("disconnect", func(reason ...any) {
 			close(refreshDone)
 
@@ -129,7 +156,7 @@ func InitChatNamespace(s *SocketServer) {
 			// собеседников не должно висеть «Печатает...» от того, кто отвалился.
 			s.stopTypingOnDisconnect(sock, data, typing)
 
-			s.handlePresenceDisconnect(sock, data.userID, chatIDs)
+			s.handlePresenceDisconnect(sock, data.userID, offlineChatIDs)
 
 			s.logger.Info("socket disconnected",
 				zap.Uint("user_id", data.userID),

@@ -80,14 +80,16 @@ func toMultiMessageResult(messages []*message.Message, profiles map[uint]*model.
 type MessageHistoryResult struct {
 	Messages      []MessageResult
 	LastMessageID *uint
+	// ReadCursors — курсоры прочтения активных участников, включая запросившего.
+	ReadCursors []ReadCursorResult
 }
 
-func toMessageHistoryResult(messages []*message.Message, profiles map[uint]*model.Profile, lastID *uint) MessageHistoryResult {
+func toMessageHistoryResult(messages []*message.Message, profiles map[uint]*model.Profile, lastID *uint, cursors []chat.ReadCursor) MessageHistoryResult {
 	return MessageHistoryResult{
 		Messages:      toMultiMessageResult(messages, profiles),
 		LastMessageID: lastID,
+		ReadCursors:   toReadCursorResults(cursors),
 	}
-
 }
 
 // READ
@@ -98,6 +100,23 @@ type ReadResult struct {
 	ChatID            uint
 	UserID            uint
 	LastReadMessageID uint
+}
+
+// ReadCursorResult — курсор прочтения одного участника чата.
+type ReadCursorResult struct {
+	UserID            uint
+	LastReadMessageID uint
+}
+
+func toReadCursorResults(cursors []chat.ReadCursor) []ReadCursorResult {
+	results := make([]ReadCursorResult, 0, len(cursors))
+	for _, c := range cursors {
+		results = append(results, ReadCursorResult{
+			UserID:            c.UserID,
+			LastReadMessageID: c.LastReadMessageID,
+		})
+	}
+	return results
 }
 
 // DeletedResult — payload события chat.deleted.
@@ -165,6 +184,9 @@ type ChatListItemResult struct {
 	LastMessage *LastMessagePreview
 	UnreadCount int
 	UpdatedAt   time.Time
+
+	// ReadCursors — курсоры прочтения активных участников.
+	ReadCursors []ReadCursorResult
 }
 
 // toChatListItemResult маппит один элемент списка чатов.
@@ -174,6 +196,8 @@ func toChatListItemResult(item *chat.ChatListItem, requesterID uint, profiles ma
 		Type:        string(item.Chat.Type),
 		UnreadCount: item.UnreadCount,
 		UpdatedAt:   item.Chat.UpdatedAt,
+		// Участники уже подгружены вместе с чатом.
+		ReadCursors: toReadCursorResults(chat.ActiveReadCursors(item.Chat.Participants)),
 	}
 
 	switch item.Chat.Type {

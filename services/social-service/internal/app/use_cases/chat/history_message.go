@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/utils"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat/message"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat/services"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/model"
@@ -12,20 +13,22 @@ import (
 
 type HistoryGetter interface {
 	History(ctx context.Context, params services.MessageGetParams) ([]*message.Message, error)
+	// ReadCursors — курсоры прочтения активных участников чата.
+	ReadCursors(ctx context.Context, chatID uint) ([]chat.ReadCursor, error)
 }
 
 type ChatHistoryHandler struct {
-	getter        HistoryGetter
-	profileGetter ProfileGetter
+	getter         HistoryGetter
+	profilesGetter ProfilesBatchGetter
 
 	logger *zap.Logger
 }
 
-func NewChatHistoryHandler(getter HistoryGetter, profileGetter ProfileGetter, logger *zap.Logger) *ChatHistoryHandler {
+func NewChatHistoryHandler(getter HistoryGetter, profilesGetter ProfilesBatchGetter, logger *zap.Logger) *ChatHistoryHandler {
 	return &ChatHistoryHandler{
-		getter:        getter,
-		profileGetter: profileGetter,
-		logger:        logger,
+		getter:         getter,
+		profilesGetter: profilesGetter,
+		logger:         logger,
 	}
 }
 
@@ -50,25 +53,42 @@ func (h *ChatHistoryHandler) Handle(ctx context.Context, cmd GetMessageCommand) 
 		return MessageHistoryResult{}, err
 	}
 
-	userIds := make([]uint, 0, len(messages))
-	for _, m := range messages {
-		userIds = append(userIds, m.SenderID)
+	// History уже проверила, что пользователь — участник чата.
+	cursors, err := h.getter.ReadCursors(ctx, cmd.ChatID)
+	if err != nil {
+		h.logger.Warn("failed to get read cursors", zap.Error(err), zap.Uint("chat_id", cmd.ChatID))
+		return MessageHistoryResult{}, err
 	}
-	userIds = utils.UniqueValues(userIds)
 
-	profiles := make(map[uint]*model.Profile, len(userIds))
-	for _, id := range userIds {
-		p, err := h.profileGetter.GetProfile(ctx, id)
-		if err != nil {
-			h.logger.Warn("failed to get profile", zap.Error(err), zap.Uint("user_id", id))
-			continue
-		}
-		profiles[p.UserID] = p
-	}
+	profiles := h.loadSenderProfiles(ctx, messages)
 
 	h.logger.Info("chat history fetched",
 		zap.Uint("chat_id", cmd.ChatID), zap.Int("count", len(messages)))
-	return toMessageHistoryResult(messages, profiles, nextCursor(messages)), nil
+	return toMessageHistoryResult(messages, profiles, nextCursor(messages), cursors), nil
+}
+
+// loadSenderProfiles одним запросом подгружает профили авторов. Best-effort.
+func (h *ChatHistoryHandler) loadSenderProfiles(ctx context.Context, messages []*message.Message) map[uint]*model.Profile {
+	ids := make([]uint, 0, len(messages))
+	for _, m := range messages {
+		ids = append(ids, m.SenderID)
+	}
+	ids = utils.UniqueValues(ids)
+
+	profiles := make(map[uint]*model.Profile, len(ids))
+	if len(ids) == 0 {
+		return profiles
+	}
+
+	list, err := h.profilesGetter.GetProfilesByIDs(ctx, ids)
+	if err != nil {
+		h.logger.Warn("failed to batch-load sender profiles", zap.Error(err))
+		return profiles
+	}
+	for _, p := range list {
+		profiles[p.UserID] = p
+	}
+	return profiles
 }
 
 // nextCursor возвращает id последнего (самого старого) сообщения страницы —

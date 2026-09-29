@@ -228,12 +228,13 @@ func (r *ChatRepository) Delete(ctx context.Context, chatID uint) error {
 	})
 }
 
-// UpdateLastMessage обновляет денормализованный указатель на последнее сообщение чата.
+// UpdateLastMessage обновляет указатель на последнее сообщение чата. Монотонный:
+// при параллельной отправке старое сообщение не затрёт новое.
 func (r *ChatRepository) UpdateLastMessage(ctx context.Context, chatID, messageID uint) error {
 	return r.dbCtx(ctx).
 		Model(&chat.Chat{}).
 		Where("id = ?", chatID).
-		Update("last_message_id", messageID).Error
+		Update("last_message_id", gorm.Expr("GREATEST(COALESCE(last_message_id, 0), ?)", messageID)).Error
 }
 
 func directKey(a, b uint) string {
