@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/social-service/internal/domain/chat/message"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -25,8 +26,13 @@ func NewMessageRepository(db *gorm.DB, log *zap.Logger) message.Repository {
 	}
 }
 
+// dbCtx возвращает транзакцию из контекста либо собственный пул.
+func (r *MessageRepository) dbCtx(ctx context.Context) *gorm.DB {
+	return txmanager.DBFromCtx(ctx, r.db)
+}
+
 func (r *MessageRepository) Create(ctx context.Context, obj *message.Message) error {
-	return r.db.WithContext(ctx).Create(obj).Error
+	return r.dbCtx(ctx).Create(obj).Error
 }
 
 // CreateIdempotent вставляет сообщение с дедупом по (chat_id, sender_id,
@@ -35,10 +41,10 @@ func (r *MessageRepository) Create(ctx context.Context, obj *message.Message) er
 // obj, чтобы вернуть тот же результат, что и в первый раз (идемпотентный ответ).
 func (r *MessageRepository) CreateIdempotent(ctx context.Context, obj *message.Message) (bool, error) {
 	if obj.ClientMessageID == nil {
-		return true, r.db.WithContext(ctx).Create(obj).Error
+		return true, r.dbCtx(ctx).Create(obj).Error
 	}
 
-	res := r.db.WithContext(ctx).
+	res := r.dbCtx(ctx).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "chat_id"}, {Name: "sender_id"}, {Name: "client_message_id"}},
 			DoNothing: true,
@@ -53,7 +59,7 @@ func (r *MessageRepository) CreateIdempotent(ctx context.Context, obj *message.M
 
 	// Конфликт: строка уже была. Возвращаем исходное сообщение через тот же obj.
 	var existing message.Message
-	err := r.db.WithContext(ctx).
+	err := r.dbCtx(ctx).
 		Where("chat_id = ? AND sender_id = ? AND client_message_id = ?",
 			obj.ChatID, obj.SenderID, *obj.ClientMessageID).
 		First(&existing).Error
@@ -67,13 +73,13 @@ func (r *MessageRepository) CreateIdempotent(ctx context.Context, obj *message.M
 // Delete — soft-delete через gorm.DeletedAt: сообщение остаётся в БД
 // («сообщение удалено»), но исключается из обычных выборок.
 func (r *MessageRepository) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).
+	return r.dbCtx(ctx).
 		Delete(&message.Message{}, id).Error
 }
 
 // Update сохраняет изменённые поля сообщения (Content, EditedAt).
 func (r *MessageRepository) Update(ctx context.Context, obj *message.Message) error {
-	return r.db.WithContext(ctx).
+	return r.dbCtx(ctx).
 		Model(obj).
 		Select("content", "edited_at").
 		Updates(obj).Error
@@ -88,7 +94,7 @@ func (r *MessageRepository) GetMessages(ctx context.Context, filter message.Filt
 		limit = defaultMessagePageSize
 	}
 
-	q := r.db.WithContext(ctx).
+	q := r.dbCtx(ctx).
 		Where("chat_id = ?", filter.ChatID)
 
 	if filter.LastMessageID != nil {
@@ -110,7 +116,7 @@ func (r *MessageRepository) GetMessages(ctx context.Context, filter message.Filt
 
 func (r *MessageRepository) GetByID(ctx context.Context, id uint) (*message.Message, error) {
 	var m message.Message
-	err := r.db.WithContext(ctx).First(&m, id).Error
+	err := r.dbCtx(ctx).First(&m, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

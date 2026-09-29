@@ -78,6 +78,24 @@ func NewReadResponse(r chatuc.ReadResult) ReadResponse {
 	}
 }
 
+// ReadCursorResponse — курсор прочтения участника (0 — ничего не прочитано).
+// Поля совпадают с событием chat.read.
+type ReadCursorResponse struct {
+	UserID            uint `json:"userId"`
+	LastReadMessageID uint `json:"lastReadMessageId"`
+}
+
+func NewReadCursorsResponse(cursors []chatuc.ReadCursorResult) []ReadCursorResponse {
+	res := make([]ReadCursorResponse, 0, len(cursors))
+	for _, c := range cursors {
+		res = append(res, ReadCursorResponse{
+			UserID:            c.UserID,
+			LastReadMessageID: c.LastReadMessageID,
+		})
+	}
+	return res
+}
+
 // DeletedResponse — событие chat.deleted. Уходит только через socket (у HTTP
 // DELETE тело ответа пустое, 204).
 type DeletedResponse struct {
@@ -128,6 +146,8 @@ func NewGroupChatResponse(r chatuc.GroupChatResult) GroupChatResponse {
 type MessageHistoryResponse struct {
 	Messages      []MessageResponse `json:"messages"`
 	LastMessageID *uint             `json:"lastMessageId"`
+	// ReadCursors — курсоры прочтения всех активных участников чата.
+	ReadCursors []ReadCursorResponse `json:"readCursors"`
 }
 
 func NewMessageHistoryResponse(r chatuc.MessageHistoryResult) MessageHistoryResponse {
@@ -138,6 +158,7 @@ func NewMessageHistoryResponse(r chatuc.MessageHistoryResult) MessageHistoryResp
 	return MessageHistoryResponse{
 		Messages:      messages,
 		LastMessageID: r.LastMessageID,
+		ReadCursors:   NewReadCursorsResponse(r.ReadCursors),
 	}
 }
 
@@ -168,6 +189,9 @@ type ChatListItemResponse struct {
 	LastMessage *LastMessagePreviewResponse `json:"lastMessage"`
 	UnreadCount int                         `json:"unreadCount"`
 	UpdatedAt   time.Time                   `json:"updatedAt"`
+
+	// ReadCursors — курсоры прочтения всех активных участников чата.
+	ReadCursors []ReadCursorResponse `json:"readCursors"`
 }
 
 func NewChatListItemResponse(item chatuc.ChatListItemResult) ChatListItemResponse {
@@ -179,6 +203,7 @@ func NewChatListItemResponse(item chatuc.ChatListItemResult) ChatListItemRespons
 		IsAdmin:     item.IsAdmin,
 		UnreadCount: item.UnreadCount,
 		UpdatedAt:   item.UpdatedAt,
+		ReadCursors: NewReadCursorsResponse(item.ReadCursors),
 	}
 	if item.LastMessage != nil {
 		res.LastMessage = &LastMessagePreviewResponse{
