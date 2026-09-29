@@ -35,6 +35,7 @@ func InitTokenHandler(g *gin.RouterGroup, deps TokenDeps) {
 	{
 		r.POST("", auth.AuthRequired(), h.Create)
 		r.PATCH("/me", auth.AuthRequired(), h.UpdateSettings)
+		r.DELETE("/me", auth.AuthRequired(), h.Delete)
 	}
 }
 
@@ -52,6 +53,29 @@ func (h *tokenHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Register(c.Request.Context(), req.ToParams(uint(userID))); err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// Delete удаляет текущее устройство — клиент вызывает его перед выходом из
+// аккаунта.
+func (h *tokenHandler) Delete(c *gin.Context) {
+	userID, err := ctxhelper.GetUserID(c)
+	if err != nil {
+		errorhandler.HandleError(c, err, h.logger)
+		return
+	}
+
+	var req dto.DeleteTokenRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		validation.AbortWithBindingError(c, err)
+		return
+	}
+
+	if err := h.service.Unregister(c.Request.Context(), uint(userID), req.DeviceID); err != nil {
 		errorhandler.HandleError(c, err, h.logger)
 		return
 	}

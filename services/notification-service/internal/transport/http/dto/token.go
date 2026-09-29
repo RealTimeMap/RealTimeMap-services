@@ -21,6 +21,11 @@ func (r CreateTokenRequest) ToParams(userID uint) token.RegisterParams {
 	}
 }
 
+// DeleteTokenRequest — удаление текущего устройства при выходе из аккаунта.
+type DeleteTokenRequest struct {
+	DeviceID string `form:"deviceId" binding:"required,max=64"`
+}
+
 // UpdateSettingsRequest — частичное обновление настроек текущего устройства.
 //
 // Все поля опциональны: клиент присылает только то, что пользователь тронул.

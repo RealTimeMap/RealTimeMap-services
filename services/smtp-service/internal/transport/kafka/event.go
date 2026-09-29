@@ -19,6 +19,8 @@ const (
 	EventUserPasswordForgotten = events.UserPasswordForgotten
 	EventUserPasswordChanged   = events.UserPasswordChanged
 	EventUserLoggedIn          = events.UserLoggedIn
+
+	EventBugCreated = events.BugCreated
 )
 
 // decodePayload разбирает payload события известного типа.

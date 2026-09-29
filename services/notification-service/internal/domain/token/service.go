@@ -139,6 +139,19 @@ func (s *Service) UpdateSettings(ctx context.Context, params UpdateSettingsParam
 	return device, nil
 }
 
+// Unregister удаляет устройство при выходе из аккаунта, чтобы уведомления
+// не приходили на него следующему пользователю. Идемпотентно.
+func (s *Service) Unregister(ctx context.Context, userID uint, deviceID string) error {
+	deleted, err := s.repo.DeleteByDevice(ctx, userID, deviceID)
+	if err != nil {
+		return err
+	}
+
+	s.logger.Info("device unregistered",
+		zap.Uint("user_id", userID), zap.String("device_id", deviceID), zap.Int64("deleted", deleted))
+	return nil
+}
+
 // DeleteUser удаляет push-токены удалённого аккаунта: после удаления
 // уведомлений ему больше не шлём, а токен — идентификатор устройства.
 func (s *Service) DeleteUser(ctx context.Context, userID uint) error {

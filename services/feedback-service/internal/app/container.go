@@ -28,7 +28,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, logger *zap.Logger) (*Contain
 	bugService := bug.NewService(bugRepo, logger)
 	publisher := newPublisher(cfg.Kafka, logger)
 	bugUseCases := &bugcases.Application{
-		Create: bugcases.NewCreatorBugHandler(bugService, logger),
+		Create: bugcases.NewCreatorBugHandler(bugService, publisher, logger),
 		List:   bugcases.NewListBugHandler(bugService, logger),
 		Get:    bugcases.NewGetBugHandler(bugService, logger),
 		Link:   bugcases.NewLinkBugHandler(bugService, logger),

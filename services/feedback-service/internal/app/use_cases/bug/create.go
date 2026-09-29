@@ -3,22 +3,29 @@ package bug
 import (
 	"context"
 
+	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/events"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/feedback-service/internal/domain/bug"
 	"go.uber.org/zap"
 )
 
 type Creator interface {
-	Create(ctx context.Context, data bug.CreateBugParams) error
+	Create(ctx context.Context, data bug.CreateBugParams) (*bug.Model, error)
 }
 
 type CreatorBugHandler struct {
-	creator Creator
+	creator   Creator
+	publisher EventPublisher
 
 	logger *zap.Logger
 }
 
-func NewCreatorBugHandler(creator Creator, logger *zap.Logger) *CreatorBugHandler {
-	return &CreatorBugHandler{creator: creator, logger: logger}
+// NewCreatorBugHandler собирает обработчик. nil вместо publisher — шина
+// выключена.
+func NewCreatorBugHandler(creator Creator, publisher EventPublisher, logger *zap.Logger) *CreatorBugHandler {
+	if publisher == nil {
+		publisher = NoOpEventPublisher{}
+	}
+	return &CreatorBugHandler{creator: creator, publisher: publisher, logger: logger}
 }
 
 type ApplicationInfoCommand struct {
@@ -42,7 +49,7 @@ type CreateBugCommand struct {
 }
 
 func (h *CreatorBugHandler) Handle(ctx context.Context, cmd CreateBugCommand) error {
-	err := h.creator.Create(ctx, bug.CreateBugParams{
+	obj, err := h.creator.Create(ctx, bug.CreateBugParams{
 		Tag: cmd.Tag,
 		App: bug.ApplicationInfoParams{
 			Build: cmd.App.Build,
@@ -62,5 +69,10 @@ func (h *CreatorBugHandler) Handle(ctx context.Context, cmd CreateBugCommand) er
 		h.logger.Error("create bug", zap.Error(err))
 		return err
 	}
+
+	created := *obj
+	publishAsync(h.logger, events.BugCreated, func(ctx context.Context) error {
+		return h.publisher.PublishBugCreated(ctx, &created)
+	})
 	return nil
 }

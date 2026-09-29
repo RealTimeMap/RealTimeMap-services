@@ -93,6 +93,11 @@ func (r *PgUserTokenRepository) UpdateSettings(ctx context.Context, id uint, set
 		}).Error
 }
 
+func (r *PgUserTokenRepository) DeleteByDevice(ctx context.Context, userID uint, deviceID string) (int64, error) {
+	res := r.db.WithContext(ctx).Where("user_id = ? AND device_id = ?", userID, deviceID).Delete(&token.Model{})
+	return res.RowsAffected, res.Error
+}
+
 func (r *PgUserTokenRepository) DeleteByUser(ctx context.Context, userID uint) (int64, error) {
 	res := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&token.Model{})
 	return res.RowsAffected, res.Error

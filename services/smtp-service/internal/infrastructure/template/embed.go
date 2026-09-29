@@ -61,6 +61,11 @@ var registry = map[string]meta{
 			"achievementsUrl", "shareUrl", "notificationSettingsUrl", "unsubscribeUrl",
 		},
 	},
+	"newBugReport": {
+		// resolution и description опциональны: клиент может их не прислать.
+		subject:      "Новый баг-репорт {{ .bugCode }}: {{ .title }}",
+		requiredData: []string{"bugCode", "title", "tagLabel", "author", "device", "build", "reportedAt", "bugUrl", "bugsUrl"},
+	},
 	"verifyEmail": {
 		// code в контракт не входит: auth-сервис выдаёт ссылку всегда, а
 		// короткий код — не обязательно. Требовать его значило бы не отправить

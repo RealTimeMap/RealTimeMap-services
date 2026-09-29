@@ -12,16 +12,22 @@ import (
 // должен копить горутины.
 const publishTimeout = 5 * time.Second
 
-// EventPublisher отправляет события о багах в шину. По ним
-// gamification-service начисляет автору отчёта опыт и достижения.
+// EventPublisher отправляет события о багах в шину. По подтверждению
+// gamification-service начисляет награду, по новому отчёту smtp-service
+// уведомляет разработчиков.
 type EventPublisher interface {
 	PublishBugConfirmed(ctx context.Context, b *bug.Model) error
+	PublishBugCreated(ctx context.Context, b *bug.Model) error
 }
 
 // NoOpEventPublisher — заглушка на случай выключенной шины.
 type NoOpEventPublisher struct{}
 
 func (NoOpEventPublisher) PublishBugConfirmed(context.Context, *bug.Model) error {
+	return nil
+}
+
+func (NoOpEventPublisher) PublishBugCreated(context.Context, *bug.Model) error {
 	return nil
 }
 

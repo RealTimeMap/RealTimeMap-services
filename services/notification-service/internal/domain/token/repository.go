@@ -17,6 +17,9 @@ type Repository interface {
 	// UpdateSettings сохраняет настройки устройства.
 	UpdateSettings(ctx context.Context, id uint, settings Settings) error
 
+	// DeleteByDevice удаляет устройство пользователя. Отсутствие — не ошибка.
+	DeleteByDevice(ctx context.Context, userID uint, deviceID string) (int64, error)
+
 	// DeleteByUser удаляет все устройства пользователя — по удалению
 	// аккаунта. Отсутствие устройств не ошибка.
 	DeleteByUser(ctx context.Context, userID uint) (int64, error)

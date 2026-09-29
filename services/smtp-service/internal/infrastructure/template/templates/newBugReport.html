@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Новый баг-репорт {{ .bugCode }} — RealTimeMap Admin</title>
+<!--[if mso]>
+<style>body,table,td,a{font-family:Arial,Helvetica,sans-serif !important}</style>
+<![endif]-->
+<style>
+@media only screen and (max-width:620px){
+  .wrap{width:100% !important}
+  .px{padding-left:20px !important;padding-right:20px !important}
+  .h1{font-size:22px !important;line-height:28px !important}
+}
+a{color:#9184d9}
+a:hover{color:#c3bcf0}
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#101220;">
+<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;max-width:0;overflow:hidden;mso-hide:all;">{{ .bugCode }} · {{ .tagLabel }} · {{ .title }}. От {{ .author }}, {{ .device }}.</span>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#101220;">
+<tr>
+<td align="center" style="padding:28px 12px 40px 12px;">
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="wrap" style="width:600px;max-width:600px;background-color:#161826;border:1px solid #2a2d40;border-radius:8px;">
+
+  <tr>
+    <td class="px" style="padding:20px 32px 18px 32px;border-bottom:1px solid #24273a;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td align="left" width="330" style="width:330px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#9184d9;letter-spacing:1.4px;font-weight:bold;">REALTIMEMAP&nbsp;·&nbsp;ADMIN</td>
+        <td align="right" width="206" style="width:206px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;mso-line-height-rule:exactly;color:#8b8fa6;">{{ .reportedAt }}</td>
+      </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:28px 32px 0 32px;">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:#8b8fa6;letter-spacing:1.2px;font-weight:bold;">НОВЫЙ БАГ-РЕПОРТ · {{ .bugCode }}</div>
+      <div class="h1" style="font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:33px;mso-line-height-rule:exactly;color:#e9e9ed;font-weight:normal;padding-top:10px;">{{ .title }}</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:23px;mso-line-height-rule:exactly;color:#b6b9cb;padding-top:12px;">Пользователь отправил отчёт через «Сообщить о баге» в приложении. Репорт ждёт разбора в разделе «Баг-репорты».</div>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:20px 32px 0 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td align="center" style="background-color:#232640;border:1px solid #3b3f63;border-radius:8px;padding:6px 11px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:#c3bcf0;font-weight:bold;">НОВЫЙ</td>
+        <td width="8" style="width:8px;">&nbsp;</td>
+        <td align="center" style="background-color:#1b1e2e;border:1px solid #2f3349;border-radius:8px;padding:6px 11px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:#c9ccdb;font-weight:bold;">{{ .tagLabel }}</td>
+      </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:22px 32px 0 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#1b1e2e;border:1px solid #282b3f;border-radius:8px;">
+        <tr>
+          <td style="padding:13px 16px;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#8b8fa6;">Пользователь</td>
+          <td align="right" style="padding:13px 16px;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#e9e9ed;font-weight:bold;">{{ .author }}</td>
+        </tr>
+        <tr>
+          <td style="padding:13px 16px;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#8b8fa6;">Устройство</td>
+          <td align="right" style="padding:13px 16px;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#e9e9ed;font-weight:bold;">{{ .device }}</td>
+        </tr>
+        {{- if .resolution }}
+        <tr>
+          <td style="padding:13px 16px;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#8b8fa6;">Разрешение экрана</td>
+          <td align="right" style="padding:13px 16px;border-bottom:1px solid #24273a;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#e9e9ed;font-weight:bold;">{{ .resolution }}</td>
+        </tr>
+        {{- end }}
+        <tr>
+          <td style="padding:13px 16px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#8b8fa6;">Версия приложения</td>
+          <td align="right" style="padding:13px 16px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;mso-line-height-rule:exactly;color:#e9e9ed;font-weight:bold;">{{ .build }}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  {{- if .description }}
+  <tr>
+    <td class="px" style="padding:24px 32px 0 32px;">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:#8b8fa6;letter-spacing:1.2px;font-weight:bold;">ЧТО ПРОИЗОШЛО</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#c9ccdb;padding-top:9px;white-space:pre-line;">{{ .description }}</div>
+    </td>
+  </tr>
+  {{- end }}
+
+  <tr>
+    <td class="px" style="padding:26px 32px 4px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td align="center" bgcolor="#161826" style="border:1px solid #9184d9;border-radius:8px;">
+          <a href="{{ .bugUrl }}" style="display:block;padding:13px 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;mso-line-height-rule:exactly;color:#c3bcf0;text-decoration:none;font-weight:bold;">Открыть репорт {{ .bugCode }}</a>
+        </td>
+      </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="px" style="padding:26px 32px 26px 32px;border-top:1px solid #24273a;">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:19px;mso-line-height-rule:exactly;color:#7e8298;">Письмо отправлено, потому что ваш адрес указан получателем уведомлений о новых баг-репортах. Личные метки и переписка пользователя в репорт не попадают.</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:19px;mso-line-height-rule:exactly;color:#7e8298;padding-top:10px;">
+        <a href="{{ .bugsUrl }}" style="color:#9184d9;text-decoration:underline;">Все баг-репорты</a>
+      </div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:18px;mso-line-height-rule:exactly;color:#5f6377;padding-top:10px;">RealTimeMap, 12 rue du Dôme, 67000 Strasbourg, France</div>
+    </td>
+  </tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+</body>
+</html>
