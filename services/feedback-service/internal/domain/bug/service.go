@@ -79,9 +79,9 @@ func NewService(repo Repository, logger *zap.Logger) *Service {
 	return &Service{repo: repo, now: time.Now, logger: logger}
 }
 
-func (s *Service) Create(ctx context.Context, data CreateBugParams) error {
+func (s *Service) Create(ctx context.Context, data CreateBugParams) (*Model, error) {
 	if valid := Tag.IsValid(Tag(data.Tag)); !valid {
-		return ErrBugTagUnavailable(data.Tag)
+		return nil, ErrBugTagUnavailable(data.Tag)
 	}
 
 	payload := &Model{
@@ -99,10 +99,10 @@ func (s *Service) Create(ctx context.Context, data CreateBugParams) error {
 		},
 	}
 	if err := s.repo.Create(ctx, payload); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return payload, nil
 }
 
 func (s *Service) GetList(ctx context.Context, filter GetBugParams) ([]Model, error) {

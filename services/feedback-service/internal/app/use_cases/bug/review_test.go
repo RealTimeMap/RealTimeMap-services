@@ -41,6 +41,10 @@ func (f *fakePublisher) PublishBugConfirmed(_ context.Context, b *bug.Model) err
 	return nil
 }
 
+func (f *fakePublisher) PublishBugCreated(context.Context, *bug.Model) error {
+	return nil
+}
+
 // Публикация фоновая, поэтому ждём её с таймаутом, а отсутствие —
 // короткой паузой.
 const (

@@ -60,6 +60,38 @@ func (p *BugPublisher) PublishBugConfirmed(ctx context.Context, b *bug.Model) er
 	return nil
 }
 
+// PublishBugCreated сообщает о новом отчёте. Анонимный отчёт тоже
+// публикуется: разработчикам он нужен независимо от автора.
+func (p *BugPublisher) PublishBugCreated(ctx context.Context, b *bug.Model) error {
+	payload := events.BugCreatedPayload{
+		BugID:      b.ID,
+		UserID:     b.UserID,
+		Title:      b.Title,
+		Desc:       b.Desc,
+		Tag:        string(b.Tag),
+		Platform:   b.Device.Platform,
+		OS:         b.Device.OS,
+		Resolution: b.Device.Resolution,
+		Build:      b.App.Build,
+		CreatedAt:  b.CreatedAt,
+	}
+	meta := producer.EventMeta{
+		EventType: events.BugCreated,
+		SourceID:  strconv.FormatUint(uint64(b.ID), 10),
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+
+	if err := p.producer.PublishWithMeta(ctx, meta, events.NewBugCreated(payload)); err != nil {
+		p.logger.Error("failed to publish bug event",
+			zap.String("event_type", events.BugCreated),
+			zap.Uint("bug_id", b.ID),
+			zap.Error(err),
+		)
+		return err
+	}
+	return nil
+}
+
 func (p *BugPublisher) Close() error {
 	return p.producer.Close()
 }

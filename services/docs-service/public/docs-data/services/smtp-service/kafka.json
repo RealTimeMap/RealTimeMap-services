@@ -81,6 +81,113 @@
           "parentUserId": 42
         }
       }
+    },
+    {
+      "id": "smtp-feedback-events",
+      "name": "feedback-service.events",
+      "summary": "Новый баг-репорт — письмо разработчикам",
+      "description": "Входящий топик feedback-service. Обрабатывается событие bug.created → письмо по шаблону newBugReport. Остальные события топика (bug.confirmed) пропускаются молча.\n\nПолучатели задаются конфигом bug_report.recipients (ENV BUG_REPORT_RECIPIENTS, через запятую), а не выбираются по роли: UserService не отдаёт список администраторов. Пустой список — письма не отправляются. Ссылка на репорт строится от bug_report.admin_url.\n\nИмя автора резолвится через UserService по userId. Сбой резолва письмо не останавливает — автор подписывается как «Пользователь #id», анонимный репорт — «Аноним».",
+      "producers": [
+        "feedback-service"
+      ],
+      "consumers": [
+        "smtp-service",
+        "gamification-service"
+      ],
+      "partitionKey": "не задан — событие без user_id, чтобы геймификация не начисляла опыт за неподтверждённый репорт",
+      "schema": [
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Тип события: bug.created"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": true,
+          "description": "Содержимое баг-репорта",
+          "children": [
+            {
+              "name": "bugId",
+              "type": "integer",
+              "required": true,
+              "description": "ID репорта. В письме выводится как BR-<bugId>"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "required": false,
+              "description": "ID автора. Нет у анонимного репорта"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Заголовок репорта"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": false,
+              "description": "Описание проблемы"
+            },
+            {
+              "name": "tag",
+              "type": "string",
+              "required": true,
+              "description": "Категория: feature, ui или logic"
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": false,
+              "description": "Устройство"
+            },
+            {
+              "name": "os",
+              "type": "string",
+              "required": false,
+              "description": "ОС и её версия"
+            },
+            {
+              "name": "resolution",
+              "type": "string",
+              "required": false,
+              "description": "Разрешение экрана"
+            },
+            {
+              "name": "build",
+              "type": "string",
+              "required": false,
+              "description": "Версия сборки приложения"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Время создания репорта, RFC 3339"
+            }
+          ]
+        }
+      ],
+      "example": {
+        "id": "5d0c1f3e-8a51-4c47-9f7e-2b6a3c9d1e20",
+        "type": "bug.created",
+        "timestamp": "2026-09-26T14:08:00Z",
+        "payload": {
+          "bugId": 318,
+          "userId": 60,
+          "title": "Метка исчезает после смены масштаба",
+          "desc": "Поставила метку у кафе, приблизила карту — метка пропала.",
+          "tag": "ui",
+          "platform": "iPhone 15",
+          "os": "iOS 18.2",
+          "resolution": "1179x2556",
+          "build": "1.0.4 (212)",
+          "createdAt": "2026-09-26T14:08:00Z"
+        }
+      }
     }
   ]
 }
