@@ -19,7 +19,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/types"
 )
 
-// fakeStorage имитирует MinIOStorage: ключ считает через storage.Resolve,
+// fakeStorage имитирует S3Storage: ключ считает через storage.Resolve,
 // как настоящий Upload.
 type fakeStorage struct {
 	mu       sync.Mutex

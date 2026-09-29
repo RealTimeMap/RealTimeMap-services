@@ -23,19 +23,19 @@ import (
 )
 
 // Интеграционные тесты хранилища: проверяют ровно то, что нельзя проверить без
-// живого MinIO — дедупликацию через StatObject, ранний выход без записи,
+// живого S3 (SeaweedFS) — дедупликацию через StatObject, ранний выход без записи,
 // поведение PutObject и отличие «объекта нет» от ошибки доступа.
 //
-// Требуют поднятого MinIO. Без него пропускаются. Запуск из корня репозитория:
+// Требуют поднятого SeaweedFS. Без него пропускаются. Запуск из корня репозитория:
 //
 //	go test ./pkg/storage/ -run Integration -v
 //
 // Параметры подключения берутся из окружения, значения по умолчанию совпадают
-// с docker-compose (проброс 9000 на хост):
+// с docker-compose (проброс 8333 на хост):
 //
-//	STORAGE_TEST_ENDPOINT   (по умолчанию localhost:9000)
-//	STORAGE_TEST_ACCESS_KEY (по умолчанию из MINIO_ROOT_USER)
-//	STORAGE_TEST_SECRET_KEY (по умолчанию из MINIO_ROOT_PASSWORD)
+//	STORAGE_TEST_ENDPOINT   (по умолчанию localhost:8333)
+//	STORAGE_TEST_ACCESS_KEY (по умолчанию из S3_ACCESS_KEY)
+//	STORAGE_TEST_SECRET_KEY (по умолчанию из S3_SECRET_KEY)
 
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
@@ -46,11 +46,11 @@ func envOr(key, fallback string) string {
 
 func testCreds(t *testing.T) (endpoint, access, secret string) {
 	t.Helper()
-	endpoint = envOr("STORAGE_TEST_ENDPOINT", "localhost:9000")
-	access = envOr("STORAGE_TEST_ACCESS_KEY", os.Getenv("MINIO_ROOT_USER"))
-	secret = envOr("STORAGE_TEST_SECRET_KEY", os.Getenv("MINIO_ROOT_PASSWORD"))
+	endpoint = envOr("STORAGE_TEST_ENDPOINT", "localhost:8333")
+	access = envOr("STORAGE_TEST_ACCESS_KEY", os.Getenv("S3_ACCESS_KEY"))
+	secret = envOr("STORAGE_TEST_SECRET_KEY", os.Getenv("S3_SECRET_KEY"))
 	if access == "" || secret == "" {
-		t.Skip("нет ключей MinIO: задай STORAGE_TEST_ACCESS_KEY/STORAGE_TEST_SECRET_KEY или MINIO_ROOT_USER/MINIO_ROOT_PASSWORD")
+		t.Skip("нет ключей S3: задай STORAGE_TEST_ACCESS_KEY/STORAGE_TEST_SECRET_KEY или S3_ACCESS_KEY/S3_SECRET_KEY")
 	}
 	return endpoint, access, secret
 }
@@ -68,12 +68,12 @@ func setupStorage(t *testing.T) (Storage, *minio.Client, string) {
 		Creds: credentials.NewStaticV4(access, secret, ""),
 	})
 	if err != nil {
-		t.Skipf("MinIO недоступен: %v", err)
+		t.Skipf("S3 недоступен: %v", err)
 	}
 
 	bucket := "test-storage-" + strings.Split(uuid.New().String(), "-")[0]
 	if err := client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
-		t.Skipf("MinIO недоступен (%s): %v", endpoint, err)
+		t.Skipf("S3 недоступен (%s): %v", endpoint, err)
 	}
 
 	t.Cleanup(func() {
@@ -85,7 +85,7 @@ func setupStorage(t *testing.T) (Storage, *minio.Client, string) {
 		_ = client.RemoveBucket(ctx, bucket)
 	})
 
-	s, err := NewMinIOStorage(StorageConfig{
+	s, err := NewS3Storage(StorageConfig{
 		Endpoint:        endpoint,
 		Bucket:          bucket,
 		AccessKeyID:     access,
@@ -422,11 +422,11 @@ func TestIntegrationExists(t *testing.T) {
 	})
 }
 
-func TestIntegrationNewMinIOStorage(t *testing.T) {
+func TestIntegrationNewS3Storage(t *testing.T) {
 	endpoint, access, secret := testCreds(t)
 
 	t.Run("несуществующий бакет — ошибка на старте, а не при первой заливке", func(t *testing.T) {
-		_, err := NewMinIOStorage(StorageConfig{
+		_, err := NewS3Storage(StorageConfig{
 			Endpoint:        endpoint,
 			Bucket:          "missing-bucket-" + strings.Split(uuid.New().String(), "-")[0],
 			AccessKeyID:     access,
@@ -437,7 +437,7 @@ func TestIntegrationNewMinIOStorage(t *testing.T) {
 	})
 
 	t.Run("неверные ключи — ошибка", func(t *testing.T) {
-		_, err := NewMinIOStorage(StorageConfig{
+		_, err := NewS3Storage(StorageConfig{
 			Endpoint:        endpoint,
 			Bucket:          "rtm-media",
 			AccessKeyID:     "wrong-access-key",

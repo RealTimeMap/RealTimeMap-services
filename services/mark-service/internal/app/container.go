@@ -48,13 +48,13 @@ type Container struct {
 func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container {
 	// Создание вспомогательных компонентов
 	// imageValidator := mediavalidator.NewPhotoValidator()
-	minioStore, err := storage.NewMinIOStorage(cfg.Storage, log)
+	s3Store, err := storage.NewS3Storage(cfg.Storage, log)
 	if err != nil {
 		panic(err)
 	}
 	// ВРЕМЕННО: запись фото в S3 вынесена из запроса в пул воркеров.
-	// Чтобы вернуть синхронную загрузку, передай в сервисы minioStore.
-	uploadPool := asyncstorage.New(minioStore, asyncstorage.Config{}, log)
+	// Чтобы вернуть синхронную загрузку, передай в сервисы s3Store.
+	uploadPool := asyncstorage.New(s3Store, asyncstorage.Config{}, log)
 	var store storage.Storage = uploadPool
 
 	// Kafka producer (только если включен).
