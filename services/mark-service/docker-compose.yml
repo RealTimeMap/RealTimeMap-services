@@ -246,6 +246,47 @@ services:
       - "traefik.http.routers.group-delete.service=mark"
       - "traefik.http.routers.group-delete.tls=true"
 
+      # POST /api/v2/attraction/create - создание достопримечательности (только админ)
+      - "traefik.http.routers.attraction-create.rule=Host(`realtimemap.ru`) && Path(`/api/v2/attraction/create`) && Method(`POST`)"
+      - "traefik.http.routers.attraction-create.entrypoints=websecure"
+      - "traefik.http.routers.attraction-create.priority=100"
+      - "traefik.http.routers.attraction-create.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.attraction-create.service=mark"
+      - "traefik.http.routers.attraction-create.tls=true"
+
+      # GET /api/v2/attraction/list?city= - достопримечательности города (публичный)
+      - "traefik.http.routers.attraction-list.rule=Host(`realtimemap.ru`) && Path(`/api/v2/attraction/list`) && Method(`GET`)"
+      - "traefik.http.routers.attraction-list.entrypoints=websecure"
+      - "traefik.http.routers.attraction-list.priority=100"
+      - "traefik.http.routers.attraction-list.middlewares=cors-headers@file"
+      - "traefik.http.routers.attraction-list.service=mark"
+      - "traefik.http.routers.attraction-list.tls=true"
+
+      # GET /api/v2/attraction/{attractionID} - детальная достопримечательность со слайдами (публичный).
+      # PathRegexp по UUID, чтобы не перехватить /attraction/list.
+      - "traefik.http.routers.attraction-detail.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/attraction/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`) && Method(`GET`)"
+      - "traefik.http.routers.attraction-detail.entrypoints=websecure"
+      - "traefik.http.routers.attraction-detail.priority=98"
+      - "traefik.http.routers.attraction-detail.middlewares=cors-headers@file"
+      - "traefik.http.routers.attraction-detail.service=mark"
+      - "traefik.http.routers.attraction-detail.tls=true"
+
+      # PATCH /api/v2/attraction/{attractionID} - обновление достопримечательности (только админ)
+      - "traefik.http.routers.attraction-update.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/attraction/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`) && Method(`PATCH`)"
+      - "traefik.http.routers.attraction-update.entrypoints=websecure"
+      - "traefik.http.routers.attraction-update.priority=98"
+      - "traefik.http.routers.attraction-update.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.attraction-update.service=mark"
+      - "traefik.http.routers.attraction-update.tls=true"
+
+      # DELETE /api/v2/attraction/{attractionID} - удаление достопримечательности (только админ)
+      - "traefik.http.routers.attraction-delete.rule=Host(`realtimemap.ru`) && PathRegexp(`^/api/v2/attraction/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`) && Method(`DELETE`)"
+      - "traefik.http.routers.attraction-delete.entrypoints=websecure"
+      - "traefik.http.routers.attraction-delete.priority=98"
+      - "traefik.http.routers.attraction-delete.middlewares=cors-headers@file,auth-check@file"
+      - "traefik.http.routers.attraction-delete.service=mark"
+      - "traefik.http.routers.attraction-delete.tls=true"
+
       # Socket.IO
       - "traefik.http.routers.mark-socketio.rule=Host(`realtimemap.ru`) && PathPrefix(`/marks/socket.io`)"
       - "traefik.http.routers.mark-socketio.entrypoints=websecure"

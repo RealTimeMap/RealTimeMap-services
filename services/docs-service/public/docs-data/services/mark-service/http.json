@@ -2878,6 +2878,685 @@
       ]
     },
     {
+      "id": "create-attraction",
+      "method": "POST",
+      "path": "/api/v2/attraction/create",
+      "summary": "Создание достопримечательности",
+      "description": "Создаёт достопримечательность вместе со слайдами и блоками одной транзакцией. Доступно только администраторам. Позиции слайдов и блоков внутри слайда не должны повторяться. Без флага publish достопримечательность создаётся в статусе draft.",
+      "tags": [
+        "Достопримечательности"
+      ],
+      "auth": true,
+      "requestBody": {
+        "description": "Данные достопримечательности",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "slug",
+            "type": "string",
+            "required": true,
+            "description": "Уникальный идентификатор для URL: строчная латиница, цифры и дефис (макс. 255 символов)"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true,
+            "description": "Название (макс. 255 символов)"
+          },
+          {
+            "name": "city",
+            "type": "string",
+            "required": true,
+            "description": "Город (макс. 128 символов)"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": true,
+            "description": "Категория (макс. 128 символов)"
+          },
+          {
+            "name": "publish",
+            "type": "boolean",
+            "required": false,
+            "description": "Сразу опубликовать (статус published). По умолчанию false — статус draft"
+          },
+          {
+            "name": "longitude",
+            "type": "number",
+            "required": true,
+            "description": "Долгота [-180..180]"
+          },
+          {
+            "name": "latitude",
+            "type": "number",
+            "required": true,
+            "description": "Широта [-90..90]"
+          },
+          {
+            "name": "slides",
+            "type": "array",
+            "required": false,
+            "description": "Слайды",
+            "children": [
+              {
+                "name": "position",
+                "type": "integer",
+                "required": false,
+                "description": "Позиция слайда (по умолчанию 0)"
+              },
+              {
+                "name": "duration",
+                "type": "integer",
+                "required": true,
+                "description": "Длительность показа в миллисекундах, больше 0"
+              },
+              {
+                "name": "blocks",
+                "type": "array",
+                "required": false,
+                "description": "Блоки слайда",
+                "children": [
+                  {
+                    "name": "position",
+                    "type": "integer",
+                    "required": false,
+                    "description": "Позиция блока внутри слайда (по умолчанию 0)"
+                  },
+                  {
+                    "name": "blockType",
+                    "type": "string",
+                    "required": true,
+                    "description": "Тип блока",
+                    "enum": [
+                      "attribute",
+                      "static"
+                    ]
+                  },
+                  {
+                    "name": "content",
+                    "type": "object",
+                    "required": true,
+                    "description": "Содержимое блока, непустой объект"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "example": {
+          "slug": "red-square",
+          "name": "Красная площадь",
+          "city": "moscow",
+          "category": "square",
+          "publish": true,
+          "longitude": 37.6208,
+          "latitude": 55.7539,
+          "slides": [
+            {
+              "position": 0,
+              "duration": 5000,
+              "blocks": [
+                {
+                  "position": 0,
+                  "blockType": "static",
+                  "content": {
+                    "text": "Главная площадь Москвы"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 201,
+          "description": "Достопримечательность создана",
+          "schema": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true,
+              "description": "UUID достопримечательности"
+            },
+            {
+              "name": "slug",
+              "type": "string",
+              "required": true,
+              "description": "Slug"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "Название"
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "required": true,
+              "description": "Город"
+            },
+            {
+              "name": "category",
+              "type": "string",
+              "required": true,
+              "description": "Категория"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус",
+              "enum": [
+                "draft",
+                "published",
+                "archived"
+              ]
+            },
+            {
+              "name": "longitude",
+              "type": "number",
+              "required": true,
+              "description": "Долгота"
+            },
+            {
+              "name": "latitude",
+              "type": "number",
+              "required": true,
+              "description": "Широта"
+            },
+            {
+              "name": "slides",
+              "type": "array",
+              "required": true,
+              "description": "Слайды с присвоенными id; у каждого блока тоже есть id",
+              "children": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true,
+                  "description": "UUID слайда"
+                },
+                {
+                  "name": "position",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Позиция"
+                },
+                {
+                  "name": "duration",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Длительность в миллисекундах"
+                },
+                {
+                  "name": "blocks",
+                  "type": "array",
+                  "required": true,
+                  "description": "Блоки: id, position, blockType, content"
+                }
+              ]
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата создания (RFC 3339)"
+            },
+            {
+              "name": "updatedAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата обновления (RFC 3339)"
+            }
+          ],
+          "example": {
+            "id": "0b8f6c2e-4a1d-4c3e-9f7a-2d5e8b1c6a90",
+            "slug": "red-square",
+            "name": "Красная площадь",
+            "city": "moscow",
+            "category": "square",
+            "status": "published",
+            "longitude": 37.6208,
+            "latitude": 55.7539,
+            "slides": [
+              {
+                "id": "5c3a9e1f-7b2d-4e8a-a6c4-1f9d3b7e2a05",
+                "position": 0,
+                "duration": 5000,
+                "blocks": [
+                  {
+                    "id": "e2d4f6a8-1c3b-4d5e-8f7a-9b0c1d2e3f40",
+                    "position": 0,
+                    "blockType": "static",
+                    "content": {
+                      "text": "Главная площадь Москвы"
+                    }
+                  }
+                ]
+              }
+            ],
+            "createdAt": "2026-09-29T12:00:00Z",
+            "updatedAt": "2026-09-29T12:00:00Z"
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "validation-error",
+        "conflict"
+      ]
+    },
+    {
+      "id": "list-attractions",
+      "method": "GET",
+      "path": "/api/v2/attraction/list",
+      "summary": "Достопримечательности города",
+      "description": "Возвращает опубликованные достопримечательности города в минимальном виде — для точек на карте. Город обязателен и сравнивается точно, с учётом регистра. Слайды не включаются, их отдаёт детальный запрос. Сортировка по названию. Авторизация не требуется.",
+      "tags": [
+        "Достопримечательности"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "city",
+          "type": "string",
+          "required": true,
+          "description": "Город — точно в том виде, в каком он указан при создании (макс. 128 символов)",
+          "location": "query",
+          "example": "Сургут"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Массив достопримечательностей (пустой, если в городе ничего нет)",
+          "schema": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true,
+              "description": "UUID достопримечательности"
+            },
+            {
+              "name": "slug",
+              "type": "string",
+              "required": true,
+              "description": "Slug"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "Название"
+            },
+            {
+              "name": "category",
+              "type": "string",
+              "required": true,
+              "description": "Категория"
+            },
+            {
+              "name": "longitude",
+              "type": "number",
+              "required": true,
+              "description": "Долгота"
+            },
+            {
+              "name": "latitude",
+              "type": "number",
+              "required": true,
+              "description": "Широта"
+            }
+          ],
+          "example": [
+            {
+              "id": "0b8f6c2e-4a1d-4c3e-9f7a-2d5e8b1c6a90",
+              "slug": "surgut-hram-preobrazheniya",
+              "name": "Храм Преображения Господня",
+              "category": "Церкви",
+              "longitude": 73.396,
+              "latitude": 61.254
+            }
+          ]
+        }
+      ],
+      "errors": [
+        "validation-error"
+      ]
+    },
+    {
+      "id": "get-attraction",
+      "method": "GET",
+      "path": "/api/v2/attraction/{attractionID}",
+      "summary": "Детальная достопримечательность",
+      "description": "Возвращает опубликованную достопримечательность вместе со слайдами и их блоками. Слайды и блоки отсортированы по position. Черновики и архивные отдают 404. Авторизация не требуется.",
+      "tags": [
+        "Достопримечательности"
+      ],
+      "auth": false,
+      "parameters": [
+        {
+          "name": "attractionID",
+          "type": "string",
+          "required": true,
+          "description": "UUID достопримечательности",
+          "location": "path",
+          "example": "0b8f6c2e-4a1d-4c3e-9f7a-2d5e8b1c6a90"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Достопримечательность со слайдами — та же структура, что в ответе на создание",
+          "schema": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true,
+              "description": "UUID достопримечательности"
+            },
+            {
+              "name": "slug",
+              "type": "string",
+              "required": true,
+              "description": "Slug"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "Название"
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "required": true,
+              "description": "Город"
+            },
+            {
+              "name": "category",
+              "type": "string",
+              "required": true,
+              "description": "Категория"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Статус (здесь всегда published)"
+            },
+            {
+              "name": "longitude",
+              "type": "number",
+              "required": true,
+              "description": "Долгота"
+            },
+            {
+              "name": "latitude",
+              "type": "number",
+              "required": true,
+              "description": "Широта"
+            },
+            {
+              "name": "slides",
+              "type": "array",
+              "required": true,
+              "description": "Слайды по возрастанию position",
+              "children": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true,
+                  "description": "UUID слайда"
+                },
+                {
+                  "name": "position",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Позиция"
+                },
+                {
+                  "name": "duration",
+                  "type": "integer",
+                  "required": true,
+                  "description": "Длительность в миллисекундах"
+                },
+                {
+                  "name": "blocks",
+                  "type": "array",
+                  "required": true,
+                  "description": "Блоки по возрастанию position",
+                  "children": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true,
+                      "description": "UUID блока"
+                    },
+                    {
+                      "name": "position",
+                      "type": "integer",
+                      "required": true,
+                      "description": "Позиция"
+                    },
+                    {
+                      "name": "blockType",
+                      "type": "string",
+                      "required": true,
+                      "description": "Тип блока",
+                      "enum": [
+                        "attribute",
+                        "static"
+                      ]
+                    },
+                    {
+                      "name": "content",
+                      "type": "object",
+                      "required": true,
+                      "description": "Содержимое блока"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата создания (RFC 3339)"
+            },
+            {
+              "name": "updatedAt",
+              "type": "string",
+              "required": true,
+              "description": "Дата обновления (RFC 3339)"
+            }
+          ],
+          "example": {
+            "id": "0b8f6c2e-4a1d-4c3e-9f7a-2d5e8b1c6a90",
+            "slug": "surgut-hram-preobrazheniya",
+            "name": "Храм Преображения Господня",
+            "city": "Сургут",
+            "category": "Церкви",
+            "status": "published",
+            "longitude": 73.396,
+            "latitude": 61.254,
+            "slides": [
+              {
+                "id": "5c3a9e1f-7b2d-4e8a-a6c4-1f9d3b7e2a05",
+                "position": 1,
+                "duration": 1200,
+                "blocks": [
+                  {
+                    "id": "e2d4f6a8-1c3b-4d5e-8f7a-9b0c1d2e3f40",
+                    "position": 1,
+                    "blockType": "attribute",
+                    "content": {
+                      "title": "Атрибут 1",
+                      "text": "Текст для атрибута 1"
+                    }
+                  }
+                ]
+              }
+            ],
+            "createdAt": "2026-09-29T12:00:00Z",
+            "updatedAt": "2026-09-29T12:00:00Z"
+          }
+        }
+      ],
+      "errors": [
+        "validation-error",
+        "not-found"
+      ]
+    },
+    {
+      "id": "update-attraction",
+      "method": "PATCH",
+      "path": "/api/v2/attraction/{attractionID}",
+      "summary": "Обновление достопримечательности",
+      "description": "Частичное обновление. Доступно только администраторам и работает с достопримечательностью в любом статусе. Не переданное поле не меняется. longitude и latitude передаются только вместе. Если передан slides, все слайды и блоки заменяются целиком в одной транзакции; пустой массив удаляет все слайды. Ответ — достопримечательность со слайдами, как в детальном запросе.",
+      "tags": [
+        "Достопримечательности"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "attractionID",
+          "type": "string",
+          "required": true,
+          "description": "UUID достопримечательности",
+          "location": "path",
+          "example": "0b8f6c2e-4a1d-4c3e-9f7a-2d5e8b1c6a90"
+        }
+      ],
+      "requestBody": {
+        "description": "Изменяемые поля",
+        "contentType": "json",
+        "schema": [
+          {
+            "name": "slug",
+            "type": "string",
+            "required": false,
+            "description": "Строчная латиница, цифры и дефис (макс. 255 символов)"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": false,
+            "description": "Название (макс. 255 символов)"
+          },
+          {
+            "name": "city",
+            "type": "string",
+            "required": false,
+            "description": "Город (макс. 128 символов)"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": false,
+            "description": "Категория (макс. 128 символов)"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "required": false,
+            "description": "Статус",
+            "enum": [
+              "draft",
+              "published",
+              "archived"
+            ]
+          },
+          {
+            "name": "longitude",
+            "type": "number",
+            "required": false,
+            "description": "Долгота [-180..180], только вместе с latitude"
+          },
+          {
+            "name": "latitude",
+            "type": "number",
+            "required": false,
+            "description": "Широта [-90..90], только вместе с longitude"
+          },
+          {
+            "name": "slides",
+            "type": "array",
+            "required": false,
+            "description": "Новый набор слайдов целиком, формат как при создании (position, duration, blocks)"
+          }
+        ],
+        "example": {
+          "name": "Храм Преображения Господня",
+          "status": "archived"
+        }
+      },
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Обновлённая достопримечательность со слайдами — структура как в GET /api/v2/attraction/{attractionID}",
+          "example": {
+            "id": "0b8f6c2e-4a1d-4c3e-9f7a-2d5e8b1c6a90",
+            "slug": "surgut-hram-preobrazheniya",
+            "name": "Храм Преображения Господня",
+            "city": "Сургут",
+            "category": "Церкви",
+            "status": "archived",
+            "longitude": 73.396,
+            "latitude": 61.254,
+            "slides": [],
+            "createdAt": "2026-09-29T12:00:00Z",
+            "updatedAt": "2026-10-01T09:30:00Z"
+          }
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "validation-error",
+        "not-found",
+        "conflict"
+      ]
+    },
+    {
+      "id": "delete-attraction",
+      "method": "DELETE",
+      "path": "/api/v2/attraction/{attractionID}",
+      "summary": "Удаление достопримечательности",
+      "description": "Мягкое удаление: запись помечается удалённой и пропадает из списка и детального запроса. Slug освобождается для новой достопримечательности. Доступно только администраторам.",
+      "tags": [
+        "Достопримечательности"
+      ],
+      "auth": true,
+      "parameters": [
+        {
+          "name": "attractionID",
+          "type": "string",
+          "required": true,
+          "description": "UUID достопримечательности",
+          "location": "path",
+          "example": "0b8f6c2e-4a1d-4c3e-9f7a-2d5e8b1c6a90"
+        }
+      ],
+      "responses": [
+        {
+          "statusCode": 204,
+          "description": "Достопримечательность удалена"
+        }
+      ],
+      "errors": [
+        "unauthorized",
+        "forbidden",
+        "validation-error",
+        "not-found"
+      ]
+    },
+    {
       "id": "health",
       "method": "GET",
       "path": "/mark/health",

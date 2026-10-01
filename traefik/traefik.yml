@@ -14,13 +14,8 @@ entryPoints:
 
   websecure:
     address: ":443"
-    # HTTP/3 (QUIC) слушает UDP на том же порту — в docker-compose должен быть
-    # проброшен 443/udp. Клиент узнаёт о нём из заголовка Alt-Svc и со второго
-    # запроса переходит на QUIC: быстрее рукопожатие, устойчивее на мобильной сети.
     http3: {}
     http:
-      # Сжатие для всех роутеров этого entrypoint'а, включая роутеры из
-      # docker-лейблов сервисов. Какие типы сжимаются — см. compress в dynamic.yml.
       middlewares:
         - compress@file
 
