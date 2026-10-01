@@ -14,6 +14,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/userdeleted"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/attraction"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/like"
@@ -37,7 +38,7 @@ func main() {
 		DBName:   cfg.Database.DBName,
 	}, log)
 	defer database.Close(db)
-	err := db.AutoMigrate(&like.Reaction{}, &mark.Mark{}, &category.Category{}, &personal.Group{}, &personal.Model{}, &personal.Revision{})
+	err := db.AutoMigrate(&like.Reaction{}, &mark.Mark{}, &category.Category{}, &personal.Group{}, &personal.Model{}, &personal.Revision{}, &attraction.Model{}, &attraction.Slide{}, &attraction.SlideBlock{})
 	if err != nil {
 		log.Fatal("Failed to migrate likes", zap.Error(err))
 	}

@@ -43,6 +43,10 @@ func RegisterRoutes(g *gin.Engine, container *app.Container) {
 		UseCase: container.PersonalUseCases,
 		Logger:  container.Logger,
 	})
+	handlers.InitAttractionHandler(api, handlers.AttractionDeps{
+		UseCases: container.AttractionUseCases,
+		Logger:   container.Logger,
+	})
 	// Health
 	health := http.HealthHandler("mark_action-service", container.DB)
 	g.GET("/mark/health", health)

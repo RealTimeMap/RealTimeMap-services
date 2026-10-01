@@ -3,7 +3,8 @@ import type { ServiceIndex, ServiceMeta, HttpDocs, SocketIODocs, KafkaDocs, Grpc
 const BASE = import.meta.env.BASE_URL + 'docs-data'
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`)
+  // no-cache: всегда перепроверять у сервера, даже если в браузере осталась старая копия
+  const res = await fetch(`${BASE}${path}`, { cache: 'no-cache' })
   if (!res.ok) throw new Error(`Не удалось загрузить ${path}: ${res.status}`)
   return res.json()
 }

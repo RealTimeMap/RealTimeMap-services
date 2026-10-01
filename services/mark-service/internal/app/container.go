@@ -8,6 +8,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/database/txmanager"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/storage"
 	"github.com/RealTimeMap/RealTimeMap-backend/pkg/transport/kafka/producer"
+	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/attraction"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/category"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/group"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_action"
@@ -15,6 +16,7 @@ import (
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/mark_stat"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/app/use_cases/personal"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/config"
+	attractionsrv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/attraction"
 	"github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark"
 	category2 "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/mark/category"
 	personalsrv "github.com/RealTimeMap/RealTimeMap-backend/services/mark-service/internal/domain/personal"
@@ -35,6 +37,7 @@ type Container struct {
 	CategoryUseCases        *category.Application
 	GroupUseCases           *group.Application
 	PersonalUseCases        *personal.Application
+	AttractionUseCases      *attraction.Application
 
 	// grpc
 	MarkStatServer *grpcstat.Handler
@@ -94,6 +97,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	groupRepo := postgres.NewPgGroupRepository(db, log)
 	personalRepo := postgres.NewPgPersonalMarkRepository(db, log)
 	revisionRepo := postgres.NewPgRevisionRepository(db, log)
+	attractionRepo := postgres.NewPgAttractionRepostiroty(db, log)
 	// Создание доменных сервисов
 	statService := mark.NewStatService(statRepo, log)
 	markService := mark.NewService(markRepo, categoryRepo, store, log)
@@ -102,6 +106,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 	groupSrv := personalsrv.NewGroupService(groupRepo, revisionRepo, manager, log)
 	personalSrv := personalsrv.NewService(personalRepo, groupRepo, revisionRepo, manager, store, log)
 	revisionSrv := personalsrv.NewRevisionService(revisionRepo, log)
+	attractionSrv := attractionsrv.NewService(attractionRepo, log)
 	// USE CASE
 	markUseCases := &mark_action.Application{
 		CreateMark:  mark_action.NewCreateMarkHandler(markService, eventPublisher, log),
@@ -151,6 +156,13 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 			personal.NewChangeSource(groupSrv, personal.ToSyncGroupDTO),
 		),
 	}
+	attractionUseCases := &attraction.Application{
+		Create:     attraction.NewCreateAttractionHandler(attractionSrv, log),
+		ListByCity: attraction.NewListByCityHandler(attractionSrv, log),
+		Get:        attraction.NewGetAttractionHandler(attractionSrv, log),
+		Update:     attraction.NewUpdateAttractionHandler(attractionSrv, log),
+		Delete:     attraction.NewDeleteAttractionHandler(attractionSrv, log),
+	}
 	// Сокеты
 	socketServer := socket.New(socket.Deps{MarkUseCases: markUseCases, Logger: log})
 
@@ -169,6 +181,7 @@ func MustContainer(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Container 
 		CategoryUseCases:        categoryUseCases,
 		GroupUseCases:           groupCases,
 		PersonalUseCases:        personalUseCases,
+		AttractionUseCases:      attractionUseCases,
 
 		Logger: log,
 

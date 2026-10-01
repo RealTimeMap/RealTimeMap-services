@@ -161,6 +161,72 @@
         "validation-error",
         "unauthorized"
       ]
+    },
+    {
+      "id": "health",
+      "method": "GET",
+      "path": "/notification/health",
+      "summary": "Health-check",
+      "description": "Проверка доступности сервиса и подключения к базе данных. Возвращает 200 если БД доступна, иначе 503.",
+      "tags": [
+        "Служебные"
+      ],
+      "responses": [
+        {
+          "statusCode": 200,
+          "description": "Сервис и БД доступны",
+          "schema": [
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Состояние сервиса",
+              "enum": [
+                "healthy"
+              ]
+            },
+            {
+              "name": "service",
+              "type": "string",
+              "required": true,
+              "description": "Имя сервиса"
+            }
+          ],
+          "example": {
+            "status": "healthy",
+            "service": "notification-service"
+          }
+        },
+        {
+          "statusCode": 503,
+          "description": "БД недоступна",
+          "schema": [
+            {
+              "name": "status",
+              "type": "string",
+              "required": true,
+              "description": "Состояние сервиса",
+              "enum": [
+                "unhealthy"
+              ]
+            },
+            {
+              "name": "database",
+              "type": "string",
+              "required": true,
+              "description": "Состояние БД",
+              "enum": [
+                "down"
+              ]
+            }
+          ],
+          "example": {
+            "status": "unhealthy",
+            "database": "down"
+          }
+        }
+      ],
+      "errors": []
     }
   ]
 }
